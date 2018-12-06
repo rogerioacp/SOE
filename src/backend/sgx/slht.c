@@ -10,8 +10,14 @@
  *-------------------------------------------------------------------------
  */
 
-#include "backend/soe.h"
 
+#include "backend/soe.h"
+#include <sgx_tcrypto.h>
+
+sgx_aes_gcm_128bit_key_t key = {
+		0x72, 0x12, 0x8a, 0x7a, 0x17, 0x52, 0x6e, 0xbf,
+        0x85, 0xd0, 0x3a, 0x62, 0x37, 0x30, 0xae, 0xad
+    }
 
 struct State {
 	/* 
@@ -24,31 +30,33 @@ struct State {
      * insertion tokens received.
 	*/
 	int nBuckets;
-}
+};
 
 
 struct InitParams{
 	/*Initial number of buckets with which the SLHt is initialized*/
 	int nBuckets;
-}
+};
 
 
 struct token{
 	void* ciphertext;
 	void* associatedData;
-}
+};
 
+State state;
 
 
 State Init(InitParams params){
 
 	if(params.nBuckets < 0){
-		return null;
+		return state;
 	}
-	State state;
+
 	state.nInsertions = 0;
-	sate.nBuckets = params.nBuckets;
+	state.nBuckets = params.nBuckets;
 
 
+	return NULL;
 	//Encrypted and authenticate state.
 }

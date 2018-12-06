@@ -99,7 +99,8 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_slht_OBJECTS = slht.$(OBJEXT)
+am__dirstamp = $(am__leading_dot)dirstamp
+am_slht_OBJECTS = main.$(OBJEXT) backend/sgx/slht.$(OBJEXT)
 slht_OBJECTS = $(am_slht_OBJECTS)
 slht_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_$(V))
@@ -117,7 +118,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I. -I$(top_builddir)/src/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/slht.Po
+am__depfiles_remade = ./$(DEPDIR)/main.Po \
+	backend/sgx/$(DEPDIR)/slht.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -243,7 +245,8 @@ target_alias =
 top_build_prefix = ../
 top_builddir = ..
 top_srcdir = ..
-slht_SOURCES = slht.c
+slht_SOURCES = main.c backend/sgx/slht.c
+AUTOMAKE_OPTIONS = subdir-objects
 all: all-am
 
 .SUFFIXES:
@@ -319,6 +322,14 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+backend/sgx/$(am__dirstamp):
+	@$(MKDIR_P) backend/sgx
+	@: > backend/sgx/$(am__dirstamp)
+backend/sgx/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) backend/sgx/$(DEPDIR)
+	@: > backend/sgx/$(DEPDIR)/$(am__dirstamp)
+backend/sgx/slht.$(OBJEXT): backend/sgx/$(am__dirstamp) \
+	backend/sgx/$(DEPDIR)/$(am__dirstamp)
 
 slht$(EXEEXT): $(slht_OBJECTS) $(slht_DEPENDENCIES) $(EXTRA_slht_DEPENDENCIES) 
 	@rm -f slht$(EXEEXT)
@@ -326,11 +337,13 @@ slht$(EXEEXT): $(slht_OBJECTS) $(slht_DEPENDENCIES) $(EXTRA_slht_DEPENDENCIES)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f backend/sgx/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-include ./$(DEPDIR)/slht.Po # am--include-marker
+include ./$(DEPDIR)/main.Po # am--include-marker
+include backend/sgx/$(DEPDIR)/slht.Po # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -339,15 +352,17 @@ $(am__depfiles_remade):
 am--depfiles: $(am__depfiles_remade)
 
 .c.o:
-	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+	$(am__mv) $$depbase.Tpo $$depbase.Po
 #	$(AM_V_CC)source='$<' object='$@' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+	$(am__mv) $$depbase.Tpo $$depbase.Po
 #	$(AM_V_CC)source='$<' object='$@' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
@@ -470,6 +485,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f backend/sgx/$(DEPDIR)/$(am__dirstamp)
+	-rm -f backend/sgx/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -479,7 +496,8 @@ clean: clean-am
 clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/slht.Po
+		-rm -f ./$(DEPDIR)/main.Po
+	-rm -f backend/sgx/$(DEPDIR)/slht.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -525,7 +543,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/slht.Po
+		-rm -f ./$(DEPDIR)/main.Po
+	-rm -f backend/sgx/$(DEPDIR)/slht.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
