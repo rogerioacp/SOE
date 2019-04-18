@@ -1,0 +1,14 @@
+enclave{
+	
+	trusted{
+			//Entry points to the enclave
+
+			public void test();
+	};
+
+   /* Ocalls are defined in an external file with code that is executed on an untrusted environment. When this functions are called from within the enclave, the processor exits the enclave mode and calls the defined function.*/
+	untrusted{
+		void logger([in, string] const char * str);
+	};
+
+};
