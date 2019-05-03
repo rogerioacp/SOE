@@ -14,10 +14,28 @@
 #ifndef SOE_H
 #define SOE_H
 
-#include "access/htup.h"
-#include "access/attnum.h"
-#include "access/stratnum.h"
-#include "postgres.h"
+#include <oram/oram.h>
+
+#include "soe_c.h"
+
+#include "access/soe_htup.h"
+
+
+//#include "access/attnum.h"
+
+/*
+ * user defined attribute numbers start at 1.   -ay 2/95
+ */
+typedef int16 AttrNumber;
+
+//#include "access/stratnum.h"
+
+/*
+ * Strategy numbers identify the semantics that particular operators have
+ * with respect to particular operator classes.  In some cases a strategy
+ * subtype (an OID) is used as further information.
+ */
+typedef uint16 StrategyNumber;
 
 
 typedef struct PScanKey{
@@ -27,15 +45,13 @@ typedef struct PScanKey{
 	Oid			sk_subtype;		/* strategy subtype */
 	Oid			sk_collation;	/* collation to use, if needed */
 	Datum		sk_argument;	/* data to compare */
-} PScanKey;
+} ScanKeyData;
+typedef ScanKeyData *ScanKey;
 
 
-void init(static char* tableName, static char* indexName, int tableNBlocks, int indexNBlocks);
+//extern declarations
 
-void insert(HeapTupleData heapTuple);
-
-HeapTupleData getTuple(PScanKey scankey);
-
+extern ORAMState initORAMState(const char *name, int nBlocks);
 
 
 #endif 	/* SOE_H */

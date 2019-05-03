@@ -1,32 +1,33 @@
 #include "soe.h"
+#include "Enclave_t.h"
+#include "storage/soe_bufmgr.h"
 
-#include <oram/plblock.h>
 #include <oram/oram.h>
+#include <oram/plblock.h>
 #include <oram/stash.h>
 #include <oram/pmap.h>
 #include <oram/ofile.h>
-#include "buffer/sgxbufmgr.h"
 
 // Bucket capacity
-#define BKCAP 1;
+#define BKCAP 1
 
 
 ORAMState stateTable = NULL;
 ORAMState stateIndex = NULL;
-VRelation table = NULL;
-VRelation index = NULL;
+VRelation oTable;
+VRelation oIndex;
 
-void init(static char* tName, static char* iName, int tNBlocks, int iNBlocks){
+
+void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks){
     stateTable = initORAMState(tName, tNBlocks);
     stateIndex = initORAMState(iName, iNBlocks);
-    table = initVRelation(stateTable);
-    index = initVRelation(index);
+    oTable = initVRelation(stateTable);
+    oIndex = initVRelation(stateIndex);
 }
 
+ ORAMState initORAMState(const char *name, int nBlocks){
 
- ORAMState initORAMState(static char *name, int nBlocks){
-
- 	size_t fileSize = nblocks * BLCKSZ;
+ 	size_t fileSize = nBlocks * BLCKSZ;
 	AMStash *stash = NULL;
     AMPMap *pmap = NULL;
     AMOFile *ofile = NULL;
@@ -41,12 +42,14 @@ void init(static char* tName, static char* iName, int tNBlocks, int iNBlocks){
     amgr->am_ofile = ofile;
 
     return init(name, fileSize, BLCKSZ, BKCAP, amgr);
-
  }
 
-void insert(HeapTupleData heapTuple){
-    
+void insert(const char* heapTuple){
+    HeapTuple tupleData = (HeapTuple) heapTuple;
 
 }
 
-HeapTupleData getTuple(PScanKey scankey);
+char* getTuple(const char* key){
+    ScanKey scankey = (ScanKey) key;
+    return NULL;
+}

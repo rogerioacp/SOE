@@ -15,9 +15,15 @@
 extern "C" {
 #endif
 
-void test(void);
+void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks);
+void insert(const char* heapTuple);
+char* getTuple(const char* scanKey);
 
 sgx_status_t SGX_CDECL logger(const char* str);
+sgx_status_t SGX_CDECL outFileInit(const char* filename, unsigned int nblocks, unsigned int blocksize);
+sgx_status_t SGX_CDECL outFileRead(char* block, const char* filename, int blkno);
+sgx_status_t SGX_CDECL outFileWrite(char* block, const char* filename, int oblkno);
+sgx_status_t SGX_CDECL outFileClose(const char* filename);
 
 #ifdef __cplusplus
 }

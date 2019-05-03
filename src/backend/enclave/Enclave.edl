@@ -3,12 +3,26 @@ enclave{
 	trusted{
 			//Entry points to the enclave
 
-			public void test();
+			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks);
+
+			public void insert([in, string] const char*  heapTuple);
+
+			public char* getTuple([in, string] const char* scanKey);
+
 	};
 
    /* Ocalls are defined in an external file with code that is executed on an untrusted environment. When this functions are called from within the enclave, the processor exits the enclave mode and calls the defined function.*/
 	untrusted{
 		void logger([in, string] const char * str);
+
+		void outFileInit([in, string] const char *filename, unsigned int nblocks, unsigned int blocksize);
+
+		void outFileRead([out] char* block, [in, string] const char* filename, int blkno);
+
+		void outFileWrite([in, string] char* block, [in, string] const char* filename, int oblkno);
+
+		void outFileClose([in, string] const char* filename);
+
 	};
 
 };
