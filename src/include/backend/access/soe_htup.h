@@ -15,7 +15,8 @@
 #define SOE_HTUP_H
 
 //Oriignal postgres include, does not need to be modified.
-#include <storage/itemptr.h>
+#include "storage/soe_itemptr.h"
+#include "access/soe_htup_details.h"
 
 /* typedefs and forward declarations for structs defined in htup_details.h */
 

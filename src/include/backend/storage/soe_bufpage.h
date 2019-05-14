@@ -17,11 +17,11 @@
 
 #include "soe_c.h"
 #include "access/soe_itup.h"
+#include "storage/soe_off.h"
+#include "storage/soe_itemid.h"
+#include "storage/soe_item.h"
 
-//Postgres default include, not necessary to modify.
-#include <storage/off.h>
-#include <storage/itemid.h>
-#include <storage/item.h>
+
 /*
  * A postgres disk page is an abstraction layered on top of a postgres
  * disk block (which is simply a unit of i/o, see block.h).
@@ -323,11 +323,11 @@ typedef PageHeaderData *PageHeader;
 
 extern void PageInit(Page page, Size pageSize, Size specialSize);
 extern void PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems);
+extern Size PageGetHeapFreeSpace(Page page);
 extern Size PageGetFreeSpace(Page page);
 extern OffsetNumber PageAddItemExtended(Page page, Item item, Size size,
 					OffsetNumber offsetNumber, int flags);
 extern Size PageGetFreeSpaceForMultipleTuples(Page page, int ntups);
 extern IndexTuple CopyIndexTuple(IndexTuple source);
-extern void PageSetChecksumInplace(Page page, BlockNumber blkno);
 
 #endif /* SOE_BUFPAGE_H */

@@ -479,9 +479,10 @@ _hash_freeovflpage(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	bitmappage = ovflbitno >> BMPG_SHIFT(metap);
 	bitmapbit = ovflbitno & BMPG_MASK(metap);
 
-	if (bitmappage >= metap->hashm_nmaps)
-		//Log errors
-		//elog(ERROR, "invalid overflow bit number %u", ovflbitno);
+	if (bitmappage >= metap->hashm_nmaps){
+		selog(ERROR, "invalid overflow bit number %u", ovflbitno);
+	}
+
 	blkno = metap->hashm_mapp[bitmappage];
 
 	/* Release metapage lock while we access the bitmap page */

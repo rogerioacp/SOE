@@ -51,8 +51,6 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 	itemsz = MAXALIGN(itemsz);	/* be safe, PageAddItem will do this but we
 								 * need to be consistent */
 
-restart_insert:
-
 	/*
 	 * Read the metapage.  We don't lock it yet; HashMaxItemSize() will
 	 * examine pd_pagesize_version, but that can't change so we can examine it
@@ -177,8 +175,9 @@ _hash_pgaddtup(VRelation rel, Buffer buf, Size itemsize, IndexTuple itup)
 	hashkey = _hash_get_indextuple_hashkey(itup);
 	itup_off = _hash_binsearch(page, hashkey);
 	//Page add item extended. already have an example of a function to add a page.
-	if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)
-		== InvalidOffsetNumber)
+	PageAddItem(page, (Item) itup, itemsize, itup_off, false, false);
+	//if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)
+	//	== InvalidOffsetNumber)
 		//log error
 		/*elog(ERROR, "failed to add index item to \"%s\"",
 			 RelationGetRelationName(rel));*/

@@ -5,7 +5,7 @@
 #include "storage/soe_bufmgr.h"
 #include "access/soe_skey.h"
 #include "access/soe_itup.h"
-#include "access/htup.h"
+#include "access/soe_htup.h"
 
 /*
  * We use the same IndexScanDescData structure for both amgettuple-based

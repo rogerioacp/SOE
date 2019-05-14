@@ -1,25 +1,28 @@
 enclave{
-	
+
 	trusted{
 			//Entry points to the enclave
 
-			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks);
+			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid);
 
-			public void insert([in, string] const char*  heapTuple);
+			public void insert([in, size=tupleSize] const char*  heapTuple, unsigned int tupleSize);
 
-			public char* getTuple([in, string] const char* scanKey);
+			public char* getTuple([in, size=scanKeySize] const char* scanKey, int scanKeySize);
 
+			public void insertHeap([in, size=tupleSize] const char* heapTuple, unsigned int tupleSize);
+
+			public void getTupleTID(unsigned int blkno, unsigned int offnum, [out, size=tupleLen] char* tuple, unsigned int tupleLen);			
 	};
 
    /* Ocalls are defined in an external file with code that is executed on an untrusted environment. When this functions are called from within the enclave, the processor exits the enclave mode and calls the defined function.*/
 	untrusted{
 		void logger([in, string] const char * str);
 
-		void outFileInit([in, string] const char *filename, unsigned int nblocks, unsigned int blocksize);
+		void outFileInit([in, string] const char *filename, [in, size=pagesSize] const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize);
 
-		void outFileRead([out] char* block, [in, string] const char* filename, int blkno);
+		void outFileRead([out, size=pageSize] char* page, [in, string] const char* filename, int blkno, int pageSize);
 
-		void outFileWrite([in, string] char* block, [in, string] const char* filename, int oblkno);
+		void outFileWrite([in, size=pageSize] const char* block, [in, string] const char* filename, int oblkno, int pageSize);
 
 		void outFileClose([in, string] const char* filename);
 

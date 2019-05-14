@@ -96,7 +96,7 @@ _hash_readnext(IndexScanDesc scan,
 {
 	BlockNumber blkno;
 	VRelation	rel = scan->indexRelation;
-	HashScanOpaque so = (HashScanOpaque) scan->opaque;
+//	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	bool		block_found = false;
 
 	blkno = (*opaquep)->hasho_nextblkno;
@@ -330,8 +330,8 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page,
 		//Assert(offnum >= FirstOffsetNumber);
 		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, offnum));
 
-		if (so->hashso_sk_hash == _hash_get_indextuple_hashkey(itup) &&
-			_hash_checkqual(scan, itup))
+		if (so->hashso_sk_hash == _hash_get_indextuple_hashkey(itup)) /* &&
+			_hash_checkqual(scan, itup))*/
 		{
 			/* tuple is qualified, so remember it */
 			_hash_saveitem(so, itemIndex, offnum, itup);

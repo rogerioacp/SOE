@@ -19,7 +19,7 @@
 #include "soe_c.h"
 
 //Oriignal postgres include, does not need to be modified.
-#include <storage/itemptr.h>
+#include "storage/soe_itemptr.h"
 
 
 typedef struct IndexAttributeBitMapData

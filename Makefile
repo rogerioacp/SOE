@@ -36,6 +36,7 @@ SGX_MODE ?= HW
 SGX_ARCH ?= x64
 SGX_DEBUG ?= 1
 PGSQL_PATH ?= /usr/local/pgsql
+INSTALL_PATH ?= /usr/local
 
 
 #top_builddir = /home/rogerio/sf_pgs/postgresql/
@@ -83,36 +84,27 @@ else
 	Urts_Library_Name := sgx_urts
 endif
 
-App_Cpp_Files := isv_app/isv_app.cpp
-App_Include_Paths := -Iservice_provider -I$(SGX_SDK)/include
-
-App_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes $(App_Include_Paths)
+Untrusted_C_Flags := $(SGX_COMMON_CFLAGS) -fPIC -Wno-attributes -I$(SGX_SDK)/include -Isrc/include/backend/enclave/
 
 # Three configuration modes - Debug, prerelease, release
 #   Debug - Macro DEBUG enabled.
 #   Prerelease - Macro NDEBUG and EDEBUG enabled.
 #   Release - Macro NDEBUG enabled.
 ifeq ($(SGX_DEBUG), 1)
-        App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
+        Untrusted_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 else ifeq ($(SGX_PRERELEASE), 1)
-        App_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
+        Untrusted_C_Flags += -DNDEBUG -DEDEBUG -UDEBUG
 else
-        App_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
+        Untrusted_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-App_Cpp_Flags := $(App_C_Flags) -std=c++11
-App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -L. -lsgx_ukey_exchange -lpthread -lservice_provider -Wl,-rpath=$(CURDIR)/sample_libcrypto -Wl,-rpath=$(CURDIR)
+#App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -L. -lsgx_ukey_exchange -lpthread -lservice_provider -Wl,-rpath=$(CURDIR)/sample_libcrypto -Wl,-rpath=$(CURDIR)
 
-ifneq ($(SGX_MODE), HW)
-	App_Link_Flags += -lsgx_uae_service_sim
-else
-	App_Link_Flags += -lsgx_uae_service
-endif
-
-App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
-
-App_Name := app
-
+#ifneq ($(SGX_MODE), HW)
+#	App_Link_Flags += -lsgx_uae_service_sim
+#else
+#	App_Link_Flags += -lsgx_uae_service
+#endif
 
 
 ######## Enclave Settings ########
@@ -126,7 +118,6 @@ else
 endif
 Crypto_Library_Name := sgx_tcrypto
 
-Enclave_Cpp_Files := isv_enclave/isv_enclave.cpp
 Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
 
 Soe_Include_Path :=  -I/usr/local/include -Isrc/include/ -Isrc/include/backend -Isrc/include/backend/enclave
@@ -142,9 +133,15 @@ ifeq ($(CC_BELOW_4_9), 1)
 else
 	Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections -fstack-protector-strong
 endif
-#mEnclave_C_Flags += -Wall -std=c99
-Enclave_C_Flags +=  $(Enclave_Include_Paths)
+
+ifneq ($(UNSAFE), 1)
+	Enclave_C_Flags +=  $(Enclave_Include_Paths)
+else
+	Enclave_C_Flags = $(SGX_COMMON_CFLAGS) -Wall -fPIC -D UNSAFE
+endif
+
 Enclave_C_Flags += $(Soe_Include_Path)
+
 
 # To generate a proper enclave, it is recommended to follow below guideline to link the trusted libraries:
 #    1. Link sgx_trts with the `--whole-archive' and `--no-whole-archive' options,
@@ -164,6 +161,8 @@ Enclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles 
 
 Enclave_Lib := libsoe.so
 Signed_Enclave_Lib := libsoe.signed.so
+Untrusted_Lib = libsoeu.so
+Unsafe_Lib = libsoeus.so
 Enclave_Config_File := src/backend/enclave/Enclave.config.xml
 
 ifeq ($(SGX_MODE), HW)
@@ -184,12 +183,16 @@ else
 endif
 endif
 
-Pgsql_C_Flags=-I$(PGSQL_PATH)/include/server -I$(PGSQL_PATH)/include/internal
+
+Pgsql_C_Flags=-I$(PGSQL_PATH)/include/ #-I$(PGSQL_PATH)/include/internal
 
 .PHONY: all run
 
 
-all: .config_$(Build_Mode)_$(SGX_ARCH) $(Signed_Enclave_Lib)
+ifeq ($(UNSAFE), 1)
+all: $(Unsafe_Lib)
+else
+all: .config_$(Build_Mode)_$(SGX_ARCH) $(Signed_Enclave_Lib) $(Untrusted_Lib)
 ifeq ($(Build_Mode), HW_DEBUG)
 	@echo "The project has been built in debug hardware mode."
 else ifeq ($(Build_Mode), SIM_DEBUG)
@@ -201,6 +204,8 @@ else ifeq ($(Build_Mode), SIM_PRERELEASE)
 else
 	@echo "The project has been built in release simulation mode."
 endif
+endif
+
 
 run: all
 ifneq ($(Build_Mode), HW_RELEASE)
@@ -215,21 +220,15 @@ endif
 
 ######## App Objects ########
 
-isv_app/isv_enclave_u.c: $(SGX_EDGER8R) isv_enclave/isv_enclave.edl
-	@cd isv_app && $(SGX_EDGER8R) --untrusted ../isv_enclave/isv_enclave.edl --search-path ../isv_enclave --search-path $(SGX_SDK)/include
+enclave_u.c: src/backend/enclave/Enclave.edl
+	$(SGX_EDGER8R) --untrusted Enclave.edl --search-path src/backend/enclave --search-path $(SGX_SDK)/include
+	mv Enclave_u.c src/backend/enclave 
+	mv Enclave_u.h src/include/backend/enclave
 	@echo "GEN  =>  $@"
 
-isv_app/isv_enclave_u.o: isv_app/isv_enclave_u.c
-	@$(CC) $(App_C_Flags) -c $< -o $@
-	@echo "CC   <=  $<"
+enclave_u.o: enclave_u.c
+	$(CC) $(Untrusted_C_Flags) -c src/backend/enclave/$<  -o $@
 
-isv_app/%.o: isv_app/%.cpp
-	@$(CXX) $(App_Cpp_Flags) -c $< -o $@
-	@echo "CXX  <=  $<"
-
-$(App_Name): isv_app/isv_enclave_u.o $(App_Cpp_Objects)
-	@$(CXX) $^ -o $@ $(App_Link_Flags)
-	@echo "LINK =>  $@"
 
 
 ######## Enclave Objects ########
@@ -283,20 +282,55 @@ soe_hashutil.o: src/backend/access/hash/soe_hashutil.c
 soe_hashsearch.o: src/backend/access/hash/soe_hashsearch.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_ofile.o: src/backend/storage/buffer/soe_ofile.c
+soe_heap_ofile.o: src/backend/storage/buffer/soe_heap_ofile.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+
+soe_hash_ofile.o: src/backend/storage/buffer/soe_hash_ofile.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+
+soe_heapam.o: src/backend/access/heap/soe_heapam.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 soe.o: src/backend/soe.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 
-$(Enclave_Lib): enclave_t.o logger.o soe_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_hash.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe.o 
-	$(CC) $(SGX_COMMON_CFLAGS)  $^ -o $@ -static $(SOE_LADD) -L/usr/local/lib/  $(Enclave_Link_Flags)
+$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.om soe.o 
+	$(CC) $(SGX_COMMON_CFLAGS)  $^ -o $@ -static $(SOE_LADD)  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Lib): $(Enclave_Lib)
 	$(SGX_ENCLAVE_SIGNER) sign -key src/backend/enclave/private.pem -enclave $(Enclave_Lib) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
+
+$(Untrusted_Lib): enclave_u.o
+	$(CC) -shared  $^ -o $@ 
+
+$(Unsafe_Lib):  logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe.o 
+	$(CC) -shared -dynamic -undefined dynamic_lookup $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD)
+
+.PHONY: install
+
+ifneq ($(UNSAFE), 1)
+install:
+	mkdir -p $(INSTALL_PATH)/lib/soe
+	mkdir -p $(INSTALL_PATH)/include/soe
+	cp $(Signed_Enclave_Lib) $(INSTALL_PATH)/lib/soe
+	cp $(Untrusted_Lib) $(INSTALL_PATH)/lib/soe
+	cp src/include/backend/enclave/* $(INSTALL_PATH)/include/soe
+	chmod 755 $(INSTALL_PATH)/lib/soe/$(Signed_Enclave_Lib)
+	chmod 755 $(INSTALL_PATH)/lib/soe/$(Untrusted_Lib)
+	chmod 644 $(INSTALL_PATH)/include/soe/*
+else
+install:
+	mkdir -p $(INSTALL_PATH)/lib/soe
+	mkdir -p $(INSTALL_PATH)/include/soe
+	cp $(Unsafe_Lib) $(INSTALL_PATH)/lib/soe
+	cp src/include/backend/enclave/* $(INSTALL_PATH)/include/soe
+	chmod 755 $(INSTALL_PATH)/lib/soe/$(Unsafe_Lib)
+	chmod 644 $(INSTALL_PATH)/include/soe/*		
+endif
+
 
 .PHONY: clean
 

@@ -19,14 +19,7 @@
 #define CALC_NEW_BUCKET(old_bucket, lowmask) \
 			old_bucket | (lowmask + 1)
 
-/*
- * _hash_checkqual -- does the index tuple satisfy the scan conditions?
- */
-/*bool
-_hash_checkqual(IndexScanDesc scan, IndexTuple itup)
-{
-	return true;
-}
+
 
 /*
  * _hash_datum2hashkey -- given a Datum, call the index's hash function
@@ -63,8 +56,8 @@ _hash_datum2hashkey(VRelation rel, Datum key)
 uint32
 _hash_datum2hashkey_type(VRelation rel, Datum key, Oid keytype)
 {
-	RegProcedure hash_proc;
-	Oid			collation;
+//	RegProcedure hash_proc;
+//	Oid			collation;
 	/*TODO: Function will be hardcoded to accepted data types.*/
 	/* XXX assumes index has only one attribute */
 	/*hash_proc = get_opfamily_proc(rel->rd_opfamily[0],

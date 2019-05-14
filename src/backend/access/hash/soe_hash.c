@@ -104,11 +104,13 @@ hashbeginscan(VRelation rel, int nkeys, int norderbys)
 	IndexScanDesc scan;
 	HashScanOpaque so;
 
+	scan = NULL;
+
 	/* no order by operators allowed */
 	//Assert(norderbys == 0);
 
 	/*TODO: RelationGetIndexScan has be placed inside the enclave*/
-	scan = RelationGetIndexScan(rel, nkeys, norderbys);
+	//scan = RelationGetIndexScan(rel, nkeys, norderbys);
 
 	/*TODO: replace palloc calls for mallocs*/
 	so = (HashScanOpaque) malloc(sizeof(HashScanOpaqueData));
@@ -192,7 +194,7 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		OffsetNumber deletable[MaxOffsetNumber];
 		int			ndeletable = 0;
 		bool		retain_pin = false;
-		bool		clear_dead_marking = false;
+		// bool		clear_dead_marking = false;
 
 		page = BufferGetPage(rel, buf);
 		opaque = (HashPageOpaque) PageGetSpecialPointer(page);

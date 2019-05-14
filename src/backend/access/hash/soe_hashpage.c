@@ -40,7 +40,6 @@ static void _hash_splitbucket(VRelation rel, Buffer metabuf,
 				  Buffer nbuf,
 				  uint32 maxbucket,
 				  uint32 highmask, uint32 lowmask);
-static void log_split_page(VRelation rel, Buffer buf);
 
 
 /*
@@ -62,9 +61,10 @@ static void log_split_page(VRelation rel, Buffer buf);
 Buffer
 _hash_getbuf_with_condlock_cleanup(VRelation rel, BlockNumber blkno, int flags)
 {
-	Buffer		buf;
+	Buffer		buf = 0;
 
 	if (blkno == P_NEW)
+		selog(ERROR, "hash AM does not use P_NEW");
 		//log error
 		//elog(ERROR, "hash AM does not use P_NEW");
 
@@ -99,9 +99,10 @@ _hash_getbuf_with_condlock_cleanup(VRelation rel, BlockNumber blkno, int flags)
 Buffer
 _hash_getbuf(VRelation rel, BlockNumber blkno, int access, int flags)
 {
-	Buffer		buf;
+	Buffer		buf = 0;
 
 	if (blkno == P_NEW)
+		selog(ERROR, "hash AM does not use P_NEW");
 		//log error
 		//elog(ERROR, "hash AM does not use P_NEW");
 
@@ -132,9 +133,10 @@ _hash_getbuf(VRelation rel, BlockNumber blkno, int access, int flags)
 Buffer
 _hash_getinitbuf(VRelation rel, BlockNumber blkno)
 {
-	Buffer		buf;
+	Buffer		buf = 0;
 
 	if (blkno == P_NEW)
+		selog(ERROR, "hash AM does not use P_NEW");
 		//elog(ERROR, "hash AM does not use P_NEW");
 
 	//buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_ZERO_AND_LOCK,
@@ -195,29 +197,26 @@ _hash_initbuf(VRelation rel, Buffer buf, uint32 max_bucket, uint32 num_bucket, u
 Buffer
 _hash_getnewbuf(VRelation rel, BlockNumber blkno)
 {
-	BlockNumber nblocks = getNumberOfBlocks(rel);
+	BlockNumber nblocks = NumberOfBlocks(rel);
 	Buffer		buf;
 
-	if (blkno == P_NEW)
+	//if (blkno == P_NEW)
 		// log error
 		//elog(ERROR, "hash AM does not use P_NEW");
-	if (blkno > nblocks)
+	//if (blkno > nblocks)
 		// log block number
 		//elog(ERROR, "access to noncontiguous page in hash index \"%s\"",
 		//	 RelationGetRelationName(rel));
 
 	/* smgr insists we use P_NEW to extend the relation */
-	if (blkno == nblocks)
-	{
+	if (blkno == nblocks){
 		//buf = ReadBufferExtended(rel, forkNum, P_NEW, RBM_NORMAL, NULL);
 		buf = ReadBuffer(rel, nblocks);
 		//if (BufferGetBlockNumber(buf) != blkno)
 			//
 			//elog(ERROR, "unexpected hash relation size: %u, should be %u",
 			//	 BufferGetBlockNumber(buf), blkno);
-	}
-	else
-	{
+	}else{
 		//buf = ReadBufferExtended(rel, forkNum, blkno, RBM_ZERO_AND_LOCK,
 		//						 NULL);
 		buf = ReadBuffer(rel, nblocks);
@@ -358,7 +357,6 @@ _hash_expandtable(VRelation rel, Buffer metabuf)
 	bool		metap_update_masks = false;
 	bool		metap_update_splitpoint = false;
 
-restart_expand:
 
 	_hash_checkpage(rel, metabuf, LH_META_PAGE);
 	metap = HashPageGetMeta(BufferGetPage(rel, metabuf));
@@ -614,12 +612,14 @@ _hash_alloc_buckets(VRelation rel, BlockNumber firstblock, uint32 nblocks)
 	ovflopaque->hasho_flag = LH_UNUSED_PAGE;
 	ovflopaque->hasho_page_id = HASHO_PAGE_ID;
 
-	/*TODO:  This has to be handled somehow with an ocall or by the oram.
-	* Need to understand the problem.
+	/*
+		Storage extension is already made by the ocall when initializing the
+		oram files.
+
+	 	RelationOpenSmgr(rel);
+		PageSetChecksumInplace(page, lastblock);
+	  	smgrextend(rel->rd_smgr, MAIN_FORKNUM, lastblock, zerobuf.data, false);
 	*/
-	//RelationOpenSmgr(rel);
-	//PageSetChecksumInplace(page, lastblock);
-	//smgrextend(rel->rd_smgr, MAIN_FORKNUM, lastblock, zerobuf.data, false);
 
 	return true;
 }
@@ -714,7 +714,7 @@ _hash_splitbucket(VRelation rel,
 			IndexTuple	itup;
 			Size		itemsz;
 			Bucket		bucket;
-			bool		found = false;
+			//bool		found = false;
 
 			/* skip dead tuples */
 			if (ItemIdIsDead(PageGetItemId(opage, ooffnum)))

@@ -21,11 +21,9 @@
 
 #include "access/soe_itup.h"
 #include "access/soe_relscan.h"
+#include "storage/soe_block.h"
 #include "storage/soe_bufmgr.h"
-
-
-#include <storage/item.h>
-#include <storage/block.h>
+#include "storage/soe_item.h"
 
 
 
@@ -61,6 +59,7 @@ typedef uint32 Bucket;
  */
 typedef struct HashPageOpaqueData
 {
+	int o_blkno; /* real block number or Dummy Block*/
 	BlockNumber hasho_prevblkno;	/* see above */
 	BlockNumber hasho_nextblkno;	/* see above */
 	Bucket		hasho_bucket;	/* bucket number this pg belongs to */

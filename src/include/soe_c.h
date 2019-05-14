@@ -95,7 +95,6 @@ typedef unsigned long long int uint64;
 
 
 
-
 /*
  * Maximum number of columns in an index.  There is little point in making
  * this anything but a multiple of 32, because the main cost is associated

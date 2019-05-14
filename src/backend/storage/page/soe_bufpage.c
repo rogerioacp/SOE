@@ -4,9 +4,78 @@
 #include "utils/soe_qsort.h"
 
 #include <stdlib.h>
-#include <storage/off.h>
-#include <storage/item.h>
 
+
+
+
+
+
+/*
+ * PageGetHeapFreeSpace
+ *		Returns the size of the free (allocatable) space on a page,
+ *		reduced by the space needed for a new line pointer.
+ *
+ * The difference between this and PageGetFreeSpace is that this will return
+ * zero if there are already MaxHeapTuplesPerPage line pointers in the page
+ * and none are free.  We use this to enforce that no more than
+ * MaxHeapTuplesPerPage line pointers are created on a heap page.  (Although
+ * no more tuples than that could fit anyway, in the presence of redirected
+ * or dead line pointers it'd be possible to have too many line pointers.
+ * To avoid breaking code that assumes MaxHeapTuplesPerPage is a hard limit
+ * on the number of line pointers, we make this extra check.)
+ */
+Size
+PageGetHeapFreeSpace(Page page)
+{
+	Size		space;
+
+	space = PageGetFreeSpace(page);
+	if (space > 0)
+	{
+		OffsetNumber offnum,
+					nline;
+
+		/*
+		 * Are there already MaxHeapTuplesPerPage line pointers in the page?
+		 */
+		nline = PageGetMaxOffsetNumber(page);
+		if (nline >= MaxHeapTuplesPerPage)
+		{
+			if (PageHasFreeLinePointers((PageHeader) page))
+			{
+				/*
+				 * Since this is just a hint, we must confirm that there is
+				 * indeed a free line pointer
+				 */
+				for (offnum = FirstOffsetNumber; offnum <= nline; offnum = OffsetNumberNext(offnum))
+				{
+					ItemId		lp = PageGetItemId(page, offnum);
+
+					if (!ItemIdIsUsed(lp))
+						break;
+				}
+
+				if (offnum > nline)
+				{
+					/*
+					 * The hint is wrong, but we can't clear it here since we
+					 * don't have the ability to mark the page dirty.
+					 */
+					space = 0;
+				}
+			}
+			else
+			{
+				/*
+				 * Although the hint might be wrong, PageAddItem will believe
+				 * it anyway, so we must believe it too.
+				 */
+				space = 0;
+			}
+		}
+	}
+	return space;
+}
 
 
 /*
@@ -84,14 +153,8 @@ void
 PageInit(Page page, Size pageSize, Size specialSize)
 {
 	PageHeader	p = (PageHeader) page;
-	//Add space for oblivpageopaquedata.
-	PageInit(page, BLCKSZ, 0);
-   // oopaque = (OblivPageOpaque) PageGetSpecialPointer(page);
-   // oopaque->o_blkno = currentBlock;
-	specialSize = MAXALIGN(specialSize);
 
-	//Assert(pageSize == BLCKSZ);
-	//Assert(pageSize > specialSize + SizeOfPageHeaderData);
+	specialSize = MAXALIGN(specialSize);
 
 	/* Make sure all fields of page are zero, as well as unused space */
 	MemSet(p, 0, pageSize);
@@ -101,7 +164,6 @@ PageInit(Page page, Size pageSize, Size specialSize)
 	p->pd_upper = pageSize - specialSize;
 	p->pd_special = pageSize - specialSize;
 	PageSetPageSizeAndVersion(page, pageSize, PG_PAGE_LAYOUT_VERSION);
-	/* p->pd_prune_xid = InvalidTransactionId;		done by above MemSet */
 }
 
 
@@ -218,7 +280,7 @@ PageAddItemExtended(Page page,
 	if (offsetNumber > limit)
 	{
 		//LOG error
-		//elog(WARNING, "specified item offset is too large");
+		selog(WARNING, "specified item offset is too large");
 		return InvalidOffsetNumber;
 	}
 
@@ -226,7 +288,7 @@ PageAddItemExtended(Page page,
 	if ((flags & PAI_IS_HEAP) != 0 && offsetNumber > MaxHeapTuplesPerPage)
 	{
 		//Log error
-		//elog(WARNING, "can't put more than MaxHeapTuplesPerPage items in a heap page");
+		selog(WARNING, "can't put more than MaxHeapTuplesPerPage items in a heap page");
 		return InvalidOffsetNumber;
 	}
 
@@ -353,8 +415,6 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 	int			nextitm;
 	OffsetNumber offnum;
 
-	//Assert(nitems <= MaxIndexTuplesPerPage);
-
 
 	/*
 	 * As with PageRepairFragmentation, paranoia seems justified.
@@ -363,12 +423,10 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 		pd_lower > pd_upper ||
 		pd_upper > pd_special ||
 		pd_special > BLCKSZ ||
-		pd_special != MAXALIGN(pd_special))
-		//Log erros
-		/*ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("corrupted page pointers: lower = %u, upper = %u, special = %u",
-						pd_lower, pd_upper, pd_special)));*/
+		pd_special != MAXALIGN(pd_special)){
+		selog(ERROR, "corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special);
+	}
+	
 
 	/*
 	 * Scan the item pointer array and build a list of just the ones we are
@@ -383,17 +441,14 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 	for (offnum = FirstOffsetNumber; offnum <= nline; offnum = OffsetNumberNext(offnum))
 	{
 		lp = PageGetItemId(page, offnum);
-		//Assert(ItemIdHasStorage(lp));
 		size = ItemIdGetLength(lp);
 		offset = ItemIdGetOffset(lp);
+		
 		if (offset < pd_upper ||
 			(offset + size) > pd_special ||
-			offset != MAXALIGN(offset))
-			//log error
-			/*ereport(ERROR,
-					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("corrupted item pointer: offset = %u, length = %u",
-							offset, (unsigned int) size)));*/
+			offset != MAXALIGN(offset)){
+			selog(ERROR, "corrupted item pointer: offset = %u, length = %u",offset, (unsigned int) size);
+		}
 
 		if (nextitm < nitems && offnum == itemnos[nextitm])
 		{

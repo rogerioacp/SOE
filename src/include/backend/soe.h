@@ -20,6 +20,8 @@
 
 #include "access/soe_htup.h"
 
+#include <oram/ofile.h>
+
 
 //#include "access/attnum.h"
 
@@ -51,7 +53,7 @@ typedef ScanKeyData *ScanKey;
 
 //extern declarations
 
-extern ORAMState initORAMState(const char *name, int nBlocks);
+extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)());
 
 
 #endif 	/* SOE_H */
