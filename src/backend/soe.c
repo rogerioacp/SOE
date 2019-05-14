@@ -3,7 +3,7 @@
 
 #ifdef UNSAFE
 #include "Enclave_dt.h"
-#elif
+#else
 #include "Enclave_t.h"
 #endif
 
@@ -22,6 +22,8 @@
 // Bucket capacity
 #define BKCAP 1
 
+/* Predefined max tuple size for sgx to copy the real tuple to*/
+#define MAX_TUPLE_SIZE 200
 
 ORAMState stateTable = NULL;
 ORAMState stateIndex = NULL;
@@ -32,7 +34,7 @@ VRelation oIndex;
 
 void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
     unsigned int tOid, unsigned int iOid){
-    selog(DEBUG1, "Initializing SOE");
+    //selog(DEBUG1, "Initializing SOE for relation %s and index  %s", tName, iName);
     
     stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate);
     stateIndex = initORAMState(iName, iNBlocks, &hash_ofileCreate);
@@ -65,33 +67,36 @@ char* getTuple(const char* key, int scanKeySize){
 void insertHeap(const char* heapTuple, unsigned int tupleSize){
     Item tuple = (Item) heapTuple;
     //selog(DEBUG1, "soe InsertHeapp tuplesize is %d", tupleSize);
-    heap_insert(oTable, tuple, (uint32) tupleSize);
+    if(tupleSize <= MAX_TUPLE_SIZE){
+        heap_insert(oTable, tuple, (uint32) tupleSize);
+    }else{
+        selog(WARNING, "Can't insert tuple of size %d", tupleSize);
+    }
 }
 
-void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen){
+void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
 
     HeapTuple heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
     ItemPointerData tid;
 
     ItemPointerSet(&tid, BufferGetBlockNumber((BlockNumber) blkno),  (OffsetNumber) offnum);
     heap_gettuple(oTable, &tid, heapTuple);
-    //selog(DEBUG1, "Input tuple len %d, output tuple len %d", tupleLen, heapTuple->t_len);
-    if(tupleLen != heapTuple->t_len){
-        selog(ERROR, "Tuple len does not match");
-    }else{
-        memcpy(tuple, (char*) heapTuple, tupleLen);
-    }
-   //free(tuple);
 
-    //TODO: this is not going to work. Have to passe the pointer size somehow.
-    //(char*) &heapTuple;
+    //selog(DEBUG1, "Input tuple len %d, output tuple len %d", tupleLen, heapTuple->t_len);
+
+    if(heapTuple->t_len > MAX_TUPLE_SIZE){
+        selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
+    }else{
+        memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
+        memcpy(tupleData, (char*) (heapTuple->t_data), tupleDataLen);
+    }
+    free(heapTuple);
 }
 
 /*
 * This function is never used. 
-* Should update the oram lib so its not necessary to create an empty function.
+* Should update the ORAM lib so its not necessary to create an empty function.
 */
-
 AMOFile *ofileCreate(void){
     return NULL;
 }

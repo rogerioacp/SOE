@@ -19,9 +19,9 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, un
 void insert(const char* heapTuple, unsigned int tupleSize);
 char* getTuple(const char* scanKey, int scanKeySize);
 void insertHeap(const char* heapTuple, unsigned int tupleSize);
-void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen);
+void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 
-sgx_status_t SGX_CDECL logger(const char* str);
+sgx_status_t SGX_CDECL oc_logger(const char* str);
 sgx_status_t SGX_CDECL outFileInit(const char* filename, const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize);
 sgx_status_t SGX_CDECL outFileRead(char* page, const char* filename, int blkno, int pageSize);
 sgx_status_t SGX_CDECL outFileWrite(const char* block, const char* filename, int oblkno, int pageSize);

@@ -55,11 +55,13 @@ typedef struct ms_getTupleTID_t {
 	unsigned int ms_offnum;
 	char* ms_tuple;
 	unsigned int ms_tupleLen;
+	char* ms_tupleData;
+	unsigned int ms_tupleDataLen;
 } ms_getTupleTID_t;
 
-typedef struct ms_logger_t {
+typedef struct ms_oc_logger_t {
 	const char* ms_str;
-} ms_logger_t;
+} ms_oc_logger_t;
 
 typedef struct ms_outFileInit_t {
 	const char* ms_filename;
@@ -297,8 +299,13 @@ static sgx_status_t SGX_CDECL sgx_getTupleTID(void* pms)
 	unsigned int _tmp_tupleLen = ms->ms_tupleLen;
 	size_t _len_tuple = _tmp_tupleLen;
 	char* _in_tuple = NULL;
+	char* _tmp_tupleData = ms->ms_tupleData;
+	unsigned int _tmp_tupleDataLen = ms->ms_tupleDataLen;
+	size_t _len_tupleData = _tmp_tupleDataLen;
+	char* _in_tupleData = NULL;
 
 	CHECK_UNIQUE_POINTER(_tmp_tuple, _len_tuple);
+	CHECK_UNIQUE_POINTER(_tmp_tupleData, _len_tupleData);
 
 	//
 	// fence after pointer checks
@@ -313,14 +320,28 @@ static sgx_status_t SGX_CDECL sgx_getTupleTID(void* pms)
 
 		memset((void*)_in_tuple, 0, _len_tuple);
 	}
+	if (_tmp_tupleData != NULL && _len_tupleData != 0) {
+		if ((_in_tupleData = (char*)malloc(_len_tupleData)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
 
-	getTupleTID(ms->ms_blkno, ms->ms_offnum, _in_tuple, _tmp_tupleLen);
+		memset((void*)_in_tupleData, 0, _len_tupleData);
+	}
+
+	getTupleTID(ms->ms_blkno, ms->ms_offnum, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
 err:
 	if (_in_tuple) {
 		if (memcpy_s(_tmp_tuple, _len_tuple, _in_tuple, _len_tuple)) {
 			status = SGX_ERROR_UNEXPECTED;
 		}
 		free(_in_tuple);
+	}
+	if (_in_tupleData) {
+		if (memcpy_s(_tmp_tupleData, _len_tupleData, _in_tupleData, _len_tupleData)) {
+			status = SGX_ERROR_UNEXPECTED;
+		}
+		free(_in_tupleData);
 	}
 
 	return status;
@@ -355,13 +376,13 @@ SGX_EXTERNC const struct {
 };
 
 
-sgx_status_t SGX_CDECL logger(const char* str)
+sgx_status_t SGX_CDECL oc_logger(const char* str)
 {
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_str = str ? strlen(str) + 1 : 0;
 
-	ms_logger_t* ms = NULL;
-	size_t ocalloc_size = sizeof(ms_logger_t);
+	ms_oc_logger_t* ms = NULL;
+	size_t ocalloc_size = sizeof(ms_oc_logger_t);
 	void *__tmp = NULL;
 
 
@@ -374,9 +395,9 @@ sgx_status_t SGX_CDECL logger(const char* str)
 		sgx_ocfree();
 		return SGX_ERROR_UNEXPECTED;
 	}
-	ms = (ms_logger_t*)__tmp;
-	__tmp = (void *)((size_t)__tmp + sizeof(ms_logger_t));
-	ocalloc_size -= sizeof(ms_logger_t);
+	ms = (ms_oc_logger_t*)__tmp;
+	__tmp = (void *)((size_t)__tmp + sizeof(ms_oc_logger_t));
+	ocalloc_size -= sizeof(ms_oc_logger_t);
 
 	if (str != NULL) {
 		ms->ms_str = (const char*)__tmp;

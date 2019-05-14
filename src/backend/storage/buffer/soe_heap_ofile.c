@@ -20,7 +20,7 @@
 
 #ifdef UNSAFE
 #include "Enclave_dt.h"
-#elif
+#else
 #include "sgx_trts.h"
 #include "Enclave_t.h"
 #endif
@@ -121,7 +121,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 	}
 	oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block);
 	//selog(DEBUG1, "heap_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, oopaque->o_blkno);
-
+	selog(DEBUG1, "heap_fileWrite for file %s", filename);
 	status = outFileWrite(block->block, filename, ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS) {

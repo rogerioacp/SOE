@@ -11,12 +11,12 @@ enclave{
 
 			public void insertHeap([in, size=tupleSize] const char* heapTuple, unsigned int tupleSize);
 
-			public void getTupleTID(unsigned int blkno, unsigned int offnum, [out, size=tupleLen] char* tuple, unsigned int tupleLen);			
+			public void getTupleTID(unsigned int blkno, unsigned int offnum, [out, size=tupleLen] char* tuple, unsigned int tupleLen, [out, size=tupleDataLen] char* tupleData, unsigned int tupleDataLen);			
 	};
 
    /* Ocalls are defined in an external file with code that is executed on an untrusted environment. When this functions are called from within the enclave, the processor exits the enclave mode and calls the defined function.*/
 	untrusted{
-		void logger([in, string] const char * str);
+		void oc_logger([in, string] const char * str);
 
 		void outFileInit([in, string] const char *filename, [in, size=pagesSize] const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize);
 

@@ -3,7 +3,7 @@
 
 #ifdef UNSAFE
 #include "Enclave_dt.h"
-#elif
+#else
 #include "Enclave_t.h"
 #endif
 

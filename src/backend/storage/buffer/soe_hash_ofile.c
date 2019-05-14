@@ -19,7 +19,7 @@
 
 #ifdef UNSAFE
 #include "Enclave_dt.h"
-#elif
+#else
 #include "sgx_trts.h"
 #include "Enclave_t.h"
 #endif

@@ -16,9 +16,9 @@
 extern "C" {
 #endif
 
-#ifndef LOGGER_DEFINED__
-#define LOGGER_DEFINED__
-void SGX_UBRIDGE(SGX_NOCONVENTION, logger, (const char* str));
+#ifndef OC_LOGGER_DEFINED__
+#define OC_LOGGER_DEFINED__
+void SGX_UBRIDGE(SGX_NOCONVENTION, oc_logger, (const char* str));
 #endif
 #ifndef OUTFILEINIT_DEFINED__
 #define OUTFILEINIT_DEFINED__
@@ -41,7 +41,7 @@ sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName,
 sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize);
 sgx_status_t getTuple(sgx_enclave_id_t eid, char** retval, const char* scanKey, int scanKeySize);
 sgx_status_t insertHeap(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize);
-sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen);
+sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 
 #ifdef __cplusplus
 }

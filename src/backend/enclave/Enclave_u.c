@@ -33,11 +33,13 @@ typedef struct ms_getTupleTID_t {
 	unsigned int ms_offnum;
 	char* ms_tuple;
 	unsigned int ms_tupleLen;
+	char* ms_tupleData;
+	unsigned int ms_tupleDataLen;
 } ms_getTupleTID_t;
 
-typedef struct ms_logger_t {
+typedef struct ms_oc_logger_t {
 	const char* ms_str;
-} ms_logger_t;
+} ms_oc_logger_t;
 
 typedef struct ms_outFileInit_t {
 	const char* ms_filename;
@@ -65,10 +67,10 @@ typedef struct ms_outFileClose_t {
 	const char* ms_filename;
 } ms_outFileClose_t;
 
-static sgx_status_t SGX_CDECL Enclave_logger(void* pms)
+static sgx_status_t SGX_CDECL Enclave_oc_logger(void* pms)
 {
-	ms_logger_t* ms = SGX_CAST(ms_logger_t*, pms);
-	logger(ms->ms_str);
+	ms_oc_logger_t* ms = SGX_CAST(ms_oc_logger_t*, pms);
+	oc_logger(ms->ms_str);
 
 	return SGX_SUCCESS;
 }
@@ -111,7 +113,7 @@ static const struct {
 } ocall_table_Enclave = {
 	5,
 	{
-		(void*)Enclave_logger,
+		(void*)Enclave_oc_logger,
 		(void*)Enclave_outFileInit,
 		(void*)Enclave_outFileRead,
 		(void*)Enclave_outFileWrite,
@@ -165,7 +167,7 @@ sgx_status_t insertHeap(sgx_enclave_id_t eid, const char* heapTuple, unsigned in
 	return status;
 }
 
-sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen)
+sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen)
 {
 	sgx_status_t status;
 	ms_getTupleTID_t ms;
@@ -173,6 +175,8 @@ sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int 
 	ms.ms_offnum = offnum;
 	ms.ms_tuple = tuple;
 	ms.ms_tupleLen = tupleLen;
+	ms.ms_tupleData = tupleData;
+	ms.ms_tupleDataLen = tupleDataLen;
 	status = sgx_ecall(eid, 4, &ocall_table_Enclave, &ms);
 	return status;
 }
