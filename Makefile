@@ -227,7 +227,7 @@ enclave_u.c: src/backend/enclave/Enclave.edl
 	@echo "GEN  =>  $@"
 
 enclave_u.o: enclave_u.c
-	$(CC) $(Untrusted_C_Flags) -c src/backend/enclave/$<  -o $@
+	$(CC) $(Untrusted_C_Flags) -c src/backend/enclave/Enclave_u.c  -o $@
 
 
 
@@ -247,10 +247,13 @@ enclave_t.c: src/backend/enclave/Enclave.edl
 
 
 enclave_t.o: enclave_t.c
-	$(CC) $(Enclave_C_Flags) -c src/backend/enclave/$<  -o $@
+	$(CC) $(Enclave_C_Flags) -c src/backend/enclave/Enclave_t.c  -o $@
 	@echo "CC   <=  $<"
 
 ######## SOE Objects ##############
+
+soe_orandom.o: src/random/soe_orandom.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 logger.o:  src/logger/logger.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
@@ -295,7 +298,7 @@ soe.o: src/backend/soe.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 
-$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe.o 
+$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe.o 
 	$(CC) $(SGX_COMMON_CFLAGS)  $^ -o $@ -static $(SOE_LADD)  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -306,7 +309,7 @@ $(Signed_Enclave_Lib): $(Enclave_Lib)
 $(Untrusted_Lib): enclave_u.o
 	$(CC) -shared  $^ -o $@ 
 
-$(Unsafe_Lib):  logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe.o 
+$(Unsafe_Lib):  logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe.o 
 	$(CC) -shared -dynamic -undefined dynamic_lookup $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD)
 
 .PHONY: install

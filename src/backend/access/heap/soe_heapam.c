@@ -12,8 +12,15 @@ heap_insert(VRelation rel, Item tup, Size len){
 	Size pageFreeSpace,
 		 saveFreeSpace;
 	Size alignedSize;
-	buffer = ReadBuffer(rel, FreeSpaceBlock(rel));
+	BlockNumber freeSpaceBlock;
 
+	freeSpaceBlock = FreeSpaceBlock(rel);
+
+	selog(DEBUG1, "Free space block returned is %d", freeSpaceBlock);
+
+	buffer = ReadBuffer(rel, freeSpaceBlock);
+
+	selog(DEBUG1, "buffer id is %d", buffer);
 	if(buffer == DUMMY_BLOCK){
 		selog(ERROR, "An invalid block number was requested");
 	}
@@ -36,6 +43,8 @@ heap_insert(VRelation rel, Item tup, Size len){
 	* Copied from RelationGetBufferForTuple in hio.c
 	*/
 	pageFreeSpace = PageGetHeapFreeSpace(page);
+	selog(DEBUG1, "current page free space is %d", pageFreeSpace);
+
 	if (alignedSize + saveFreeSpace > pageFreeSpace)
 	{
 		selog(WARNING, "Page has no free space");
@@ -63,6 +72,7 @@ heap_insert(VRelation rel, Item tup, Size len){
 
 	MarkBufferDirty(rel, buffer);
 	ReleaseBuffer(rel, buffer);
+	UpdateFSM(rel);
 
 }
 
@@ -103,7 +113,7 @@ void heap_gettuple(VRelation rel, ItemPointer tid, HeapTuple tuple){
 	tuple->t_len = ItemIdGetLength(lp);
 	tuple->t_tableOid = RelationGetRelid(rel);
 	ItemPointerSetOffsetNumber(&tuple->t_self, offnum);
-
+	//TODO: Is this release freening the buffer correctly?
 	ReleaseBuffer(rel, buffer);
 }
 

@@ -7,11 +7,9 @@ enclave{
 
 			public void insert([in, size=tupleSize] const char*  heapTuple, unsigned int tupleSize);
 
-			public char* getTuple([in, size=scanKeySize] const char* scanKey, int scanKeySize);
+			public int getTuple([in, size=scanKeySize] const char* scanKey, int scanKeySize, [out, size=tupleLen] char* tuple, unsigned int tupleLen, [out, size=tupleDataLen] char* tupleData, unsigned int tupleDataLen );
 
-			public void insertHeap([in, size=tupleSize] const char* heapTuple, unsigned int tupleSize);
-
-			public void getTupleTID(unsigned int blkno, unsigned int offnum, [out, size=tupleLen] char* tuple, unsigned int tupleLen, [out, size=tupleDataLen] char* tupleData, unsigned int tupleDataLen);			
+			public void insertHeap([in, size=tupleSize] const char* heapTuple, unsigned int tupleSize);		
 	};
 
    /* Ocalls are defined in an external file with code that is executed on an untrusted environment. When this functions are called from within the enclave, the processor exits the enclave mode and calls the defined function.*/

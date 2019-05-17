@@ -30,6 +30,8 @@ ORAMState stateIndex = NULL;
 VRelation oTable;
 VRelation oIndex;
 
+BlockNumber blkno;
+OffsetNumber off;
 
 
 void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
@@ -40,6 +42,9 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
     stateIndex = initORAMState(iName, iNBlocks, &hash_ofileCreate);
     oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
     oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &hash_pageInit);
+
+    blkno=0;
+    off=1;
 }
 
  ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)()){
@@ -58,9 +63,49 @@ void insert(const char* heapTuple, unsigned int size){
 
 }
 
-char* getTuple(const char* key, int scanKeySize){
-   // ScanKey scankey = (ScanKey) key;
-    return NULL;
+int getTuple(const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
+
+    HeapTuple heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+    ItemPointerData tid;
+    int hasNext = 0;
+
+
+    if(strcmp(key, "NEXT")==0){
+
+         /**
+         * If there are no more blocks or the current block has no more tuples.
+         * The prototype assumes a sequential insertion.
+         */ 
+        if( blkno == oTable->totalBlocks || off - 1 >= oTable->fsm[blkno] ){
+            return 1;
+        }
+
+        ItemPointerSet(&tid, blkno, off);
+        heap_gettuple(oTable, &tid, heapTuple); 
+
+
+        //If the current block still has tuples
+        if(off + 1 <= oTable->fsm[blkno]){
+            // continue to search on current block   
+            off +=1;
+        }else{
+            //Move to the next block
+            blkno += 1;
+            off = 1;
+        }
+       
+
+    }
+
+     if(heapTuple->t_len > MAX_TUPLE_SIZE){
+        selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
+    }else{
+        memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
+        memcpy(tupleData, (char*) (heapTuple->t_data), tupleDataLen);
+    }
+    /*TODO: check if heapTuple->t_data should be freed*/
+    free(heapTuple);
+    return hasNext;
 }
 
 

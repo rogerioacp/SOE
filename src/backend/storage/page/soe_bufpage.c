@@ -5,11 +5,6 @@
 
 #include <stdlib.h>
 
-
-
-
-
-
 /*
  * PageGetHeapFreeSpace
  *		Returns the size of the free (allocatable) space on a page,
@@ -149,6 +144,7 @@ PageGetFreeSpaceForMultipleTuples(Page page, int ntups)
 
 	return (Size) space;
 }
+
 void
 PageInit(Page page, Size pageSize, Size specialSize)
 {

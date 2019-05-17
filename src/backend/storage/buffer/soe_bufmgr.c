@@ -196,6 +196,8 @@ BufferGetBlockNumber(Buffer buffer)
 
 BlockNumber FreeSpaceBlock(VRelation rel){
 
+    selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
+
     if(rel->fsm[rel->currentBlock] == 0){
         return P_NEW;
     }else{
