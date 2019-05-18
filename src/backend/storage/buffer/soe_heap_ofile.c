@@ -37,8 +37,8 @@
 
 void heap_pageInit(Page page, BlockNumber blkno, Size blocksize){
     OblivPageOpaque oopaque;
-	PageInit(page,  blocksize, sizeof(OblivPageOpaqueData));
-	oopaque = (OblivPageOpaque) PageGetSpecialPointer(page);
+	PageInit_s(page,  blocksize, sizeof(OblivPageOpaqueData));
+	oopaque = (OblivPageOpaque) PageGetSpecialPointer_s(page);
 	oopaque->o_blkno = blkno;
 }
 
@@ -81,7 +81,7 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	
 	//selog(DEBUG1, "heap_fileRead %d", ob_blkno);
 	sgx_status_t status;
-	OblivPageOpaque oopaque;
+	OblivPageOpaque oopaque = NULL;
 
 	status = SGX_SUCCESS;
  	block->block = (void*) malloc(BLCKSZ);
@@ -92,7 +92,7 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
 	}
 
-	oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block);
+	oopaque = (OblivPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
 
@@ -104,7 +104,7 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 void 
 heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	sgx_status_t status = SGX_SUCCESS;
-	OblivPageOpaque oopaque;
+	//OblivPageOpaque oopaque = NULL;
 
 
 	if(block->blkno == DUMMY_BLOCK){
@@ -119,7 +119,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 		//selog(DEBUG1, "Going to write DUMMY_BLOCK");
 		heap_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
-	oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block);
+	//oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block);
 	//selog(DEBUG1, "heap_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, oopaque->o_blkno);
 	//selog(DEBUG1, "heap_fileWrite for file %s", filename);
 	status = outFileWrite(block->block, filename, ob_blkno, BLCKSZ);

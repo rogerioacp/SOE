@@ -39,6 +39,7 @@ PGSQL_PATH ?= /usr/local/pgsql
 INSTALL_PATH ?= /usr/local
 
 
+
 #top_builddir = /home/rogerio/sf_pgs/postgresql/
 #include $(top_builddir)/src/Makefile.global
 #include $(top_srcdir)/contrib/contrib-global.mk
@@ -60,6 +61,9 @@ else
 	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 endif
+
+
+
 
 ifeq ($(SGX_DEBUG), 1)
 ifeq ($(SGX_PRERELEASE), 1)
@@ -98,14 +102,15 @@ else
         Untrusted_C_Flags += -DNDEBUG -UEDEBUG -UDEBUG
 endif
 
-#App_Link_Flags := $(SGX_COMMON_CFLAGS) -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -L. -lsgx_ukey_exchange -lpthread -lservice_provider -Wl,-rpath=$(CURDIR)/sample_libcrypto -Wl,-rpath=$(CURDIR)
 
-#ifneq ($(SGX_MODE), HW)
-#	App_Link_Flags += -lsgx_uae_service_sim
-#else
-#	App_Link_Flags += -lsgx_uae_service
-#endif
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	Utrust_Flags += -shared
+endif
+ifeq ($(UNAME_S),Darwin)
+	Utrust_Flags = -shared -dynamic -undefined dynamic_lookup 
+endif
 
 ######## Enclave Settings ########
 
@@ -137,7 +142,11 @@ endif
 ifneq ($(UNSAFE), 1)
 	Enclave_C_Flags +=  $(Enclave_Include_Paths)
 else
-	Enclave_C_Flags = $(SGX_COMMON_CFLAGS) -Wall -fPIC -D UNSAFE
+	Enclave_C_Flags = $(SGX_COMMON_CFLAGS) -Wall -fPIC -DUNSAFE
+endif
+
+ifeq ($(USE_VALGRIND), 1)
+	Enclave_C_Flags += -DUSE_VALGRIND
 endif
 
 Enclave_C_Flags += $(Soe_Include_Path)
@@ -218,7 +227,7 @@ endif
 	@touch .config_$(Build_Mode)_$(SGX_ARCH)
 
 
-######## App Objects ########
+######## Untrusted side Objects ########
 
 enclave_u.c: src/backend/enclave/Enclave.edl
 	$(SGX_EDGER8R) --untrusted Enclave.edl --search-path src/backend/enclave --search-path $(SGX_SDK)/include
@@ -238,12 +247,6 @@ enclave_t.c: src/backend/enclave/Enclave.edl
 	mv Enclave_t.c src/backend/enclave 
 	mv Enclave_t.h src/include/backend/enclave
 	@echo "GEN  =>  $@"
-
-#enclave_u.c: src/backend/enclave/Enclave.edl
-#	$(SGX_EDGER8R) --untrusted Enclave.edl --search-path src/backend/enclave --search-path $(SGX_SDK)/include
-#	mv Enclave_u.c src/backend/enclave 
-#	mv Enclave_u.h src/include/backend/enclave
-#	@echo "GEN  =>  $@"
 
 
 enclave_t.o: enclave_t.c
@@ -309,8 +312,8 @@ $(Signed_Enclave_Lib): $(Enclave_Lib)
 $(Untrusted_Lib): enclave_u.o
 	$(CC) -shared  $^ -o $@ 
 
-$(Unsafe_Lib):  logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe.o 
-	$(CC) -shared -dynamic -undefined dynamic_lookup $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD)
+$(Unsafe_Lib):  soe.o logger.o  soe_heapam.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_hash.o soe_orandom.o 
+	$(CC) $(Utrust_Flags) $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD)
 
 .PHONY: install
 

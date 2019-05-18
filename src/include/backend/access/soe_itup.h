@@ -89,23 +89,23 @@ typedef IndexTupleData *IndexTuple;
  */
 #define MaxIndexTuplesPerPage	\
 	((int) ((BLCKSZ - SizeOfPageHeaderData) / \
-			(MAXALIGN(sizeof(IndexTupleData) + 1) + sizeof(ItemIdData))))
+			(MAXALIGN_s(sizeof(IndexTupleData) + 1) + sizeof(ItemIdData))))
 
-#define IndexTupleSize(itup)		((Size) ((itup)->t_info & INDEX_SIZE_MASK))
+#define IndexTupleSize_s(itup)		((Size) ((itup)->t_info & INDEX_SIZE_MASK))
 
 /*
  * Takes an infomask as argument (primarily because this needs to be usable
  * at index_form_tuple time so enough space is allocated).
  */
-#define IndexInfoFindDataOffset(t_info) \
+#define IndexInfoFindDataOffset_s(t_info) \
 ( \
 	(!((t_info) & INDEX_NULL_MASK)) ? \
 	( \
-		(Size)MAXALIGN(sizeof(IndexTupleData)) \
+		(Size)MAXALIGN_s(sizeof(IndexTupleData)) \
 	) \
 	: \
 	( \
-		(Size)MAXALIGN(sizeof(IndexTupleData) + sizeof(IndexAttributeBitMapData)) \
+		(Size)MAXALIGN_s(sizeof(IndexTupleData) + sizeof(IndexAttributeBitMapData)) \
 	) \
 )
 

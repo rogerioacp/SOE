@@ -53,16 +53,16 @@
 #include "soe_c.h"
 
 
-static char *med3(char *a, char *b, char *c,
+static char *med3_s(char *a, char *b, char *c,
 	 int (*cmp) (const void *, const void *));
-static void swapfunc(char *, char *, size_t, int);
+static void swapfunc_s(char *, char *, size_t, int);
 
 
 /*
  * Min
  *		Return the minimum of two numbers.
  */
-#define Min(x, y)		((x) < (y) ? (x) : (y))
+#define Min_s(x, y)		((x) < (y) ? (x) : (y))
 
 
 
@@ -83,7 +83,7 @@ static void swapfunc(char *, char *, size_t, int);
  * overrun, so that judgment seems wrong.
  */
 
-#define swapcode(TYPE, parmi, parmj, n) \
+#define swapcode_s(TYPE, parmi, parmj, n) \
 do {		\
 	size_t i = (n) / sizeof (TYPE);			\
 	TYPE *pi = (TYPE *)(void *)(parmi);			\
@@ -95,30 +95,30 @@ do {		\
 		} while (--i > 0);				\
 } while (0)
 
-#define SWAPINIT(a, es) swaptype = ((char *)(a) - (char *)0) % sizeof(long) || \
+#define SWAPINIT_s(a, es) swaptype = ((char *)(a) - (char *)0) % sizeof(long) || \
 	(es) % sizeof(long) ? 2 : (es) == sizeof(long)? 0 : 1;
 
 static void
-swapfunc(char *a, char *b, size_t n, int swaptype)
+swapfunc_s(char *a, char *b, size_t n, int swaptype)
 {
 	if (swaptype <= 1)
-		swapcode(long, a, b, n);
+		swapcode_s(long, a, b, n);
 	else
-		swapcode(char, a, b, n);
+		swapcode_s(char, a, b, n);
 }
 
-#define swap(a, b)						\
+#define swap_s(a, b)						\
 	if (swaptype == 0) {					\
 		long t = *(long *)(void *)(a);			\
 		*(long *)(void *)(a) = *(long *)(void *)(b);	\
 		*(long *)(void *)(b) = t;			\
 	} else							\
-		swapfunc(a, b, es, swaptype)
+		swapfunc_s(a, b, es, swaptype)
 
-#define vecswap(a, b, n) if ((n) > 0) swapfunc(a, b, n, swaptype)
+#define vecswap_s(a, b, n) if ((n) > 0) swapfunc_s(a, b, n, swaptype)
 
 static char *
-med3(char *a, char *b, char *c, int (*cmp) (const void *, const void *))
+med3_s(char *a, char *b, char *c, int (*cmp) (const void *, const void *))
 {
 	return cmp(a, b) < 0 ?
 		(cmp(b, c) < 0 ? b : (cmp(a, c) < 0 ? c : a))
@@ -126,7 +126,7 @@ med3(char *a, char *b, char *c, int (*cmp) (const void *, const void *))
 }
 
 void
-pg_qsort(void *a, size_t n, size_t es, int (*cmp) (const void *, const void *))
+pg_qsort_s(void *a, size_t n, size_t es, int (*cmp) (const void *, const void *))
 {
 	char	   *pa,
 			   *pb,
@@ -141,13 +141,13 @@ pg_qsort(void *a, size_t n, size_t es, int (*cmp) (const void *, const void *))
 				swaptype,
 				presorted;
 
-loop:SWAPINIT(a, es);
+loop:SWAPINIT_s(a, es);
 	if (n < 7)
 	{
 		for (pm = (char *) a + es; pm < (char *) a + n * es; pm += es)
 			for (pl = pm; pl > (char *) a && cmp(pl - es, pl) > 0;
 				 pl -= es)
-				swap(pl, pl - es);
+				swap_s(pl, pl - es);
 		return;
 	}
 	presorted = 1;
@@ -170,13 +170,13 @@ loop:SWAPINIT(a, es);
 		{
 			size_t		d = (n / 8) * es;
 
-			pl = med3(pl, pl + d, pl + 2 * d, cmp);
-			pm = med3(pm - d, pm, pm + d, cmp);
-			pn = med3(pn - 2 * d, pn - d, pn, cmp);
+			pl = med3_s(pl, pl + d, pl + 2 * d, cmp);
+			pm = med3_s(pm - d, pm, pm + d, cmp);
+			pn = med3_s(pn - 2 * d, pn - d, pn, cmp);
 		}
-		pm = med3(pl, pm, pn, cmp);
+		pm = med3_s(pl, pm, pn, cmp);
 	}
-	swap(a, pm);
+	swap_s(a, pm);
 	pa = pb = (char *) a + es;
 	pc = pd = (char *) a + (n - 1) * es;
 	for (;;)
@@ -185,7 +185,7 @@ loop:SWAPINIT(a, es);
 		{
 			if (r == 0)
 			{
-				swap(pa, pb);
+				swap_s(pa, pb);
 				pa += es;
 			}
 			pb += es;
@@ -194,29 +194,29 @@ loop:SWAPINIT(a, es);
 		{
 			if (r == 0)
 			{
-				swap(pc, pd);
+				swap_s(pc, pd);
 				pd -= es;
 			}
 			pc -= es;
 		}
 		if (pb > pc)
 			break;
-		swap(pb, pc);
+		swap_s(pb, pc);
 		pb += es;
 		pc -= es;
 	}
 	pn = (char *) a + n * es;
-	d1 = Min(pa - (char *) a, pb - pa);
-	vecswap(a, pb - d1, d1);
-	d1 = Min(pd - pc, pn - pd - es);
-	vecswap(pb, pn - d1, d1);
+	d1 = Min_s(pa - (char *) a, pb - pa);
+	vecswap_s(a, pb - d1, d1);
+	d1 = Min_s(pd - pc, pn - pd - es);
+	vecswap_s(pb, pn - d1, d1);
 	d1 = pb - pa;
 	d2 = pd - pc;
 	if (d1 <= d2)
 	{
 		/* Recurse on left partition, then iterate on right partition */
 		if (d1 > es)
-			pg_qsort(a, d1 / es, es, cmp);
+			pg_qsort_s(a, d1 / es, es, cmp);
 		if (d2 > es)
 		{
 			/* Iterate rather than recurse to save stack space */
@@ -230,7 +230,7 @@ loop:SWAPINIT(a, es);
 	{
 		/* Recurse on right partition, then iterate on left partition */
 		if (d2 > es)
-			pg_qsort(pn - d2, d2 / es, es, cmp);
+			pg_qsort_s(pn - d2, d2 / es, es, cmp);
 		if (d1 > es)
 		{
 			/* Iterate rather than recurse to save stack space */

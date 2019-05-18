@@ -4,10 +4,11 @@
 #include "storage/soe_heap_ofile.h"
 
 #include <stdlib.h>
+#include <collectc/list.h>
 
 //zero index block
 //If the VRelation has 1 block, it only has the offset 0.
-BlockNumber NumberOfBlocks(VRelation rel){
+BlockNumber NumberOfBlocks_s(VRelation rel){
     return (BlockNumber) rel->lastFreeBlock;
 }
 
@@ -36,13 +37,13 @@ VRelation InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, 
 * before searching on the oram.
 *
 */
-Buffer ReadBuffer(VRelation relation, BlockNumber blockNum){
+Buffer ReadBuffer_s(VRelation relation, BlockNumber blockNum){
 
     bool isExtended;
     char* page = NULL;
     void* element;
     VBlock searchVBlock;
-    OblivPageOpaque oopaque;
+    //OblivPageOpaque oopaque;
 
     isExtended = (blockNum == P_NEW);
     BlockNumber blockID;
@@ -54,7 +55,7 @@ Buffer ReadBuffer(VRelation relation, BlockNumber blockNum){
     if(isExtended){
         //selog(DEBUG1, "1 - Going to oram read real block %d", relation->lastFreeBlock);
 
-        result = read(&page, relation->lastFreeBlock, relation->oram);
+        result = read_oram(&page, relation->lastFreeBlock, relation->oram);
         if( result == DUMMY_BLOCK){
             //selog(DEBUG1, "Found Dummy block, going to initialize to blkno %d", relation->lastFreeBlock);
             /**
@@ -97,11 +98,11 @@ Buffer ReadBuffer(VRelation relation, BlockNumber blockNum){
         }
 
         //selog(DEBUG1, "2 - Going to oram read real block %d", blockNum);
-        result = read(&page, blockNum, relation->oram);
+        result = read_oram(&page, blockNum, relation->oram);
         if(result == DUMMY_BLOCK){
             selog(ERROR, "READ a dummy block on READ BUFFER");
         }
-        oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) page);
+        //oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) page);
         //selog(DEBUG1, "Page special pointer has blkno %d", oopaque->o_blkno);
         blockID = blockNum;
     }
@@ -111,14 +112,14 @@ Buffer ReadBuffer(VRelation relation, BlockNumber blockNum){
      block->page = page;
      list_add(relation->buffer, block);
 
-    oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->page);
+    //oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->page);
     // selog(DEBUG1, "Inserted block on buffer list with blkno %d and special %d", block->id, oopaque->o_blkno);
 
     return blockID;
 }
 
 
-Page BufferGetPage(VRelation relation, Buffer buffer)
+Page BufferGetPage_s(VRelation relation, Buffer buffer)
 {
     ListIter iter;
     VBlock vblock;
@@ -135,13 +136,13 @@ Page BufferGetPage(VRelation relation, Buffer buffer)
 }
 
 
-void MarkBufferDirty(VRelation relation, Buffer buffer){
+void MarkBufferDirty_s(VRelation relation, Buffer buffer){
 
     int result;
     ListIter iter;
     VBlock vblock;
     void* element;
-    OblivPageOpaque oopaque;
+    //OblivPageOpaque oopaque;
 
     list_iter_init(&iter, relation->buffer);
 
@@ -149,7 +150,7 @@ void MarkBufferDirty(VRelation relation, Buffer buffer){
     while(list_iter_next(&iter, &element) != CC_ITER_END){
         vblock = (VBlock) element;
         if(vblock->id == buffer){
-            oopaque = (OblivPageOpaque) PageGetSpecialPointer( (Page) vblock->page);
+            //oopaque = (OblivPageOpaque) PageGetSpecialPointer( (Page) vblock->page);
             //selog(DEBUG1, "Found page on buffer list with blkno %d and special %d", vblock->id, oopaque->o_blkno);
 
             break;
@@ -157,7 +158,7 @@ void MarkBufferDirty(VRelation relation, Buffer buffer){
     }
 
     //selog(DEBUG1, "GOING to oblivsiou write to real blkno %d", vblock->id);
-    result  = write(vblock->page, BLCKSZ, vblock->id, relation->oram);
+    result  = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram);
 
     if(result != BLCKSZ){
         selog(ERROR, "Write failed to write a complete page");
@@ -165,7 +166,7 @@ void MarkBufferDirty(VRelation relation, Buffer buffer){
 
 }
 
-void ReleaseBuffer(VRelation relation, Buffer buffer){
+void ReleaseBuffer_s(VRelation relation, Buffer buffer){
     
     ListIter iter;
     VBlock vblock;
@@ -189,12 +190,12 @@ void ReleaseBuffer(VRelation relation, Buffer buffer){
 
 
 BlockNumber
-BufferGetBlockNumber(Buffer buffer)
+BufferGetBlockNumber_s(Buffer buffer)
 {
     return (BlockNumber) buffer;
 }
 
-BlockNumber FreeSpaceBlock(VRelation rel){
+BlockNumber FreeSpaceBlock_s(VRelation rel){
 
     selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
 
@@ -209,7 +210,20 @@ void UpdateFSM(VRelation rel){
     rel->fsm[rel->currentBlock] +=1;
 }
 
-void BufferFull(VRelation rel, Buffer buff){
+void BufferFull_s(VRelation rel, Buffer buff){
     rel->currentBlock +=1;
+}
+
+void destroyVBlcok(void* block){
+    free(((VBlock) block)->page);
+    free(block);
+}
+
+void closeVRelation(VRelation rel){
+    close_oram(rel->oram);
+    list_remove_all_cb(rel->buffer, &destroyVBlcok);
+    list_destroy(rel->buffer);
+    free(rel->fsm);
+    free(rel);
 }
 

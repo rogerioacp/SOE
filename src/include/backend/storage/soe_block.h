@@ -69,21 +69,21 @@ typedef BlockIdData *BlockId;	/* block identifier */
  * BlockNumberIsValid
  *		True iff blockNumber is valid.
  */
-#define BlockNumberIsValid(blockNumber) \
+#define BlockNumberIsValid_s(blockNumber) \
 	((bool) ((BlockNumber) (blockNumber) != InvalidBlockNumber))
 
 /*
  * BlockIdIsValid
  *		True iff the block identifier is valid.
  */
-#define BlockIdIsValid(blockId) \
-	((bool) PointerIsValid(blockId))
+#define BlockIdIsValid_s(blockId) \
+	((bool) PointerIsValid_s(blockId))
 
 /*
  * BlockIdSet
  *		Sets a block identifier to the specified value.
  */
-#define BlockIdSet(blockId, blockNumber) \
+#define BlockIdSet_s(blockId, blockNumber) \
 ( \
 	(blockId)->bi_hi = (blockNumber) >> 16, \
 	(blockId)->bi_lo = (blockNumber) & 0xffff \
@@ -93,7 +93,7 @@ typedef BlockIdData *BlockId;	/* block identifier */
  * BlockIdCopy
  *		Copy a block identifier.
  */
-#define BlockIdCopy(toBlockId, fromBlockId) \
+#define BlockIdCopy_s(toBlockId, fromBlockId) \
 ( \
 	(toBlockId)->bi_hi = (fromBlockId)->bi_hi, \
 	(toBlockId)->bi_lo = (fromBlockId)->bi_lo \
@@ -103,7 +103,7 @@ typedef BlockIdData *BlockId;	/* block identifier */
  * BlockIdEquals
  *		Check for block number equality.
  */
-#define BlockIdEquals(blockId1, blockId2) \
+#define BlockIdEquals_s(blockId1, blockId2) \
 	((blockId1)->bi_hi == (blockId2)->bi_hi && \
 	 (blockId1)->bi_lo == (blockId2)->bi_lo)
 
@@ -111,7 +111,7 @@ typedef BlockIdData *BlockId;	/* block identifier */
  * BlockIdGetBlockNumber
  *		Retrieve the block number from a block identifier.
  */
-#define BlockIdGetBlockNumber(blockId) \
+#define BlockIdGetBlockNumber_s(blockId) \
 ( \
 	(BlockNumber) (((blockId)->bi_hi << 16) | ((uint16) (blockId)->bi_lo)) \
 )

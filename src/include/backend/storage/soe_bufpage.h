@@ -20,6 +20,7 @@
 #include "storage/soe_off.h"
 #include "storage/soe_itemid.h"
 #include "storage/soe_item.h"
+#include "access/soe_htup_details.h"
 
 
 /*
@@ -166,7 +167,7 @@ typedef PageHeaderData *PageHeader;
 /*
  * line pointer(s) do not count as part of header
  */
-#define SizeOfPageHeaderData (offsetof(PageHeaderData, pd_linp))
+#define SizeOfPageHeaderData (offsetof_s(PageHeaderData, pd_linp))
 
 
 
@@ -197,7 +198,7 @@ typedef PageHeaderData *PageHeader;
  * PageGetSpecialPointer
  *		Returns pointer to special space on a page.
  */
-#define PageGetSpecialPointer(page) \
+#define PageGetSpecialPointer_s(page) \
 ( \
 	(char *) ((char *) (page) + ((PageHeader) (page))->pd_special) \
 )
@@ -207,11 +208,11 @@ typedef PageHeaderData *PageHeader;
  * of the arguments!)
  */
 
-#define PageHasFreeLinePointers(page) \
+#define PageHasFreeLinePointers_s(page) \
 	(((PageHeader) (page))->pd_flags & PD_HAS_FREE_LINES)
-#define PageSetHasFreeLinePointers(page) \
+#define PageSetHasFreeLinePointers_s(page) \
 	(((PageHeader) (page))->pd_flags |= PD_HAS_FREE_LINES)
-#define PageClearHasFreeLinePointers(page) \
+#define PageClearHasFreeLinePointers_s(page) \
 	(((PageHeader) (page))->pd_flags &= ~PD_HAS_FREE_LINES)
 
 /*
@@ -221,21 +222,16 @@ typedef PageHeaderData *PageHeader;
  * We could support setting these two values separately, but there's
  * no real need for it at the moment.
  */
-#define PageSetPageSizeAndVersion(page, size, version) \
+#define PageSetPageSizeAndVersion_s(page, size, version) \
 ( \
 	((PageHeader) (page))->pd_pagesize_version = (size) | (version) \
 )
 
-#define PageAddItem(page, item, size, offsetNumber, overwrite, is_heap) \
-	PageAddItemExtended(page, item, size, offsetNumber, \
+#define PageAddItem_s(page, item, size, offsetNumber, overwrite, is_heap) \
+	PageAddItemExtended_s(page, item, size, offsetNumber, \
 						((overwrite) ? PAI_OVERWRITE : 0) | \
 						((is_heap) ? PAI_IS_HEAP : 0))
 
-
-/*
- * line pointer(s) do not count as part of header
- */
-#define SizeOfPageHeaderData (offsetof(PageHeaderData, pd_linp))
 	
 
 /*
@@ -246,7 +242,7 @@ typedef PageHeaderData *PageHeader;
  * BufferGetPageSize, which can be called on an unformatted page).
  * however, it can be called on a page that is not stored in a buffer.
  */
-#define PageGetPageSize(page) \
+#define PageGetPageSize_s(page) \
 	((Size) (((PageHeader) (page))->pd_pagesize_version & (uint16) 0xFF00))
 
 /*
@@ -257,9 +253,9 @@ typedef PageHeaderData *PageHeader;
  *		This does not change the status of any of the resources passed.
  *		The semantics may change in the future.
  */
-#define PageGetItem(page, itemId) \
+#define PageGetItem_s(page, itemId) \
 ( \
-	(Item)(((char *)(page)) + ItemIdGetOffset(itemId)) \
+	(Item)(((char *)(page)) + ItemIdGetOffset_s(itemId)) \
 )
 
 
@@ -268,7 +264,7 @@ typedef PageHeaderData *PageHeader;
  * PageGetItemId
  *		Returns an item identifier of a page.
  */
-#define PageGetItemId(page, offsetNumber) \
+#define PageGetItemId_s(page, offsetNumber) \
 	((ItemId) (&((PageHeader) (page))->pd_linp[(offsetNumber) - 1]))
 
 /*
@@ -281,7 +277,7 @@ typedef PageHeaderData *PageHeader;
  *		return zero to ensure sane behavior.  Accept double evaluation
  *		of the argument so that we can ensure this.
  */
-#define PageGetMaxOffsetNumber(page) \
+#define PageGetMaxOffsetNumber_s(page) \
 	(((PageHeader) (page))->pd_lower <= SizeOfPageHeaderData ? 0 : \
 	 ((((PageHeader) (page))->pd_lower - SizeOfPageHeaderData) \
 	  / sizeof(ItemIdData)))
@@ -294,8 +290,8 @@ typedef PageHeaderData *PageHeader;
  * Now it is.  Beware of old code that might think the offset to the contents
  * is just SizeOfPageHeaderData rather than MAXALIGN(SizeOfPageHeaderData).
  */
-#define PageGetContents(page) \
-	((char *) (page) + MAXALIGN(SizeOfPageHeaderData))
+#define PageGetContents_s(page) \
+	((char *) (page) + MAXALIGN_s(SizeOfPageHeaderData))
 
 /* ----------------
  *		page special data macros
@@ -305,15 +301,15 @@ typedef PageHeaderData *PageHeader;
  * PageGetSpecialSize
  *		Returns size of special space on a page.
  */
-#define PageGetSpecialSize(page) \
-	((uint16) (PageGetPageSize(page) - ((PageHeader)(page))->pd_special))
+#define PageGetSpecialSize_s(page) \
+	((uint16) (PageGetPageSize_s(page) - ((PageHeader)(page))->pd_special))
 
 
 /*
  * PageIsNew
  *		returns true iff page has not been initialized (by PageInit)
  */
-#define PageIsNew(page) (((PageHeader) (page))->pd_upper == 0)
+#define PageIsNew_s(page) (((PageHeader) (page))->pd_upper == 0)
 
 
 /* ----------------------------------------------------------------
@@ -321,13 +317,13 @@ typedef PageHeaderData *PageHeader;
  * ----------------------------------------------------------------
  */
 
-extern void PageInit(Page page, Size pageSize, Size specialSize);
-extern void PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems);
-extern Size PageGetHeapFreeSpace(Page page);
-extern Size PageGetFreeSpace(Page page);
-extern OffsetNumber PageAddItemExtended(Page page, Item item, Size size,
+extern void PageInit_s(Page page, Size pageSize, Size specialSize);
+extern void PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems);
+extern Size PageGetHeapFreeSpace_s(Page page);
+extern Size PageGetFreeSpace_s(Page page);
+extern OffsetNumber PageAddItemExtended_s(Page page, Item item, Size size,
 					OffsetNumber offsetNumber, int flags);
-extern Size PageGetFreeSpaceForMultipleTuples(Page page, int ntups);
-extern IndexTuple CopyIndexTuple(IndexTuple source);
+extern Size PageGetFreeSpaceForMultipleTuples_s(Page page, int ntups);
+extern IndexTuple CopyIndexTuple_s(IndexTuple source);
 
 #endif /* SOE_BUFPAGE_H */

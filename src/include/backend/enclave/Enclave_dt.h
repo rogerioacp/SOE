@@ -16,6 +16,7 @@ void insertHeap(const char* heapTuple, unsigned int tupleSize);
 int getTuple(const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 
+void closeSoe();
 
 extern void oc_logger(const char* str);
 extern sgx_status_t outFileInit(const char* filename, const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize);

@@ -37,7 +37,7 @@ typedef uint16 OffsetNumber;
  * OffsetNumberIsValid
  *		True iff the offset number is valid.
  */
-#define OffsetNumberIsValid(offsetNumber) \
+#define OffsetNumberIsValid_s(offsetNumber) \
 	((bool) ((offsetNumber != InvalidOffsetNumber) && \
 			 (offsetNumber <= MaxOffsetNumber)))
 
@@ -50,7 +50,7 @@ typedef uint16 OffsetNumber;
  *		OffsetNumber to move back, and sometimes we do so to form a
  *		real C array index).
  */
-#define OffsetNumberNext(offsetNumber) \
+#define OffsetNumberNext_s(offsetNumber) \
 	((OffsetNumber) (1 + (offsetNumber)))
 #define OffsetNumberPrev(offsetNumber) \
 	((OffsetNumber) (-1 + (offsetNumber)))

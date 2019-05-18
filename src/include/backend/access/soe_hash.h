@@ -35,8 +35,8 @@ typedef uint32 Bucket;
 
 #define InvalidBucket	((Bucket) 0xFFFFFFFF)
 
-#define BUCKET_TO_BLKNO(metap,B) \
-		((BlockNumber) ((B) + ((B) ? (metap)->hashm_spares[_hash_spareindex((B)+1)-1] : 0)) + 1)
+#define BUCKET_TO_BLKNO_s(metap,B) \
+		((BlockNumber) ((B) + ((B) ? (metap)->hashm_spares[_hash_spareindex_s((B)+1)-1] : 0)) + 1)
 
 
 #define HASH_METAPAGE	0		/* metapage is always block 0 */
@@ -100,7 +100,7 @@ typedef struct HashScanPosData
 } HashScanPosData;
 
 
-#define HashScanPosInvalidate(scanpos) \
+#define HashScanPosInvalidate_s(scanpos) \
 	do { \
 		(scanpos).buf = InvalidBuffer; \
 		(scanpos).currPage = InvalidBlockNumber; \
@@ -112,9 +112,9 @@ typedef struct HashScanPosData
 	} while (0);
 
 
-#define HashScanPosIsValid(scanpos) \
+#define HashScanPosIsValid_s(scanpos) \
 ( \
-	BlockNumberIsValid((scanpos).currPage) \
+	BlockNumberIsValid_s((scanpos).currPage) \
 )
 
 
@@ -199,7 +199,7 @@ typedef HashScanOpaqueData *HashScanOpaque;
  * the block size boundary.  So we use BLCKSZ to determine the maximum number
  * of bitmaps.
  */
-#define HASH_MAX_BITMAPS			Min(BLCKSZ / 8, 1024)
+#define HASH_MAX_BITMAPS			Min_s(BLCKSZ / 8, 1024)
 
 #define HASH_SPLITPOINT_PHASE_BITS	2
 #define HASH_SPLITPOINT_PHASES_PER_GRP	(1 << HASH_SPLITPOINT_PHASE_BITS)
@@ -227,16 +227,16 @@ typedef HashScanOpaqueData *HashScanOpaque;
  * depends on the page size and the header/trailer overhead.  We require
  * the number of bits per page to be a power of 2.
  */
-#define BMPGSZ_BYTE(metap)		((metap)->hashm_bmsize)
-#define BMPGSZ_BIT(metap)		((metap)->hashm_bmsize << BYTE_TO_BIT)
-#define BMPG_SHIFT(metap)		((metap)->hashm_bmshift)
-#define BMPG_MASK(metap)		(BMPGSZ_BIT(metap) - 1)
+#define BMPGSZ_BYTE_s(metap)		((metap)->hashm_bmsize)
+#define BMPGSZ_BIT_s(metap)		((metap)->hashm_bmsize << BYTE_TO_BIT)
+#define BMPG_SHIFT_s(metap)		((metap)->hashm_bmshift)
+#define BMPG_MASK_s(metap)		(BMPGSZ_BIT_s(metap) - 1)
 
 
 
 
-#define HashPageGetBitmap(page) \
-	((uint32 *) PageGetContents(page))
+#define HashPageGetBitmap_s(page) \
+	((uint32 *) PageGetContents_s(page))
 
 
 typedef struct HashMetaPageData
@@ -267,11 +267,11 @@ typedef HashMetaPageData *HashMetaPage;
 /*
  * Maximum size of a hash index item (it's okay to have only one per page)
  */
-#define HashMaxItemSize(page) \
-	MAXALIGN_DOWN(PageGetPageSize(page) - \
+#define HashMaxItemSize_s(page) \
+	MAXALIGN_DOWN_s(PageGetPageSize_s(page) - \
 				  SizeOfPageHeaderData - \
 				  sizeof(ItemIdData) - \
-				  MAXALIGN(sizeof(HashPageOpaqueData)))
+				  MAXALIGN_s(sizeof(HashPageOpaqueData)))
 
 
 /*
@@ -308,8 +308,8 @@ typedef HashMetaPageData *HashMetaPage;
 
 
 
-#define HashPageGetMeta(page) \
-	((HashMetaPage) PageGetContents(page))
+#define HashPageGetMeta_s(page) \
+	((HashMetaPage) PageGetContents_s(page))
 
 
 /*
@@ -318,9 +318,9 @@ typedef HashMetaPageData *HashMetaPage;
 #define BITS_PER_MAP	32		/* Number of bits in uint32 */
 
 /* Given the address of the beginning of a bit map, clear/set the nth bit */
-#define CLRBIT(A, N)	((A)[(N)/BITS_PER_MAP] &= ~(1<<((N)%BITS_PER_MAP)))
-#define SETBIT(A, N)	((A)[(N)/BITS_PER_MAP] |= (1<<((N)%BITS_PER_MAP)))
-#define ISSET(A, N)		((A)[(N)/BITS_PER_MAP] & (1<<((N)%BITS_PER_MAP)))
+#define CLRBIT_s(A, N)	((A)[(N)/BITS_PER_MAP] &= ~(1<<((N)%BITS_PER_MAP)))
+#define SETBIT_s(A, N)	((A)[(N)/BITS_PER_MAP] |= (1<<((N)%BITS_PER_MAP)))
+#define ISSET_s(A, N)		((A)[(N)/BITS_PER_MAP] & (1<<((N)%BITS_PER_MAP)))
 /*
  *	hashinsert() -- insert an index tuple into a hash table.
  *
@@ -328,71 +328,71 @@ typedef HashMetaPageData *HashMetaPage;
  *	Find the appropriate location for the new tuple, and put it there.
  */
 bool
-hashinsert(VRelation rel, IndexTuple tuple);
+hashinsert_s(VRelation rel, IndexTuple tuple);
 
 
 /* private routines */
 
 /* hashsearch.c */
-extern bool _hash_next(IndexScanDesc scan);
-extern bool _hash_first(IndexScanDesc scan);
+extern bool _hash_next_s(IndexScanDesc scan);
+extern bool _hash_first_s(IndexScanDesc scan);
 
 
 /* hashinsert.c */
-extern void _hash_doinsert(VRelation rel, IndexTuple itup);
-extern OffsetNumber _hash_pgaddtup(VRelation rel, Buffer buf,
+extern void _hash_doinsert_s(VRelation rel, IndexTuple itup);
+extern OffsetNumber _hash_pgaddtup_s(VRelation rel, Buffer buf,
 			   Size itemsize, IndexTuple itup);
 
 
 /* hashutil.c */
-extern Bucket _hash_hashkey2bucket(uint32 hashkey, uint32 maxbucket,
+extern Bucket _hash_hashkey2bucket_s(uint32 hashkey, uint32 maxbucket,
 					 uint32 highmask, uint32 lowmask);
-extern uint32 _hash_get_indextuple_hashkey(IndexTuple itup);
-extern void _hash_checkpage(VRelation rel, Buffer buf, int flags);
-extern OffsetNumber _hash_binsearch(Page page, uint32 hash_value);
-extern uint32 _hash_get_totalbuckets(uint32 splitpoint_phase);
-extern void _hash_pgaddmultitup(VRelation rel, Buffer buf, IndexTuple *itups,
+extern uint32 _hash_get_indextuple_hashkey_s(IndexTuple itup);
+extern void _hash_checkpage_s(VRelation rel, Buffer buf, int flags);
+extern OffsetNumber _hash_binsearch_s(Page page, uint32 hash_value);
+extern uint32 _hash_get_totalbuckets_s(uint32 splitpoint_phase);
+extern void _hash_pgaddmultitup_s(VRelation rel, Buffer buf, IndexTuple *itups,
 					OffsetNumber *itup_offsets, uint16 nitups);
-extern uint32 _hash_spareindex(uint32 num_bucket);
-extern uint32 _hash_datum2hashkey(VRelation rel, Datum key);
-extern bool _hash_checkqual(IndexScanDesc scan, IndexTuple itup);
+extern uint32 _hash_spareindex_s(uint32 num_bucket);
+extern uint32 _hash_datum2hashkey_s(VRelation rel, Datum key);
+extern bool _hash_checkqual_s(IndexScanDesc scan, IndexTuple itup);
 
 
 /* hashpage.c */
-extern Buffer _hash_getinitbuf(VRelation rel, BlockNumber blkno);
+extern Buffer _hash_getinitbuf_s(VRelation rel, BlockNumber blkno);
 
-extern Buffer _hash_getbuf(VRelation rel, BlockNumber blkno,
+extern Buffer _hash_getbuf_s(VRelation rel, BlockNumber blkno,
 			 int access, int flags);
-extern Buffer _hash_getbuf_with_strategy(VRelation rel, BlockNumber blkno, int flags);
+extern Buffer _hash_getbuf_with_strategy_s(VRelation rel, BlockNumber blkno, int flags);
 
-extern void _hash_relbuf(VRelation rel, Buffer buf);
+extern void _hash_relbuf_s(VRelation rel, Buffer buf);
 
-extern Buffer _hash_getbucketbuf_from_hashkey(VRelation rel, uint32 hashkey,
+extern Buffer _hash_getbucketbuf_from_hashkey_s(VRelation rel, uint32 hashkey,
 								int access,
 								HashMetaPage *cachedmetap);
 
-extern void _hash_expandtable(VRelation rel, Buffer metabuf);
+extern void _hash_expandtable_s(VRelation rel, Buffer metabuf);
 
-extern Buffer _hash_getnewbuf(VRelation rel, BlockNumber blkno);
-extern void _hash_pageinit(Page page, Size size);
-extern void _hash_initbuf(VRelation rel, Buffer buf, uint32 max_bucket, uint32 num_bucket,
+extern Buffer _hash_getnewbuf_s(VRelation rel, BlockNumber blkno);
+extern void _hash_pageinit_s(Page page, Size size);
+extern void _hash_initbuf_s(VRelation rel, Buffer buf, uint32 max_bucket, uint32 num_bucket,
 			  uint32 flag, bool initpage);
 
-extern void _hash_dropbuf(VRelation rel, Buffer buf);
-extern void _hash_dropscanbuf(VRelation rel, HashScanOpaque so);
+extern void _hash_dropbuf_s(VRelation rel, Buffer buf);
+extern void _hash_dropscanbuf_s(VRelation rel, HashScanOpaque so);
 
 
 /* hashovfl.c */
 
-extern void _hash_squeezebucket(VRelation rel,
+extern void _hash_squeezebucket_s(VRelation rel,
 					Bucket bucket, BlockNumber bucket_blkno,
 					Buffer bucket_buf);
-extern Buffer _hash_addovflpage(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin);
-extern void _hash_initbitmapbuffer(VRelation rel, Buffer buf, uint16 bmsize, bool initpage);
+extern Buffer _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin);
+extern void _hash_initbitmapbuffer_s(VRelation rel, Buffer buf, uint16 bmsize, bool initpage);
 
 
 /* hash.c */
-extern void hashbucketcleanup(VRelation rel, Bucket cur_bucket,
+extern void hashbucketcleanup_s(VRelation rel, Bucket cur_bucket,
 				  Buffer bucket_buf, BlockNumber bucket_blkno,
 				  uint32 maxbucket, uint32 highmask, uint32 lowmask);
 

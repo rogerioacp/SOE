@@ -25,7 +25,7 @@
  *		and hashinsert.  By here, itup is completely filled in.
  */
 void
-_hash_doinsert(VRelation rel, IndexTuple itup)
+_hash_doinsert_s(VRelation rel, IndexTuple itup)
 {
 	Buffer		buf = InvalidBuffer;
 	Buffer		bucket_buf;
@@ -38,17 +38,16 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 	Size		itemsz;
 	bool		do_expand;
 	uint32		hashkey;
-	Bucket		bucket;
-	OffsetNumber itup_off;
+	//Bucket		bucket;
 
 	/*
 	 * Get the hash key for the item (it's stored in the index tuple itself).
 	 */
-	hashkey = _hash_get_indextuple_hashkey(itup);
+	hashkey = _hash_get_indextuple_hashkey_s(itup);
 
 	/* compute item size too */
-	itemsz = IndexTupleSize(itup);
-	itemsz = MAXALIGN(itemsz);	/* be safe, PageAddItem will do this but we
+	itemsz = IndexTupleSize_s(itup);
+	itemsz = MAXALIGN_s(itemsz);	/* be safe, PageAddItem will do this but we
 								 * need to be consistent */
 
 	/*
@@ -56,8 +55,8 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 	 * examine pd_pagesize_version, but that can't change so we can examine it
 	 * without a lock.
 	 */
-	metabuf = _hash_getbuf(rel, HASH_METAPAGE, HASH_NOLOCK, LH_META_PAGE);
-	metapage = BufferGetPage(rel, metabuf);
+	metabuf = _hash_getbuf_s(rel, HASH_METAPAGE, HASH_NOLOCK, LH_META_PAGE);
+	metapage = BufferGetPage_s(rel, metabuf);
 
 	/*
 	 * Check whether the item can fit on a hash page at all. (Eventually, we
@@ -66,7 +65,7 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 	 *
 	 * XXX this is useless code if we are only storing hash keys.
 	 */
-	if (itemsz > HashMaxItemSize(metapage))
+	if (itemsz > HashMaxItemSize_s(metapage))
 		//log error
 		/*ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
@@ -75,7 +74,7 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 				 errhint("Values larger than a buffer page cannot be indexed.")));*/
 
 	/* Lock the primary bucket page for the target bucket. */
-	buf = _hash_getbucketbuf_from_hashkey(rel, hashkey, HASH_WRITE,
+	buf = _hash_getbucketbuf_from_hashkey_s(rel, hashkey, HASH_WRITE,
 										  &usedmetap);
 	//Assert(usedmetap != NULL);
 
@@ -83,12 +82,12 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 	/* remember the primary bucket buffer to release the pin on it at end. */
 	bucket_buf = buf;
 
-	page = BufferGetPage(rel, buf);
-	pageopaque = (HashPageOpaque) PageGetSpecialPointer(page);
-	bucket = pageopaque->hasho_bucket;
+	page = BufferGetPage_s(rel, buf);
+	pageopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
+	//bucket = pageopaque->hasho_bucket;
 
 	/* Do the insertion */
-	while (PageGetFreeSpace(page) < itemsz)
+	while (PageGetFreeSpace_s(page) < itemsz)
 	{
 		BlockNumber nextblkno;
 
@@ -98,11 +97,11 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 		 */
 		nextblkno = pageopaque->hasho_nextblkno;
 
-		if (BlockNumberIsValid(nextblkno))
+		if (BlockNumberIsValid_s(nextblkno))
 		{
 
-			buf = _hash_getbuf(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
-			page = BufferGetPage(rel, buf);
+			buf = _hash_getbuf_s(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
+			page = BufferGetPage_s(rel, buf);
 		}
 		else
 		{
@@ -112,13 +111,13 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 			 */
 
 			/* chain to a new overflow page */
-			buf = _hash_addovflpage(rel, metabuf, buf, (buf == bucket_buf) ? true : false);
-			page = BufferGetPage(rel, buf);
+			buf = _hash_addovflpage_s(rel, metabuf, buf, (buf == bucket_buf) ? true : false);
+			page = BufferGetPage_s(rel, buf);
 
 			/* should fit now, given test above */
 			//Assert(PageGetFreeSpace(page) >= itemsz);
 		}
-		pageopaque = (HashPageOpaque) PageGetSpecialPointer(page);
+		pageopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 		//Assert((pageopaque->hasho_flag & LH_PAGE_TYPE) == LH_OVERFLOW_PAGE);
 		//Assert(pageopaque->hasho_bucket == bucket);
 	}
@@ -129,24 +128,24 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
 	 */
 
 	/* found page with enough space, so add the item here */
-	itup_off = _hash_pgaddtup(rel, buf, itemsz, itup);
+	//itup_off = _hash_pgaddtup(rel, buf, itemsz, itup);
 
-	MarkBufferDirty(rel, buf);
+	MarkBufferDirty_s(rel, buf);
 
 	/* metapage operations */
-	metap = HashPageGetMeta(metapage);
+	metap = HashPageGetMeta_s(metapage);
 	metap->hashm_ntuples += 1;
 
 	/* Make sure this stays in sync with _hash_expandtable() */
 	do_expand = metap->hashm_ntuples >
 		(double) metap->hashm_ffactor * (metap->hashm_maxbucket + 1);
 
-	MarkBufferDirty(rel, metabuf);
+	MarkBufferDirty_s(rel, metabuf);
 
 
 	/* Attempt to split if a split is needed */
 	if (do_expand)
-		_hash_expandtable(rel, metabuf);
+		_hash_expandtable_s(rel, metabuf);
 
 }
 
@@ -162,20 +161,20 @@ _hash_doinsert(VRelation rel, IndexTuple itup)
  * page are sorted by hashkey value.
  */
 OffsetNumber
-_hash_pgaddtup(VRelation rel, Buffer buf, Size itemsize, IndexTuple itup)
+_hash_pgaddtup_s(VRelation rel, Buffer buf, Size itemsize, IndexTuple itup)
 {
 	OffsetNumber itup_off;
 	Page		page;
 	uint32		hashkey;
 
-	_hash_checkpage(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
-	page = BufferGetPage(rel, buf);
+	_hash_checkpage_s(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+	page = BufferGetPage_s(rel, buf);
 
 	/* Find where to insert the tuple (preserving page's hashkey ordering) */
-	hashkey = _hash_get_indextuple_hashkey(itup);
-	itup_off = _hash_binsearch(page, hashkey);
+	hashkey = _hash_get_indextuple_hashkey_s(itup);
+	itup_off = _hash_binsearch_s(page, hashkey);
 	//Page add item extended. already have an example of a function to add a page.
-	PageAddItem(page, (Item) itup, itemsize, itup_off, false, false);
+	PageAddItem_s(page, (Item) itup, itemsize, itup_off, false, false);
 	//if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)
 	//	== InvalidOffsetNumber)
 		//log error
@@ -195,7 +194,7 @@ _hash_pgaddtup(VRelation rel, Buffer buf, Size itemsize, IndexTuple itup)
  * Returns the offset number array at which the tuples were inserted.
  */
 void
-_hash_pgaddmultitup(VRelation rel, Buffer buf, IndexTuple *itups,
+_hash_pgaddmultitup_s(VRelation rel, Buffer buf, IndexTuple *itups,
 					OffsetNumber *itup_offsets, uint16 nitups)
 {
 	OffsetNumber itup_off;
@@ -203,23 +202,23 @@ _hash_pgaddmultitup(VRelation rel, Buffer buf, IndexTuple *itups,
 	uint32		hashkey;
 	int			i;
 
-	_hash_checkpage(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
-	page = BufferGetPage(rel, buf);
+	_hash_checkpage_s(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+	page = BufferGetPage_s(rel, buf);
 
 	for (i = 0; i < nitups; i++)
 	{
 		Size		itemsize;
 
-		itemsize = IndexTupleSize(itups[i]);
-		itemsize = MAXALIGN(itemsize);
+		itemsize = IndexTupleSize_s(itups[i]);
+		itemsize = MAXALIGN_s(itemsize);
 
 		/* Find where to insert the tuple (preserving page's hashkey ordering) */
-		hashkey = _hash_get_indextuple_hashkey(itups[i]);
-		itup_off = _hash_binsearch(page, hashkey);
+		hashkey = _hash_get_indextuple_hashkey_s(itups[i]);
+		itup_off = _hash_binsearch_s(page, hashkey);
 
 		itup_offsets[i] = itup_off;
 
-		if (PageAddItem(page, (Item) itups[i], itemsize, itup_off, false, false)
+		if (PageAddItem_s(page, (Item) itups[i], itemsize, itup_off, false, false)
 			== InvalidOffsetNumber)
 			selog(ERROR,"failed to add index item to relation");
 				// RelationGetRelationName(rel));

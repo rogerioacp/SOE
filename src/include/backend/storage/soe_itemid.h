@@ -56,26 +56,26 @@ typedef uint16 ItemLength;
 /*
  *		ItemIdGetLength
  */
-#define ItemIdGetLength(itemId) \
+#define ItemIdGetLength_s(itemId) \
    ((itemId)->lp_len)
 
 /*
  *		ItemIdGetOffset
  */
-#define ItemIdGetOffset(itemId) \
+#define ItemIdGetOffset_s(itemId) \
    ((itemId)->lp_off)
 
 /*
  *		ItemIdGetFlags
  */
-#define ItemIdGetFlags(itemId) \
+#define ItemIdGetFlags_s(itemId) \
    ((itemId)->lp_flags)
 
 /*
  *		ItemIdGetRedirect
  * In a REDIRECT pointer, lp_off holds the link to the next item pointer
  */
-#define ItemIdGetRedirect(itemId) \
+#define ItemIdGetRedirect_s(itemId) \
    ((itemId)->lp_off)
 
 /*
@@ -83,41 +83,41 @@ typedef uint16 ItemLength;
  *		True iff item identifier is valid.
  *		This is a pretty weak test, probably useful only in Asserts.
  */
-#define ItemIdIsValid(itemId)	PointerIsValid(itemId)
+#define ItemIdIsValid_s(itemId)	PointerIsValid_s(itemId)
 
 /*
  * ItemIdIsUsed
  *		True iff item identifier is in use.
  */
-#define ItemIdIsUsed(itemId) \
+#define ItemIdIsUsed_s(itemId) \
 	((itemId)->lp_flags != LP_UNUSED)
 
 /*
  * ItemIdIsNormal
  *		True iff item identifier is in state NORMAL.
  */
-#define ItemIdIsNormal(itemId) \
+#define ItemIdIsNormal_s(itemId) \
 	((itemId)->lp_flags == LP_NORMAL)
 
 /*
  * ItemIdIsRedirected
  *		True iff item identifier is in state REDIRECT.
  */
-#define ItemIdIsRedirected(itemId) \
+#define ItemIdIsRedirected_s(itemId) \
 	((itemId)->lp_flags == LP_REDIRECT)
 
 /*
  * ItemIdIsDead
  *		True iff item identifier is in state DEAD.
  */
-#define ItemIdIsDead(itemId) \
+#define ItemIdIsDead_s(itemId) \
 	((itemId)->lp_flags == LP_DEAD)
 
 /*
  * ItemIdHasStorage
  *		True iff item identifier has associated storage.
  */
-#define ItemIdHasStorage(itemId) \
+#define ItemIdHasStorage_s(itemId) \
 	((itemId)->lp_len != 0)
 
 /*
@@ -125,7 +125,7 @@ typedef uint16 ItemLength;
  *		Set the item identifier to be UNUSED, with no storage.
  *		Beware of multiple evaluations of itemId!
  */
-#define ItemIdSetUnused(itemId) \
+#define ItemIdSetUnused_s(itemId) \
 ( \
 	(itemId)->lp_flags = LP_UNUSED, \
 	(itemId)->lp_off = 0, \
@@ -137,7 +137,7 @@ typedef uint16 ItemLength;
  *		Set the item identifier to be NORMAL, with the specified storage.
  *		Beware of multiple evaluations of itemId!
  */
-#define ItemIdSetNormal(itemId, off, len) \
+#define ItemIdSetNormal_s(itemId, off, len) \
 ( \
 	(itemId)->lp_flags = LP_NORMAL, \
 	(itemId)->lp_off = (off), \
@@ -149,7 +149,7 @@ typedef uint16 ItemLength;
  *		Set the item identifier to be REDIRECT, with the specified link.
  *		Beware of multiple evaluations of itemId!
  */
-#define ItemIdSetRedirect(itemId, link) \
+#define ItemIdSetRedirect_s(itemId, link) \
 ( \
 	(itemId)->lp_flags = LP_REDIRECT, \
 	(itemId)->lp_off = (link), \
@@ -161,7 +161,7 @@ typedef uint16 ItemLength;
  *		Set the item identifier to be DEAD, with no storage.
  *		Beware of multiple evaluations of itemId!
  */
-#define ItemIdSetDead(itemId) \
+#define ItemIdSetDead_s(itemId) \
 ( \
 	(itemId)->lp_flags = LP_DEAD, \
 	(itemId)->lp_off = 0, \
@@ -176,7 +176,7 @@ typedef uint16 ItemLength;
  * we trust that multiple processors can do this in parallel and get
  * the same result.
  */
-#define ItemIdMarkDead(itemId) \
+#define ItemIdMarkDead_s(itemId) \
 ( \
 	(itemId)->lp_flags = LP_DEAD \
 )

@@ -22,10 +22,8 @@
 #include "storage/soe_item.h"
 #include "storage/soe_itemptr.h"
 
-extern void heap_insert(VRelation relation, Item tup, Size isze);
+extern void heap_insert_s(VRelation relation, Item tup, Size isze);
 
-extern void heap_gettuple(VRelation rel, ItemPointer tid, HeapTuple tuple);
-
-
+extern void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple);
 
 #endif							/* SOE_HEAPAM_H */

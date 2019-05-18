@@ -154,7 +154,7 @@ struct HeapTupleHeaderData
 
 
 
-#define SizeofHeapTupleHeader offsetof(HeapTupleHeaderData, t_bits)
+#define SizeofHeapTupleHeader offsetof_s(HeapTupleHeaderData, t_bits)
 
 /*
  * MaxHeapTuplesPerPage is an upper bound on the number of tuples that can
@@ -169,7 +169,7 @@ struct HeapTupleHeaderData
  */
 #define MaxHeapTuplesPerPage	\
 	((int) ((BLCKSZ - SizeOfPageHeaderData) / \
-			(MAXALIGN(SizeofHeapTupleHeader) + sizeof(ItemIdData))))
+			(MAXALIGN_s(SizeofHeapTupleHeader) + sizeof(ItemIdData))))
 
 
 #endif /* SOE_HTUP_DETAILS_H */

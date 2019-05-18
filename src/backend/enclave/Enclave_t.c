@@ -40,24 +40,19 @@ typedef struct ms_insert_t {
 } ms_insert_t;
 
 typedef struct ms_getTuple_t {
-	char* ms_retval;
+	int ms_retval;
 	const char* ms_scanKey;
 	int ms_scanKeySize;
+	char* ms_tuple;
+	unsigned int ms_tupleLen;
+	char* ms_tupleData;
+	unsigned int ms_tupleDataLen;
 } ms_getTuple_t;
 
 typedef struct ms_insertHeap_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
 } ms_insertHeap_t;
-
-typedef struct ms_getTupleTID_t {
-	unsigned int ms_blkno;
-	unsigned int ms_offnum;
-	char* ms_tuple;
-	unsigned int ms_tupleLen;
-	char* ms_tupleData;
-	unsigned int ms_tupleDataLen;
-} ms_getTupleTID_t;
 
 typedef struct ms_oc_logger_t {
 	const char* ms_str;
@@ -215,8 +210,18 @@ static sgx_status_t SGX_CDECL sgx_getTuple(void* pms)
 	int _tmp_scanKeySize = ms->ms_scanKeySize;
 	size_t _len_scanKey = _tmp_scanKeySize;
 	char* _in_scanKey = NULL;
+	char* _tmp_tuple = ms->ms_tuple;
+	unsigned int _tmp_tupleLen = ms->ms_tupleLen;
+	size_t _len_tuple = _tmp_tupleLen;
+	char* _in_tuple = NULL;
+	char* _tmp_tupleData = ms->ms_tupleData;
+	unsigned int _tmp_tupleDataLen = ms->ms_tupleDataLen;
+	size_t _len_tupleData = _tmp_tupleDataLen;
+	char* _in_tupleData = NULL;
 
 	CHECK_UNIQUE_POINTER(_tmp_scanKey, _len_scanKey);
+	CHECK_UNIQUE_POINTER(_tmp_tuple, _len_tuple);
+	CHECK_UNIQUE_POINTER(_tmp_tupleData, _len_tupleData);
 
 	//
 	// fence after pointer checks
@@ -236,10 +241,38 @@ static sgx_status_t SGX_CDECL sgx_getTuple(void* pms)
 		}
 
 	}
+	if (_tmp_tuple != NULL && _len_tuple != 0) {
+		if ((_in_tuple = (char*)malloc(_len_tuple)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
 
-	ms->ms_retval = getTuple((const char*)_in_scanKey, _tmp_scanKeySize);
+		memset((void*)_in_tuple, 0, _len_tuple);
+	}
+	if (_tmp_tupleData != NULL && _len_tupleData != 0) {
+		if ((_in_tupleData = (char*)malloc(_len_tupleData)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_tupleData, 0, _len_tupleData);
+	}
+
+	ms->ms_retval = getTuple((const char*)_in_scanKey, _tmp_scanKeySize, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
 err:
 	if (_in_scanKey) free(_in_scanKey);
+	if (_in_tuple) {
+		if (memcpy_s(_tmp_tuple, _len_tuple, _in_tuple, _len_tuple)) {
+			status = SGX_ERROR_UNEXPECTED;
+		}
+		free(_in_tuple);
+	}
+	if (_in_tupleData) {
+		if (memcpy_s(_tmp_tupleData, _len_tupleData, _in_tupleData, _len_tupleData)) {
+			status = SGX_ERROR_UNEXPECTED;
+		}
+		free(_in_tupleData);
+	}
 
 	return status;
 }
@@ -286,92 +319,30 @@ err:
 	return status;
 }
 
-static sgx_status_t SGX_CDECL sgx_getTupleTID(void* pms)
-{
-	CHECK_REF_POINTER(pms, sizeof(ms_getTupleTID_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
-	ms_getTupleTID_t* ms = SGX_CAST(ms_getTupleTID_t*, pms);
-	sgx_status_t status = SGX_SUCCESS;
-	char* _tmp_tuple = ms->ms_tuple;
-	unsigned int _tmp_tupleLen = ms->ms_tupleLen;
-	size_t _len_tuple = _tmp_tupleLen;
-	char* _in_tuple = NULL;
-	char* _tmp_tupleData = ms->ms_tupleData;
-	unsigned int _tmp_tupleDataLen = ms->ms_tupleDataLen;
-	size_t _len_tupleData = _tmp_tupleDataLen;
-	char* _in_tupleData = NULL;
-
-	CHECK_UNIQUE_POINTER(_tmp_tuple, _len_tuple);
-	CHECK_UNIQUE_POINTER(_tmp_tupleData, _len_tupleData);
-
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
-
-	if (_tmp_tuple != NULL && _len_tuple != 0) {
-		if ((_in_tuple = (char*)malloc(_len_tuple)) == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memset((void*)_in_tuple, 0, _len_tuple);
-	}
-	if (_tmp_tupleData != NULL && _len_tupleData != 0) {
-		if ((_in_tupleData = (char*)malloc(_len_tupleData)) == NULL) {
-			status = SGX_ERROR_OUT_OF_MEMORY;
-			goto err;
-		}
-
-		memset((void*)_in_tupleData, 0, _len_tupleData);
-	}
-
-	getTupleTID(ms->ms_blkno, ms->ms_offnum, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
-err:
-	if (_in_tuple) {
-		if (memcpy_s(_tmp_tuple, _len_tuple, _in_tuple, _len_tuple)) {
-			status = SGX_ERROR_UNEXPECTED;
-		}
-		free(_in_tuple);
-	}
-	if (_in_tupleData) {
-		if (memcpy_s(_tmp_tupleData, _len_tupleData, _in_tupleData, _len_tupleData)) {
-			status = SGX_ERROR_UNEXPECTED;
-		}
-		free(_in_tupleData);
-	}
-
-	return status;
-}
-
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[5];
+	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[4];
 } g_ecall_table = {
-	5,
+	4,
 	{
 		{(void*)(uintptr_t)sgx_initSOE, 0},
 		{(void*)(uintptr_t)sgx_insert, 0},
 		{(void*)(uintptr_t)sgx_getTuple, 0},
 		{(void*)(uintptr_t)sgx_insertHeap, 0},
-		{(void*)(uintptr_t)sgx_getTupleTID, 0},
 	}
 };
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[5][5];
+	uint8_t entry_table[5][4];
 } g_dyn_entry_table = {
 	5,
 	{
-		{0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, },
-		{0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, },
+		{0, 0, 0, 0, },
+		{0, 0, 0, 0, },
+		{0, 0, 0, 0, },
+		{0, 0, 0, 0, },
 	}
 };
 

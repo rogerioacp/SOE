@@ -27,6 +27,13 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef USE_VALGRIND
+#include <valgrind/memcheck.h>
+#else
+#define VALGRIND_DO_LEAK_CHECK			do {} while (0)
+
+#endif
+
 /*
  * intN
  *		Signed integer, EXACTLY N BITS IN SIZE,
@@ -72,8 +79,8 @@ typedef long int int64;
 #ifndef HAVE_UINT64
 typedef unsigned long int uint64;
 #endif
-#define INT64CONST(x)  (x##L)
-#define UINT64CONST(x) (x##UL)
+#define INT64CONST_s(x)  (x##L)
+#define UINT64CONST_s(x) (x##UL)
 #elif defined(HAVE_LONG_LONG_INT_64)
 /* We have working support for "long long int", use that */
 
@@ -83,8 +90,8 @@ typedef long long int int64;
 #ifndef HAVE_UINT64
 typedef unsigned long long int uint64;
 #endif
-#define INT64CONST(x)  (x##LL)
-#define UINT64CONST(x) (x##ULL)
+#define INT64CONST_s(x)  (x##LL)
+#define UINT64CONST_s(x) (x##ULL)
 /* neither HAVE_LONG_INT_64 nor HAVE_LONG_LONG_INT_64 */
 //#error must have a working 64-bit integer datatype
 #endif
@@ -204,19 +211,19 @@ typedef union PGAlignedBlock
  * Max
  *		Return the maximum of two numbers.
  */
-#define Max(x, y)		((x) > (y) ? (x) : (y))
+#define Max_s(x, y)		((x) > (y) ? (x) : (y))
 
 /*
  * Min
  *		Return the minimum of two numbers.
  */
-#define Min(x, y)		((x) < (y) ? (x) : (y))
+#define Min_s(x, y)		((x) < (y) ? (x) : (y))
 
 /*
  * Abs
  *		Return the absolute value of the argument.
  */
-#define Abs(x)			((x) >= 0 ? (x) : -(x))
+#define Abs_s(x)			((x) >= 0 ? (x) : -(x))
 
 
 
@@ -242,7 +249,7 @@ typedef regproc RegProcedure;
  * ----------------
  */
 
-#define TYPEALIGN(ALIGNVAL,LEN)  \
+#define TYPEALIGN_s(ALIGNVAL,LEN)  \
 	(((uintptr_t) (LEN) + ((ALIGNVAL) - 1)) & ~((uintptr_t) ((ALIGNVAL) - 1)))
 
 
@@ -250,14 +257,11 @@ typedef regproc RegProcedure;
 #define MAXIMUM_ALIGNOF 8
 
 
-
-#define MAXALIGN(LEN)			TYPEALIGN(MAXIMUM_ALIGNOF, (LEN))
-
-#define TYPEALIGN_DOWN(ALIGNVAL,LEN)  \
+#define TYPEALIGN_DOWN_s(ALIGNVAL,LEN)  \
 	(((uintptr_t) (LEN)) & ~((uintptr_t) ((ALIGNVAL) - 1)))
 
 
-#define MAXALIGN_DOWN(LEN)			TYPEALIGN_DOWN(MAXIMUM_ALIGNOF, (LEN))
+#define MAXALIGN_DOWN_s(LEN)			TYPEALIGN_DOWN_s(MAXIMUM_ALIGNOF, (LEN))
 
 /* Get a bit mask of the bits set in non-long aligned addresses */
 #define LONG_ALIGN_MASK (sizeof(long) - 1)
@@ -270,7 +274,7 @@ typedef regproc RegProcedure;
  *		Returns datum representation for a 32-bit unsigned integer.
  */
 
-#define UInt32GetDatum(X) ((Datum) (X))
+#define UInt32GetDatum_s(X) ((Datum) (X))
 
 
 /*
@@ -283,7 +287,7 @@ typedef regproc RegProcedure;
  *	memset() functions.  More research needs to be done, perhaps with
  *	MEMSET_LOOP_LIMIT tests in configure.
  */
-#define MemSet(start, val, len) \
+#define MemSet_s(start, val, len) \
 	do \
 	{ \
 		/* must be void* because we don't know if it is integer aligned yet */ \
@@ -311,7 +315,26 @@ typedef regproc RegProcedure;
 	} while (0)
 
 
-#define MAXALIGN(LEN)			TYPEALIGN(MAXIMUM_ALIGNOF, (LEN))
+#define MAXALIGN_s(LEN)			TYPEALIGN_s(MAXIMUM_ALIGNOF, (LEN))
+
+
+
+/* ----------------------------------------------------------------
+ *				Section 5:	offsetof, lengthof, alignment
+ * ----------------------------------------------------------------
+ */
+/*
+ * offsetof
+ *		Offset of a structure/union field within that structure/union.
+ *
+ *		XXX This is supposed to be part of stddef.h, but isn't on
+ *		some systems (like SunOS 4).
+ */
+#ifndef offsetof_s
+#define offsetof_s(type, field)	((long) &((type *)0)->field)
+#endif							/* offsetof */
+
+
 
 #endif /* SOE_C_H */
 

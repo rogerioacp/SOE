@@ -28,7 +28,7 @@
  *	Find the appropriate location for the new tuple, and put it there.
  */
 bool
-hashinsert(VRelation rel, IndexTuple itup)
+hashinsert_s(VRelation rel, IndexTuple itup)
 {
 
 	/*
@@ -59,7 +59,7 @@ hashinsert(VRelation rel, IndexTuple itup)
 	//itup = index_form_tuple(RelationGetDescr(rel), index_values, index_isnull);
 	//itup->t_tid = *ht_ctid;
 
-	_hash_doinsert(rel, itup);
+	_hash_doinsert_s(rel, itup);
 	return false;
 }
 
@@ -68,7 +68,7 @@ hashinsert(VRelation rel, IndexTuple itup)
  *	hashgettuple() -- Get the next tuple in the scan.
  */
 bool
-hashgettuple(IndexScanDesc scan)
+hashgettuple_s(IndexScanDesc scan)
 {
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	bool		res;
@@ -81,14 +81,14 @@ hashgettuple(IndexScanDesc scan)
 	 * appropriate direction.  If we haven't done so yet, we call a routine to
 	 * get the first item in the scan.
 	 */
-	if (!HashScanPosIsValid(so->currPos))
-		res = _hash_first(scan);
+	if (!HashScanPosIsValid_s(so->currPos))
+		res = _hash_first_s(scan);
 	else
 	{
 		/*
 		 * Now continue the scan.
 		 */
-		res = _hash_next(scan);
+		res = _hash_next_s(scan);
 	}
 
 	return res;
@@ -99,7 +99,7 @@ hashgettuple(IndexScanDesc scan)
  *	hashbeginscan() -- start a scan on a hash index
  */
 IndexScanDesc
-hashbeginscan(VRelation rel, int nkeys, int norderbys)
+hashbeginscan_s(VRelation rel, int nkeys, int norderbys)
 {
 	IndexScanDesc scan;
 	HashScanOpaque so;
@@ -114,7 +114,7 @@ hashbeginscan(VRelation rel, int nkeys, int norderbys)
 
 	/*TODO: replace palloc calls for mallocs*/
 	so = (HashScanOpaque) malloc(sizeof(HashScanOpaqueData));
-	HashScanPosInvalidate(so->currPos);
+	HashScanPosInvalidate_s(so->currPos);
 	so->hashso_bucket_buf = InvalidBuffer;
 	so->hashso_split_bucket_buf = InvalidBuffer;
 
@@ -133,12 +133,12 @@ hashbeginscan(VRelation rel, int nkeys, int norderbys)
  *	hashendscan() -- close down a scan
  */
 void
-hashendscan(IndexScanDesc scan)
+hashendscan_s(IndexScanDesc scan)
 {
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	VRelation	rel = scan->indexRelation;
 
-	_hash_dropscanbuf(rel, so);
+	_hash_dropscanbuf_s(rel, so);
 
 	if (so->killedItems != NULL)
 		free(so->killedItems);
@@ -172,7 +172,7 @@ hashendscan(IndexScanDesc scan)
  * split can start.
  */
 void
-hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
+hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 				  BlockNumber bucket_blkno,
 				  uint32 maxbucket, uint32 highmask, uint32 lowmask)
 {
@@ -193,29 +193,29 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		Page		page;
 		OffsetNumber deletable[MaxOffsetNumber];
 		int			ndeletable = 0;
-		bool		retain_pin = false;
+		//bool		retain_pin = false;
 		// bool		clear_dead_marking = false;
 
-		page = BufferGetPage(rel, buf);
-		opaque = (HashPageOpaque) PageGetSpecialPointer(page);
+		page = BufferGetPage_s(rel, buf);
+		opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
 		/* Scan each tuple in page */
-		maxoffno = PageGetMaxOffsetNumber(page);
+		maxoffno = PageGetMaxOffsetNumber_s(page);
 		for (offno = FirstOffsetNumber;
 			 offno <= maxoffno;
-			 offno = OffsetNumberNext(offno))
+			 offno = OffsetNumberNext_s(offno))
 		{
-			ItemPointer htup;
+//			ItemPointer htup;
 			IndexTuple	itup;
 			Bucket		bucket;
 			bool		kill_tuple = false;
 
-			itup = (IndexTuple) PageGetItem(page,
-											PageGetItemId(page, offno));
-			htup = &(itup->t_tid);
+			itup = (IndexTuple) PageGetItem_s(page,
+											PageGetItemId_s(page, offno));
+			//htup = &(itup->t_tid);
 			
 			/* delete the tuples that are moved by split. */
-			bucket = _hash_hashkey2bucket(_hash_get_indextuple_hashkey(itup),
+			bucket = _hash_hashkey2bucket_s(_hash_get_indextuple_hashkey_s(itup),
 										  maxbucket,
 										  highmask,
 										  lowmask);
@@ -240,10 +240,10 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		}
 
 		/* retain the pin on primary bucket page till end of bucket scan */
-		if (blkno == bucket_blkno)
+		/*if (blkno == bucket_blkno)
 			retain_pin = true;
 		else
-			retain_pin = false;
+			retain_pin = false;*/
 
 		blkno = opaque->hasho_nextblkno;
 
@@ -254,19 +254,19 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		{
 			/* No ereport(ERROR) until changes are logged */
 
-			PageIndexMultiDelete(page, deletable, ndeletable);
+			PageIndexMultiDelete_s(page, deletable, ndeletable);
 			bucket_dirty = true;
 
-			MarkBufferDirty(rel, buf);
+			MarkBufferDirty_s(rel, buf);
 
 		
 		}
 
 		/* bail out if there are no more pages to scan. */
-		if (!BlockNumberIsValid(blkno))
+		if (!BlockNumberIsValid_s(blkno))
 			break;
 
-		next_buf = _hash_getbuf_with_strategy(rel, blkno, LH_OVERFLOW_PAGE);
+		next_buf = _hash_getbuf_with_strategy_s(rel, blkno, LH_OVERFLOW_PAGE);
 
 		/*
 		 * release the lock on previous page after acquiring the lock on next
@@ -287,7 +287,7 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 	 */
 	if (buf != bucket_buf)
 	{
-		_hash_relbuf(rel, buf);
+		_hash_relbuf_s(rel, buf);
 		//LockBuffer(bucket_buf, BUFFER_LOCK_EXCLUSIVE);
 	}
 
@@ -303,13 +303,13 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 	HashPageOpaque bucket_opaque;
 	Page		page;
 
-	page = BufferGetPage(rel, bucket_buf);
-	bucket_opaque = (HashPageOpaque) PageGetSpecialPointer(page);
+	page = BufferGetPage_s(rel, bucket_buf);
+	bucket_opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
 	/* No ereport(ERROR) until changes are logged */
 
 	bucket_opaque->hasho_flag &= ~LH_BUCKET_NEEDS_SPLIT_CLEANUP;
-	MarkBufferDirty(rel, bucket_buf);
+	MarkBufferDirty_s(rel, bucket_buf);
 
 	
 
@@ -322,7 +322,7 @@ hashbucketcleanup(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 	//Assuming that its always ok to cleanup.  
 	// TODO:Check if buffer locks used by soe always enable cleanup in this point.
 	if (bucket_dirty)
-		_hash_squeezebucket(rel, cur_bucket, bucket_blkno, bucket_buf);
+		_hash_squeezebucket_s(rel, cur_bucket, bucket_blkno, bucket_buf);
 	//else
 	//	LockBuffer(bucket_buf, BUFFER_LOCK_UNLOCK);
 }

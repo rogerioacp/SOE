@@ -20,11 +20,11 @@
  * on the number of line pointers, we make this extra check.)
  */
 Size
-PageGetHeapFreeSpace(Page page)
+PageGetHeapFreeSpace_s(Page page)
 {
 	Size		space;
 
-	space = PageGetFreeSpace(page);
+	space = PageGetFreeSpace_s(page);
 	if (space > 0)
 	{
 		OffsetNumber offnum,
@@ -33,20 +33,20 @@ PageGetHeapFreeSpace(Page page)
 		/*
 		 * Are there already MaxHeapTuplesPerPage line pointers in the page?
 		 */
-		nline = PageGetMaxOffsetNumber(page);
+		nline = PageGetMaxOffsetNumber_s(page);
 		if (nline >= MaxHeapTuplesPerPage)
 		{
-			if (PageHasFreeLinePointers((PageHeader) page))
+			if (PageHasFreeLinePointers_s((PageHeader) page))
 			{
 				/*
 				 * Since this is just a hint, we must confirm that there is
 				 * indeed a free line pointer
 				 */
-				for (offnum = FirstOffsetNumber; offnum <= nline; offnum = OffsetNumberNext(offnum))
+				for (offnum = FirstOffsetNumber; offnum <= nline; offnum = OffsetNumberNext_s(offnum))
 				{
-					ItemId		lp = PageGetItemId(page, offnum);
+					ItemId		lp = PageGetItemId_s(page, offnum);
 
-					if (!ItemIdIsUsed(lp))
+					if (!ItemIdIsUsed_s(lp))
 						break;
 				}
 
@@ -78,12 +78,12 @@ PageGetHeapFreeSpace(Page page)
  * function copy of CopyIndexTuple in indextuple.c
  */
 IndexTuple
-CopyIndexTuple(IndexTuple source)
+CopyIndexTuple_s(IndexTuple source)
 {
 	IndexTuple	result;
 	Size		size;
 
-	size = IndexTupleSize(source);
+	size = IndexTupleSize_s(source);
 	result = (IndexTuple) malloc(size);
 	memcpy(result, source, size);
 	return result;
@@ -98,7 +98,7 @@ CopyIndexTuple(IndexTuple source)
  * PageGetHeapFreeSpace on heap pages.
  */
 Size
-PageGetFreeSpace(Page page)
+PageGetFreeSpace_s(Page page)
 {
 	int			space;
 
@@ -127,7 +127,7 @@ PageGetFreeSpace(Page page)
  * PageGetHeapFreeSpace on heap pages.
  */
 Size
-PageGetFreeSpaceForMultipleTuples(Page page, int ntups)
+PageGetFreeSpaceForMultipleTuples_s(Page page, int ntups)
 {
 	int			space;
 
@@ -146,20 +146,20 @@ PageGetFreeSpaceForMultipleTuples(Page page, int ntups)
 }
 
 void
-PageInit(Page page, Size pageSize, Size specialSize)
+PageInit_s(Page page, Size pageSize, Size specialSize)
 {
 	PageHeader	p = (PageHeader) page;
 
-	specialSize = MAXALIGN(specialSize);
+	specialSize = MAXALIGN_s(specialSize);
 
 	/* Make sure all fields of page are zero, as well as unused space */
-	MemSet(p, 0, pageSize);
+	MemSet_s(p, 0, pageSize);
 
 	p->pd_flags = 0;
 	p->pd_lower = SizeOfPageHeaderData;
 	p->pd_upper = pageSize - specialSize;
 	p->pd_special = pageSize - specialSize;
-	PageSetPageSizeAndVersion(page, pageSize, PG_PAGE_LAYOUT_VERSION);
+	PageSetPageSizeAndVersion_s(page, pageSize, PG_PAGE_LAYOUT_VERSION);
 }
 
 
@@ -192,7 +192,7 @@ PageInit(Page page, Size pageSize, Size specialSize)
  *	!!! EREPORT(ERROR) IS DISALLOWED HERE !!!
  */
 OffsetNumber
-PageAddItemExtended(Page page,
+PageAddItemExtended_s(Page page,
 					Item item,
 					Size size,
 					OffsetNumber offsetNumber,
@@ -218,18 +218,18 @@ PageAddItemExtended(Page page,
 	/*
 	 * Select offsetNumber to place the new item at
 	 */
-	limit = OffsetNumberNext(PageGetMaxOffsetNumber(page));
+	limit = OffsetNumberNext_s(PageGetMaxOffsetNumber_s(page));
 
 	/* was offsetNumber passed in? */
-	if (OffsetNumberIsValid(offsetNumber))
+	if (OffsetNumberIsValid_s(offsetNumber))
 	{
 		/* yes, check it */
 		if ((flags & PAI_OVERWRITE) != 0)
 		{
 			if (offsetNumber < limit)
 			{
-				itemId = PageGetItemId(phdr, offsetNumber);
-				if (ItemIdIsUsed(itemId) || ItemIdHasStorage(itemId))
+				itemId = PageGetItemId_s(phdr, offsetNumber);
+				if (ItemIdIsUsed_s(itemId) || ItemIdHasStorage_s(itemId))
 				{
 					selog(WARNING,"will not overwrite a used ItemId");
 					return InvalidOffsetNumber;
@@ -246,7 +246,7 @@ PageAddItemExtended(Page page,
 	{
 		/* offsetNumber was not passed in, so find a free slot */
 		/* if no free slot, we'll put it at limit (1st open slot) */
-		if (PageHasFreeLinePointers(phdr))
+		if (PageHasFreeLinePointers_s(phdr))
 		{
 			/*
 			 * Look for "recyclable" (unused) ItemId.  We check for no storage
@@ -255,14 +255,14 @@ PageAddItemExtended(Page page,
 			 */
 			for (offsetNumber = 1; offsetNumber < limit; offsetNumber++)
 			{
-				itemId = PageGetItemId(phdr, offsetNumber);
-				if (!ItemIdIsUsed(itemId) && !ItemIdHasStorage(itemId))
+				itemId = PageGetItemId_s(phdr, offsetNumber);
+				if (!ItemIdIsUsed_s(itemId) && !ItemIdHasStorage_s(itemId))
 					break;
 			}
 			if (offsetNumber >= limit)
 			{
 				/* the hint is wrong, so reset it */
-				PageClearHasFreeLinePointers(phdr);
+				PageClearHasFreeLinePointers_s(phdr);
 			}
 		}
 		else
@@ -299,7 +299,7 @@ PageAddItemExtended(Page page,
 	else
 		lower = phdr->pd_lower;
 
-	alignedSize = MAXALIGN(size);
+	alignedSize = MAXALIGN_s(size);
 
 	upper = (int) phdr->pd_upper - (int) alignedSize;
 
@@ -309,14 +309,14 @@ PageAddItemExtended(Page page,
 	/*
 	 * OK to insert the item.  First, shuffle the existing pointers if needed.
 	 */
-	itemId = PageGetItemId(phdr, offsetNumber);
+	itemId = PageGetItemId_s(phdr, offsetNumber);
 
 	if (needshuffle)
 		memmove(itemId + 1, itemId,
 				(limit - offsetNumber) * sizeof(ItemIdData));
 
 	/* set the item pointer */
-	ItemIdSetNormal(itemId, upper, size);
+	ItemIdSetNormal_s(itemId, upper, size);
 
 	/* copy the item's data onto the page */
 	memcpy((char *) page + upper, item, size);
@@ -342,7 +342,7 @@ typedef struct itemIdSortData
 typedef itemIdSortData *itemIdSort;
 
 static int
-itemoffcompare(const void *itemidp1, const void *itemidp2)
+itemoffcompare_s(const void *itemidp1, const void *itemidp2)
 {
 	/* Sort in decreasing itemoff order */
 	return ((itemIdSort) itemidp2)->itemoff -
@@ -354,15 +354,15 @@ itemoffcompare(const void *itemidp1, const void *itemidp2)
  * remove the gaps caused by the removed items.
  */
 static void
-compactify_tuples(itemIdSort itemidbase, int nitems, Page page)
+compactify_tuples_s(itemIdSort itemidbase, int nitems, Page page)
 {
 	PageHeader	phdr = (PageHeader) page;
 	Offset		upper;
 	int			i;
 
 	/* sort itemIdSortData array into decreasing itemoff order */
-	qsort((char *) itemidbase, nitems, sizeof(itemIdSortData),
-		  itemoffcompare);
+	qsort_s((char *) itemidbase, nitems, sizeof(itemIdSortData),
+		  itemoffcompare_s);
 
 	upper = phdr->pd_special;
 	for (i = 0; i < nitems; i++)
@@ -370,7 +370,7 @@ compactify_tuples(itemIdSort itemidbase, int nitems, Page page)
 		itemIdSort	itemidptr = &itemidbase[i];
 		ItemId		lp;
 
-		lp = PageGetItemId(page, itemidptr->offsetindex + 1);
+		lp = PageGetItemId_s(page, itemidptr->offsetindex + 1);
 		upper -= itemidptr->alignedlen;
 		memmove((char *) page + upper,
 				(char *) page + itemidptr->itemoff,
@@ -393,7 +393,7 @@ compactify_tuples(itemIdSort itemidbase, int nitems, Page page)
  * of item numbers to be deleted in item number order!
  */
 void
-PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
+PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 {
 	PageHeader	phdr = (PageHeader) page;
 	Offset		pd_lower = phdr->pd_lower;
@@ -419,7 +419,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 		pd_lower > pd_upper ||
 		pd_upper > pd_special ||
 		pd_special > BLCKSZ ||
-		pd_special != MAXALIGN(pd_special)){
+		pd_special != MAXALIGN_s(pd_special)){
 		selog(ERROR, "corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special);
 	}
 	
@@ -429,20 +429,20 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 	 * going to keep.  Notice we do not modify the page yet, since we are
 	 * still validity-checking.
 	 */
-	nline = PageGetMaxOffsetNumber(page);
+	nline = PageGetMaxOffsetNumber_s(page);
 	itemidptr = itemidbase;
 	totallen = 0;
 	nused = 0;
 	nextitm = 0;
-	for (offnum = FirstOffsetNumber; offnum <= nline; offnum = OffsetNumberNext(offnum))
+	for (offnum = FirstOffsetNumber; offnum <= nline; offnum = OffsetNumberNext_s(offnum))
 	{
-		lp = PageGetItemId(page, offnum);
-		size = ItemIdGetLength(lp);
-		offset = ItemIdGetOffset(lp);
+		lp = PageGetItemId_s(page, offnum);
+		size = ItemIdGetLength_s(lp);
+		offset = ItemIdGetOffset_s(lp);
 		
 		if (offset < pd_upper ||
 			(offset + size) > pd_special ||
-			offset != MAXALIGN(offset)){
+			offset != MAXALIGN_s(offset)){
 			selog(ERROR, "corrupted item pointer: offset = %u, length = %u",offset, (unsigned int) size);
 		}
 
@@ -455,7 +455,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 		{
 			itemidptr->offsetindex = nused; /* where it will go */
 			itemidptr->itemoff = offset;
-			itemidptr->alignedlen = MAXALIGN(size);
+			itemidptr->alignedlen = MAXALIGN_s(size);
 			totallen += itemidptr->alignedlen;
 			newitemids[nused] = *lp;
 			itemidptr++;
@@ -483,7 +483,7 @@ PageIndexMultiDelete(Page page, OffsetNumber *itemnos, int nitems)
 	phdr->pd_lower = SizeOfPageHeaderData + nused * sizeof(ItemIdData);
 
 	/* and compactify the tuple data */
-	compactify_tuples(itemidbase, nused, page);
+	compactify_tuples_s(itemidbase, nused, page);
 }
 
 

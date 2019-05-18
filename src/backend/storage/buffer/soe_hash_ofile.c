@@ -37,9 +37,9 @@
 void hash_pageInit(Page page, BlockNumber blkno, Size blocksize){
     HashPageOpaque ovflopaque;
 
-	PageInit(page,  blocksize, sizeof(HashPageOpaqueData));
+	PageInit_s(page,  blocksize, sizeof(HashPageOpaqueData));
 
-	ovflopaque = (HashPageOpaque) PageGetSpecialPointer(page);
+	ovflopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
 	ovflopaque->o_blkno = blkno;
 
@@ -93,7 +93,7 @@ hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
 	}
 
-	oopaque = (HashPageOpaque) PageGetSpecialPointer((Page) block->block);
+	oopaque = (HashPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
 }

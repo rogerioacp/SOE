@@ -79,32 +79,32 @@ typedef ItemPointerData *ItemPointer;
  * ItemPointerIsValid
  *		True iff the disk item pointer is not NULL.
  */
-#define ItemPointerIsValid(pointer) \
-	((bool) (PointerIsValid(pointer) && ((pointer)->ip_posid != 0)))
+#define ItemPointerIsValid_s(pointer) \
+	((bool) (PointerIsValid_s(pointer) && ((pointer)->ip_posid != 0)))
 
 /*
  * ItemPointerGetBlockNumberNoCheck
  *		Returns the block number of a disk item pointer.
  */
-#define ItemPointerGetBlockNumberNoCheck(pointer) \
+#define ItemPointerGetBlockNumberNoCheck_s(pointer) \
 ( \
-	BlockIdGetBlockNumber(&(pointer)->ip_blkid) \
+	BlockIdGetBlockNumber_s(&(pointer)->ip_blkid) \
 )
 
 /*
  * ItemPointerGetBlockNumber
  *		As above, but verifies that the item pointer looks valid.
  */
-#define ItemPointerGetBlockNumber(pointer) \
+#define ItemPointerGetBlockNumber_s(pointer) \
 ( \
-	ItemPointerGetBlockNumberNoCheck(pointer) \
+	ItemPointerGetBlockNumberNoCheck_s(pointer) \
 )
 
 /*
  * ItemPointerGetOffsetNumberNoCheck
  *		Returns the offset number of a disk item pointer.
  */
-#define ItemPointerGetOffsetNumberNoCheck(pointer) \
+#define ItemPointerGetOffsetNumberNoCheck_s(pointer) \
 ( \
 	(pointer)->ip_posid \
 )
@@ -113,18 +113,18 @@ typedef ItemPointerData *ItemPointer;
  * ItemPointerGetOffsetNumber
  *		As above, but verifies that the item pointer looks valid.
  */
-#define ItemPointerGetOffsetNumber(pointer) \
+#define ItemPointerGetOffsetNumber_s(pointer) \
 ( \
-	ItemPointerGetOffsetNumberNoCheck(pointer) \
+	ItemPointerGetOffsetNumberNoCheck_s(pointer) \
 )
 
 /*
  * ItemPointerSet
  *		Sets a disk item pointer to the specified block and offset.
  */
-#define ItemPointerSet(pointer, blockNumber, offNum) \
+#define ItemPointerSet_s(pointer, blockNumber, offNum) \
 ( \
-	BlockIdSet(&((pointer)->ip_blkid), blockNumber), \
+	BlockIdSet_s(&((pointer)->ip_blkid), blockNumber), \
 	(pointer)->ip_posid = offNum \
 )
 
@@ -132,16 +132,16 @@ typedef ItemPointerData *ItemPointer;
  * ItemPointerSetBlockNumber
  *		Sets a disk item pointer to the specified block.
  */
-#define ItemPointerSetBlockNumber(pointer, blockNumber) \
+#define ItemPointerSetBlockNumber_s(pointer, blockNumber) \
 ( \
-	BlockIdSet(&((pointer)->ip_blkid), blockNumber) \
+	BlockIdSet_s(&((pointer)->ip_blkid), blockNumber) \
 )
 
 /*
  * ItemPointerSetOffsetNumber
  *		Sets a disk item pointer to the specified offset.
  */
-#define ItemPointerSetOffsetNumber(pointer, offsetNumber) \
+#define ItemPointerSetOffsetNumber_s(pointer, offsetNumber) \
 ( \
 	(pointer)->ip_posid = (offsetNumber) \
 )
@@ -153,7 +153,7 @@ typedef ItemPointerData *ItemPointer;
  * Should there ever be padding in an ItemPointer this would need to be handled
  * differently as it's used as hash key.
  */
-#define ItemPointerCopy(fromPointer, toPointer) \
+#define ItemPointerCopy_s(fromPointer, toPointer) \
 ( \
 	*(toPointer) = *(fromPointer) \
 )
@@ -162,9 +162,9 @@ typedef ItemPointerData *ItemPointer;
  * ItemPointerSetInvalid
  *		Sets a disk item pointer to be invalid.
  */
-#define ItemPointerSetInvalid(pointer) \
+#define ItemPointerSetInvalid_s(pointer) \
 ( \
-	BlockIdSet(&((pointer)->ip_blkid), InvalidBlockNumber), \
+	BlockIdSet_s(&((pointer)->ip_blkid), InvalidBlockNumber), \
 	(pointer)->ip_posid = InvalidOffsetNumber \
 )
 
@@ -173,10 +173,10 @@ typedef ItemPointerData *ItemPointer;
  *		True iff the block number indicates the tuple has moved to another
  *		partition.
  */
-#define ItemPointerIndicatesMovedPartitions(pointer) \
+#define ItemPointerIndicatesMovedPartitions_s(pointer) \
 ( \
-	ItemPointerGetOffsetNumber(pointer) == MovedPartitionsOffsetNumber && \
-	ItemPointerGetBlockNumberNoCheck(pointer) == MovedPartitionsBlockNumber \
+	ItemPointerGetOffsetNumber_s(pointer) == MovedPartitionsOffsetNumber && \
+	ItemPointerGetBlockNumberNoCheck_s(pointer) == MovedPartitionsBlockNumber \
 )
 
 /*
@@ -184,15 +184,15 @@ typedef ItemPointerData *ItemPointer;
  *		Indicate that the item referenced by the itempointer has moved into a
  *		different partition.
  */
-#define ItemPointerSetMovedPartitions(pointer) \
-	ItemPointerSet((pointer), MovedPartitionsBlockNumber, MovedPartitionsOffsetNumber)
+#define ItemPointerSetMovedPartitions_s(pointer) \
+	ItemPointerSet_s((pointer), MovedPartitionsBlockNumber, MovedPartitionsOffsetNumber)
 
 /* ----------------
  *		externs
  * ----------------
  */
 
-extern bool ItemPointerEquals(ItemPointer pointer1, ItemPointer pointer2);
-extern int32 ItemPointerCompare(ItemPointer arg1, ItemPointer arg2);
+extern bool ItemPointerEquals_s(ItemPointer pointer1, ItemPointer pointer2);
+extern int32 ItemPointerCompare_s(ItemPointer arg1, ItemPointer arg2);
 
 #endif							/* ITEMPTR_H */

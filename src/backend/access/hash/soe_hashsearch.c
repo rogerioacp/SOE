@@ -15,12 +15,12 @@
 
 #include "access/soe_hash.h"
 
-static bool _hash_readpage(IndexScanDesc scan, Buffer *bufP);
-static int _hash_load_qualified_items(IndexScanDesc scan, Page page,
+static bool _hash_readpage_s(IndexScanDesc scan, Buffer *bufP);
+static int _hash_load_qualified_items_s(IndexScanDesc scan, Page page,
 						   OffsetNumber offnum);
-static inline void _hash_saveitem(HashScanOpaque so, int itemIndex,
+static inline void _hash_saveitem_s(HashScanOpaque so, int itemIndex,
 			   OffsetNumber offnum, IndexTuple itup);
-static void _hash_readnext(IndexScanDesc scan, Buffer *bufp,
+static void _hash_readnext_s(IndexScanDesc scan, Buffer *bufp,
 			   Page *pagep, HashPageOpaque *opaquep);
 
 /*
@@ -38,7 +38,7 @@ static void _hash_readnext(IndexScanDesc scan, Buffer *bufp,
  *		page.
  */
 bool
-_hash_next(IndexScanDesc scan)
+_hash_next_s(IndexScanDesc scan)
 {
 	VRelation	rel = scan->indexRelation;
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
@@ -57,11 +57,11 @@ _hash_next(IndexScanDesc scan)
 	{
 
 		blkno = so->currPos.nextPage;
-		if (BlockNumberIsValid(blkno))
+		if (BlockNumberIsValid_s(blkno))
 		{
-			buf = _hash_getbuf(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
+			buf = _hash_getbuf_s(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
 			//TestForOldSnapshot(scan->xs_snapshot, rel, BufferGetPage(buf));
-			if (!_hash_readpage(scan, &buf))
+			if (!_hash_readpage_s(scan, &buf))
 				end_of_scan = true;
 		}
 		else
@@ -72,8 +72,8 @@ _hash_next(IndexScanDesc scan)
 
 	if (end_of_scan)
 	{
-		_hash_dropscanbuf(rel, so);
-		HashScanPosInvalidate(so->currPos);
+		_hash_dropscanbuf_s(rel, so);
+		HashScanPosInvalidate_s(so->currPos);
 		return false;
 	}
 
@@ -91,7 +91,7 @@ _hash_next(IndexScanDesc scan)
  * bucket being split after the last bucket page of bucket being populated.
  */
 static void
-_hash_readnext(IndexScanDesc scan,
+_hash_readnext_s(IndexScanDesc scan,
 			   Buffer *bufp, Page *pagep, HashPageOpaque *opaquep)
 {
 	BlockNumber blkno;
@@ -112,18 +112,18 @@ _hash_readnext(IndexScanDesc scan,
 
 	*bufp = InvalidBuffer;
 	/* check for interrupts while we're not holding any buffer lock */
-	if (BlockNumberIsValid(blkno))
+	if (BlockNumberIsValid_s(blkno))
 	{
-		*bufp = _hash_getbuf(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
+		*bufp = _hash_getbuf_s(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
 		block_found = true;
 	}
 	
 
 	if (block_found)
 	{
-		*pagep = BufferGetPage(rel, *bufp);
+		*pagep = BufferGetPage_s(rel, *bufp);
 		//TestForOldSnapshot(scan->xs_snapshot, rel, *pagep);
-		*opaquep = (HashPageOpaque) PageGetSpecialPointer(*pagep);
+		*opaquep = (HashPageOpaque) PageGetSpecialPointer_s(*pagep);
 	}
 }
 
@@ -145,16 +145,16 @@ _hash_readnext(IndexScanDesc scan,
  *		bucket page but no pins or locks held on overflow page.
  */
 bool
-_hash_first(IndexScanDesc scan)
+_hash_first_s(IndexScanDesc scan)
 {
 	VRelation	rel = scan->indexRelation;
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	ScanKey		cur;
 	uint32		hashkey;
-	Bucket		bucket;
+	//Bucket		bucket;
 	Buffer		buf;
-	Page		page;
-	HashPageOpaque opaque;
+//	Page		page;
+//	HashPageOpaque opaque;
 	HashScanPosItem *currItem;
 
 	/* There may be more than one index qual, but we hash only the first */
@@ -185,17 +185,17 @@ _hash_first(IndexScanDesc scan)
 	//TODO: Define how to create hashkey
 	/*if (cur->sk_subtype == rel->rd_opcintype[0] ||
 		cur->sk_subtype == InvalidOid)*/
-	 hashkey = _hash_datum2hashkey(rel, cur->sk_argument);
+	 hashkey = _hash_datum2hashkey_s(rel, cur->sk_argument);
 	/*else
 		hashkey = _hash_datum2hashkey_type(rel, cur->sk_argument,
 										   cur->sk_subtype);*/
 
 	so->hashso_sk_hash = hashkey;
 
-	buf = _hash_getbucketbuf_from_hashkey(rel, hashkey, HASH_READ, NULL);
-	page = BufferGetPage(rel, buf);
-	opaque = (HashPageOpaque) PageGetSpecialPointer(page);
-	bucket = opaque->hasho_bucket;
+	buf = _hash_getbucketbuf_from_hashkey_s(rel, hashkey, HASH_READ, NULL);
+	//page = BufferGetPage(rel, buf);
+	//opaque = (HashPageOpaque) PageGetSpecialPointer(page);
+	//bucket = opaque->hasho_bucket;
 
 	so->hashso_bucket_buf = buf;
 
@@ -205,7 +205,7 @@ _hash_first(IndexScanDesc scan)
 	so->currPos.buf = buf;
 
 	/* Now find all the tuples satisfying the qualification from a page */
-	if (!_hash_readpage(scan, &buf))
+	if (!_hash_readpage_s(scan, &buf))
 		return false;
 
 	/* OK, itemIndex says what to return */
@@ -227,7 +227,7 @@ _hash_first(IndexScanDesc scan)
  *	Return true if any matching items are found else return false.
  */
 static bool
-_hash_readpage(IndexScanDesc scan, Buffer *bufP)
+_hash_readpage_s(IndexScanDesc scan, Buffer *bufP)
 {
 	VRelation	rel = scan->indexRelation;
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
@@ -239,12 +239,12 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP)
 
 	buf = *bufP;
 	//Assert(BufferIsValid(buf));
-	_hash_checkpage(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
-	page = BufferGetPage(rel, buf);
-	opaque = (HashPageOpaque) PageGetSpecialPointer(page);
+	_hash_checkpage_s(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+	page = BufferGetPage_s(rel, buf);
+	opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
 	so->currPos.buf = buf;
-	so->currPos.currPage = BufferGetBlockNumber(buf);
+	so->currPos.currPage = BufferGetBlockNumber_s(buf);
 
 
 	BlockNumber prev_blkno = InvalidBlockNumber;
@@ -252,9 +252,9 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP)
 	for (;;)
 	{
 		/* new page, locate starting position by binary search */
-		offnum = _hash_binsearch(page, so->hashso_sk_hash);
+		offnum = _hash_binsearch_s(page, so->hashso_sk_hash);
 
-		itemIndex = _hash_load_qualified_items(scan, page, offnum);
+		itemIndex = _hash_load_qualified_items_s(scan, page, offnum);
 
 		if (itemIndex != 0)
 			break;
@@ -270,11 +270,11 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP)
 		else
 			prev_blkno = opaque->hasho_prevblkno;
 
-		_hash_readnext(scan, &buf, &page, &opaque);
-		if (BufferIsValid(rel, buf))
+		_hash_readnext_s(scan, &buf, &page, &opaque);
+		if (BufferIsValid_s(rel, buf))
 		{
 			so->currPos.buf = buf;
-			so->currPos.currPage = BufferGetBlockNumber(buf);
+			so->currPos.currPage = BufferGetBlockNumber_s(buf);
 		}
 		else
 		{
@@ -300,7 +300,7 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP)
 
 	so->currPos.prevPage = opaque->hasho_prevblkno;
 	so->currPos.nextPage = opaque->hasho_nextblkno;
-	_hash_relbuf(rel, so->currPos.buf);
+	_hash_relbuf_s(rel, so->currPos.buf);
 	so->currPos.buf = InvalidBuffer;
 
 	//Assert(so->currPos.firstItem <= so->currPos.lastItem);
@@ -312,7 +312,7 @@ _hash_readpage(IndexScanDesc scan, Buffer *bufP)
  * into so->currPos. Helper function for _hash_readpage.
  */
 static int
-_hash_load_qualified_items(IndexScanDesc scan, Page page,
+_hash_load_qualified_items_s(IndexScanDesc scan, Page page,
 						   OffsetNumber offnum)
 {
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
@@ -320,7 +320,7 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page,
 	int			itemIndex;
 	OffsetNumber maxoff;
 
-	maxoff = PageGetMaxOffsetNumber(page);
+	maxoff = PageGetMaxOffsetNumber_s(page);
 
 	/* load items[] in ascending order */
 	itemIndex = 0;
@@ -328,13 +328,13 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page,
 	while (offnum <= maxoff)
 	{
 		//Assert(offnum >= FirstOffsetNumber);
-		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, offnum));
+		itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, offnum));
 
-		if (so->hashso_sk_hash == _hash_get_indextuple_hashkey(itup)) /* &&
+		if (so->hashso_sk_hash == _hash_get_indextuple_hashkey_s(itup)) /* &&
 			_hash_checkqual(scan, itup))*/
 		{
 			/* tuple is qualified, so remember it */
-			_hash_saveitem(so, itemIndex, offnum, itup);
+			_hash_saveitem_s(so, itemIndex, offnum, itup);
 			itemIndex++;
 		}
 		else
@@ -346,7 +346,7 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page,
 			break;
 		}
 
-		offnum = OffsetNumberNext(offnum);
+		offnum = OffsetNumberNext_s(offnum);
 	}
 
 	//Assert(itemIndex <= MaxIndexTuplesPerPage);
@@ -355,7 +355,7 @@ _hash_load_qualified_items(IndexScanDesc scan, Page page,
 
 /* Save an index item into so->currPos.items[itemIndex] */
 static inline void
-_hash_saveitem(HashScanOpaque so, int itemIndex,
+_hash_saveitem_s(HashScanOpaque so, int itemIndex,
 			   OffsetNumber offnum, IndexTuple itup)
 {
 	HashScanPosItem *currItem = &so->currPos.items[itemIndex];

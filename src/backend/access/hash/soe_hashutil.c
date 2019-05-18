@@ -16,7 +16,7 @@
 #include "access/soe_hash.h"
 #include "logger/logger.h"
 
-#define CALC_NEW_BUCKET(old_bucket, lowmask) \
+#define CALC_NEW_BUCKET_s(old_bucket, lowmask) \
 			old_bucket | (lowmask + 1)
 
 
@@ -28,7 +28,7 @@
  * "primary" hash function that's tracked for us by the generic index code.
  */
 uint32
-_hash_datum2hashkey(VRelation rel, Datum key)
+_hash_datum2hashkey_s(VRelation rel, Datum key)
 {
 	//FmgrInfo   *procinfo;
 	//Oid			collation;
@@ -54,7 +54,7 @@ _hash_datum2hashkey(VRelation rel, Datum key)
  * cross-type situations.
  */
 uint32
-_hash_datum2hashkey_type(VRelation rel, Datum key, Oid keytype)
+_hash_datum2hashkey_type_s(VRelation rel, Datum key, Oid keytype)
 {
 //	RegProcedure hash_proc;
 //	Oid			collation;
@@ -80,7 +80,7 @@ _hash_datum2hashkey_type(VRelation rel, Datum key, Oid keytype)
  * _hash_hashkey2bucket -- determine which bucket the hashkey maps to.
  */
 Bucket
-_hash_hashkey2bucket(uint32 hashkey, uint32 maxbucket,
+_hash_hashkey2bucket_s(uint32 hashkey, uint32 maxbucket,
 					 uint32 highmask, uint32 lowmask)
 {
 	Bucket		bucket;
@@ -96,7 +96,7 @@ _hash_hashkey2bucket(uint32 hashkey, uint32 maxbucket,
  * _hash_log2 -- returns ceil(lg2(num))
  */
 uint32
-_hash_log2(uint32 num)
+_hash_log2_s(uint32 num)
 {
 	uint32		i,
 				limit;
@@ -112,12 +112,12 @@ _hash_log2(uint32 num)
  *					   bucket
  */
 uint32
-_hash_spareindex(uint32 num_bucket)
+_hash_spareindex_s(uint32 num_bucket)
 {
 	uint32		splitpoint_group;
 	uint32		splitpoint_phases;
 
-	splitpoint_group = _hash_log2(num_bucket);
+	splitpoint_group = _hash_log2_s(num_bucket);
 
 	if (splitpoint_group < HASH_SPLITPOINT_GROUPS_WITH_ONE_PHASE)
 		return splitpoint_group;
@@ -144,7 +144,7 @@ _hash_spareindex(uint32 num_bucket)
  *							the given splitpoint phase.
  */
 uint32
-_hash_get_totalbuckets(uint32 splitpoint_phase)
+_hash_get_totalbuckets_s(uint32 splitpoint_phase)
 {
 	uint32		splitpoint_group;
 	uint32		total_buckets;
@@ -180,9 +180,9 @@ _hash_get_totalbuckets(uint32 splitpoint_phase)
  * (values of hasho_flag & LH_PAGE_TYPE).
  */
 void
-_hash_checkpage(VRelation rel, Buffer buf, int flags)
+_hash_checkpage_s(VRelation rel, Buffer buf, int flags)
 {
-	Page		page = BufferGetPage(rel, buf);
+	Page		page = BufferGetPage_s(rel, buf);
 
 	/*
 	 * ReadBuffer verifies that every newly-read page passes
@@ -190,7 +190,7 @@ _hash_checkpage(VRelation rel, Buffer buf, int flags)
 	 * page header or is all-zero.  We have to defend against the all-zero
 	 * case, however.
 	 */
-	if (PageIsNew(page))
+	if (PageIsNew_s(page))
 		/*TODO: error messages*/
 		/*ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
@@ -202,7 +202,7 @@ _hash_checkpage(VRelation rel, Buffer buf, int flags)
 	/*
 	 * Additionally check that the special area looks sane.
 	 */
-	if (PageGetSpecialSize(page) != MAXALIGN(sizeof(HashPageOpaqueData)))
+	if (PageGetSpecialSize_s(page) != MAXALIGN_s(sizeof(HashPageOpaqueData)))
 		selog(ERROR, "1-index contains corrupted page at block");
 		/*TODO: error messages*/
 		/*ereport(ERROR,
@@ -214,7 +214,7 @@ _hash_checkpage(VRelation rel, Buffer buf, int flags)
 
 	if (flags)
 	{
-		HashPageOpaque opaque = (HashPageOpaque) PageGetSpecialPointer(page);
+		HashPageOpaque opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
 		if ((opaque->hasho_flag & flags) == 0)
 			selog(ERROR, "2-index contains corrupted page at block");
@@ -233,7 +233,7 @@ _hash_checkpage(VRelation rel, Buffer buf, int flags)
 	 */
 	if (flags == LH_META_PAGE)
 	{
-		HashMetaPage metap = HashPageGetMeta(page);
+		HashMetaPage metap = HashPageGetMeta_s(page);
 
 		if (metap->hashm_magic != HASH_MAGIC)
 			selog(ERROR, "2-index is not a hash index");
@@ -261,7 +261,7 @@ _hash_checkpage(VRelation rel, Buffer buf, int flags)
  * _hash_get_indextuple_hashkey - get the hash index tuple's hash key value
  */
 uint32
-_hash_get_indextuple_hashkey(IndexTuple itup)
+_hash_get_indextuple_hashkey_s(IndexTuple itup)
 {
 	char	   *attp;
 
@@ -269,7 +269,7 @@ _hash_get_indextuple_hashkey(IndexTuple itup)
 	 * We assume the hash key is the first attribute and can't be null, so
 	 * this can be done crudely but very very cheaply ...
 	 */
-	attp = (char *) itup + IndexInfoFindDataOffset(itup->t_info);
+	attp = (char *) itup + IndexInfoFindDataOffset_s(itup->t_info);
 	//Todo: this code has to decrypt the hashkey and only then cast to uint32.
 	return *((uint32 *) attp);
 }
@@ -289,7 +289,7 @@ _hash_get_indextuple_hashkey(IndexTuple itup)
  * currently support that.
  */
 bool
-_hash_convert_tuple(VRelation index,
+_hash_convert_tuple_s(VRelation index,
 					Datum *user_values, bool *user_isnull,
 					Datum *index_values, bool *index_isnull)
 {
@@ -302,8 +302,8 @@ _hash_convert_tuple(VRelation index,
 	if (user_isnull[0])
 		return false;
 
-	hashkey = _hash_datum2hashkey(index, user_values[0]);
-	index_values[0] = UInt32GetDatum(hashkey);
+	hashkey = _hash_datum2hashkey_s(index, user_values[0]);
+	index_values[0] = UInt32GetDatum_s(hashkey);
 	index_isnull[0] = false;
 	return true;
 }
@@ -321,13 +321,13 @@ _hash_convert_tuple(VRelation index,
  * a search, or to insert a new item.
  */
 OffsetNumber
-_hash_binsearch(Page page, uint32 hash_value)
+_hash_binsearch_s(Page page, uint32 hash_value)
 {
 	OffsetNumber upper;
 	OffsetNumber lower;
 
 	/* Loop invariant: lower <= desired place <= upper */
-	upper = PageGetMaxOffsetNumber(page) + 1;
+	upper = PageGetMaxOffsetNumber_s(page) + 1;
 	lower = FirstOffsetNumber;
 
 	while (upper > lower)
@@ -339,8 +339,8 @@ _hash_binsearch(Page page, uint32 hash_value)
 		off = (upper + lower) / 2;
 		//Assert(OffsetNumberIsValid(off));
 
-		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, off));
-		hashkey = _hash_get_indextuple_hashkey(itup);
+		itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, off));
+		hashkey = _hash_get_indextuple_hashkey_s(itup);
 		if (hashkey < hash_value)
 			lower = off + 1;
 		else
@@ -359,13 +359,13 @@ _hash_binsearch(Page page, uint32 hash_value)
  * This is handy for starting a new page in a backwards scan.
  */
 OffsetNumber
-_hash_binsearch_last(Page page, uint32 hash_value)
+_hash_binsearch_last_s(Page page, uint32 hash_value)
 {
 	OffsetNumber upper;
 	OffsetNumber lower;
 
 	/* Loop invariant: lower <= desired place <= upper */
-	upper = PageGetMaxOffsetNumber(page);
+	upper = PageGetMaxOffsetNumber_s(page);
 	lower = FirstOffsetNumber - 1;
 
 	while (upper > lower)
@@ -377,8 +377,8 @@ _hash_binsearch_last(Page page, uint32 hash_value)
 		off = (upper + lower + 1) / 2;
 		//Assert(OffsetNumberIsValid(off));
 
-		itup = (IndexTuple) PageGetItem(page, PageGetItemId(page, off));
-		hashkey = _hash_get_indextuple_hashkey(itup);
+		itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, off));
+		hashkey = _hash_get_indextuple_hashkey_s(itup);
 		if (hashkey > hash_value)
 			upper = off - 1;
 		else

@@ -18,7 +18,7 @@
  * RelationGetTargetPageFreeSpace
  *		Returns the relation's desired freespace per page in bytes.
  */
-#define RelationGetTargetPageFreeSpace(relation, defaultff) \
+#define RelationGetTargetPageFreeSpace_s(relation, defaultff) \
 	(BLCKSZ * (100 - defaultff) / 100)
 
 #define HEAP_DEFAULT_FILLFACTOR		10
@@ -36,12 +36,12 @@
  *		(formatted) disk page.
  */
 /* XXX should dig out of buffer descriptor */
-#define BufferGetPageSize(vbuffer, buffer) \
+#define BufferGetPageSize_s(vbuffer, buffer) \
 ( \
 	(Size)BLCKSZ \
 )
 
-#define BufferIsValid(vbuffer, bufnum) \
+#define BufferIsValid_s(vbuffer, bufnum) \
 ( \
 	(bufnum) != InvalidBuffer  \
 )
@@ -80,7 +80,7 @@ typedef struct VBlock{
  * RelationGetRelid
  *		Returns the OID of the relation
  */
-#define RelationGetRelid(relation) ((relation)->rd_id)
+#define RelationGetRelid_s(relation) ((relation)->rd_id)
 
 
 /* special block number for ReadBuffer() */
@@ -89,23 +89,24 @@ typedef struct VBlock{
 
 extern VRelation InitVRelation(ORAMState relstate, unsigned int oid,  int total_blocks, pageinit_function pg_f);
 
-extern Buffer ReadBuffer(VRelation relation, BlockNumber blockNum);
+extern Buffer ReadBuffer_s(VRelation relation, BlockNumber blockNum);
 
-extern Page BufferGetPage(VRelation relation, Buffer buffer);
+extern Page BufferGetPage_s(VRelation relation, Buffer buffer);
 
-extern void MarkBufferDirty(VRelation relation, Buffer buffer);
+extern void MarkBufferDirty_s(VRelation relation, Buffer buffer);
 
-extern void ReleaseBuffer(VRelation relation, Buffer buffer);
+extern void ReleaseBuffer_s(VRelation relation, Buffer buffer);
 
-extern BlockNumber BufferGetBlockNumber(Buffer buffer);
+extern BlockNumber BufferGetBlockNumber_s(Buffer buffer);
 
-extern BlockNumber NumberOfBlocks(VRelation rel);
+extern BlockNumber NumberOfBlocks_s(VRelation rel);
 
-extern BlockNumber FreeSpaceBlock(VRelation rel);
+extern BlockNumber FreeSpaceBlock_s(VRelation rel);
 
 extern void UpdateFSM(VRelation rel);
 
-extern void BufferFull(VRelation rel, Buffer buffer);
+extern void BufferFull_s(VRelation rel, Buffer buffer);
 
+extern void closeVRelation(VRelation rel);
 
 #endif /* SOE_BUFPAGE_H */

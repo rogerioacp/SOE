@@ -53,7 +53,7 @@ typedef ScanKeyData *ScanKey;
 
 //extern declarations
 
-extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)());
+extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(), int isIndex);
 
 
 #endif 	/* SOE_H */

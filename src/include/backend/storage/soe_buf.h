@@ -28,12 +28,12 @@ typedef int Buffer;
  * BufferIsInvalid
  *		True iff the buffer is invalid.
  */
-#define BufferIsInvalid(buffer) ((buffer) == InvalidBuffer)
+#define BufferIsInvalid_s(buffer) ((buffer) == InvalidBuffer)
 
 /*
  * BufferIsLocal
  *		True iff the buffer is local (not visible to other backends).
  */
-#define BufferIsLocal(buffer)	((buffer) < 0)
+#define BufferIsLocal_s(buffer)	((buffer) < 0)
 
 #endif							/* SOE_BUF_H */
