@@ -39,9 +39,8 @@ void SGX_UBRIDGE(SGX_NOCONVENTION, outFileClose, (const char* filename));
 
 sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid);
 sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize);
-sgx_status_t getTuple(sgx_enclave_id_t eid, char** retval, const char* scanKey, int scanKeySize);
+sgx_status_t getTuple(sgx_enclave_id_t eid, int* retval, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 sgx_status_t insertHeap(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize);
-sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 
 #ifdef __cplusplus
 }

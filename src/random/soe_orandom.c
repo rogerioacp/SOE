@@ -16,7 +16,7 @@ unsigned int getRandomInt(void){
 		return random();
 	#else
 		unsigned int val;
-		sgx_read_rand(&val, sizeof(unsigned int));
+		sgx_read_rand((char*)&val, sizeof(unsigned int));
 	return val;
 	#endif
 }

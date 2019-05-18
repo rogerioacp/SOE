@@ -18,24 +18,19 @@ typedef struct ms_insert_t {
 } ms_insert_t;
 
 typedef struct ms_getTuple_t {
-	char* ms_retval;
+	int ms_retval;
 	const char* ms_scanKey;
 	int ms_scanKeySize;
+	char* ms_tuple;
+	unsigned int ms_tupleLen;
+	char* ms_tupleData;
+	unsigned int ms_tupleDataLen;
 } ms_getTuple_t;
 
 typedef struct ms_insertHeap_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
 } ms_insertHeap_t;
-
-typedef struct ms_getTupleTID_t {
-	unsigned int ms_blkno;
-	unsigned int ms_offnum;
-	char* ms_tuple;
-	unsigned int ms_tupleLen;
-	char* ms_tupleData;
-	unsigned int ms_tupleDataLen;
-} ms_getTupleTID_t;
 
 typedef struct ms_oc_logger_t {
 	const char* ms_str;
@@ -146,12 +141,16 @@ sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tu
 	return status;
 }
 
-sgx_status_t getTuple(sgx_enclave_id_t eid, char** retval, const char* scanKey, int scanKeySize)
+sgx_status_t getTuple(sgx_enclave_id_t eid, int* retval, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen)
 {
 	sgx_status_t status;
 	ms_getTuple_t ms;
 	ms.ms_scanKey = scanKey;
 	ms.ms_scanKeySize = scanKeySize;
+	ms.ms_tuple = tuple;
+	ms.ms_tupleLen = tupleLen;
+	ms.ms_tupleData = tupleData;
+	ms.ms_tupleDataLen = tupleDataLen;
 	status = sgx_ecall(eid, 2, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
@@ -164,20 +163,6 @@ sgx_status_t insertHeap(sgx_enclave_id_t eid, const char* heapTuple, unsigned in
 	ms.ms_heapTuple = heapTuple;
 	ms.ms_tupleSize = tupleSize;
 	status = sgx_ecall(eid, 3, &ocall_table_Enclave, &ms);
-	return status;
-}
-
-sgx_status_t getTupleTID(sgx_enclave_id_t eid, unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen)
-{
-	sgx_status_t status;
-	ms_getTupleTID_t ms;
-	ms.ms_blkno = blkno;
-	ms.ms_offnum = offnum;
-	ms.ms_tuple = tuple;
-	ms.ms_tupleLen = tupleLen;
-	ms.ms_tupleData = tupleData;
-	ms.ms_tupleDataLen = tupleDataLen;
-	status = sgx_ecall(eid, 4, &ocall_table_Enclave, &ms);
 	return status;
 }
 
