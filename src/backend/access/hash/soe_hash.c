@@ -20,6 +20,7 @@
 #include "access/soe_hash.h"
 #include "access/soe_itup.h"
 #include "access/soe_genam.h"
+#include "logger/logger.h"
 
 /*
  *	hashinsert() -- insert an index tuple into a hash table.
@@ -28,7 +29,7 @@
  *	Find the appropriate location for the new tuple, and put it there.
  */
 bool
-hashinsert_s(VRelation rel, IndexTuple itup)
+hashinsert_s(VRelation rel, ItemPointer ht_ctid, const char* datum, unsigned int datumSize)
 {
 
 	/*
@@ -39,16 +40,16 @@ hashinsert_s(VRelation rel, IndexTuple itup)
 	 * tuple.
      */
 
-	//Datum		index_values[1];
-	//bool		index_isnull[1];
-	//IndexTuple	itup;
+	Datum		index_values[1];
+	bool		index_isnull[1];
+	IndexTuple	itup;
 
+	//selog(DEBUG1, "Indexed datum is %s and has size %d", datum, datumSize);
 	/* convert data to a hash key; on failure, do not insert anything */
 	// Is going to be hardocode for prototype. hasutil.c
-	//if (!_hash_convert_tuple(rel,
-	//						 values, isnull,
-	//						 index_values, index_isnull))
-	//	return false;
+	if (!_hash_convert_tuple_s(rel, datum, datumSize,
+							 index_values, index_isnull))
+		return false;
 
 	/* form an index tuple and point it at the heap tuple */
 	/**
@@ -56,10 +57,11 @@ hashinsert_s(VRelation rel, IndexTuple itup)
 	 * system security and does not need to import the index_form_tuple 
 	 * function to inside of the enclave.
 	 */
-	//itup = index_form_tuple(RelationGetDescr(rel), index_values, index_isnull);
-	//itup->t_tid = *ht_ctid;
-
+	itup = index_form_tuple_s(rel->tDesc, index_values, index_isnull);
+	itup->t_tid = *ht_ctid;
+	selog(DEBUG1, "indexed value is %s, has size %d and  key %d", datum, datumSize, DatumGetInt32_s(index_values[0]));
 	_hash_doinsert_s(rel, itup);
+	free(itup);
 	return false;
 }
 
@@ -81,10 +83,13 @@ hashgettuple_s(IndexScanDesc scan)
 	 * appropriate direction.  If we haven't done so yet, we call a routine to
 	 * get the first item in the scan.
 	 */
-	if (!HashScanPosIsValid_s(so->currPos))
+	if (!HashScanPosIsValid_s(so->currPos)){
+		selog(DEBUG1, "Going to search first match");
 		res = _hash_first_s(scan);
+	}
 	else
 	{
+		selog(DEBUG1, "Going to continue search for next match");
 		/*
 		 * Now continue the scan.
 		 */
@@ -99,20 +104,18 @@ hashgettuple_s(IndexScanDesc scan)
  *	hashbeginscan() -- start a scan on a hash index
  */
 IndexScanDesc
-hashbeginscan_s(VRelation rel, int nkeys, int norderbys)
+hashbeginscan_s(VRelation irel, const char* key, int keysize)
 {
 	IndexScanDesc scan;
 	HashScanOpaque so;
+	ScanKey scanKey;
 
-	scan = NULL;
+	scanKey = (ScanKey) malloc(sizeof(ScanKeyData));
+	scanKey->sk_subtype = irel->foid;
+	scanKey->sk_argument = (char*) malloc(keysize);
+	memcpy(scanKey->sk_argument, key, keysize);
+	scanKey->datumSize = keysize;
 
-	/* no order by operators allowed */
-	//Assert(norderbys == 0);
-
-	/*TODO: RelationGetIndexScan has be placed inside the enclave*/
-	//scan = RelationGetIndexScan(rel, nkeys, norderbys);
-
-	/*TODO: replace palloc calls for mallocs*/
 	so = (HashScanOpaque) malloc(sizeof(HashScanOpaqueData));
 	HashScanPosInvalidate_s(so->currPos);
 	so->hashso_bucket_buf = InvalidBuffer;
@@ -121,10 +124,18 @@ hashbeginscan_s(VRelation rel, int nkeys, int norderbys)
 	so->hashso_buc_populated = false;
 	so->hashso_buc_split = false;
 
-	so->killedItems = NULL;
-	so->numKilled = 0;
+	//so->killedItems = NULL;
+	//so->numKilled = 0;
 
+	scan = (IndexScanDesc) malloc(sizeof(IndexScanDescData));
+	scan->indexRelation = irel;
+	scan->keyData = scanKey;
 	scan->opaque = so;
+
+	ItemPointerSetInvalid_s(&scan->xs_ctup.t_self);
+	scan->xs_ctup.t_data = NULL;
+	scan->xs_cbuf = InvalidBuffer;
+	scan->xs_continue_hot = false;
 
 	return scan;
 }
@@ -136,14 +147,14 @@ void
 hashendscan_s(IndexScanDesc scan)
 {
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
-	VRelation	rel = scan->indexRelation;
+	VRelation rel = scan->indexRelation;
 
 	_hash_dropscanbuf_s(rel, so);
 
-	if (so->killedItems != NULL)
-		free(so->killedItems);
+	free(scan->keyData->sk_argument);
+	free(scan->keyData);
 	free(so);
-	scan->opaque = NULL;
+	free(scan);
 }
 
 

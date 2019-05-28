@@ -156,6 +156,45 @@ struct HeapTupleHeaderData
 
 #define SizeofHeapTupleHeader offsetof_s(HeapTupleHeaderData, t_bits)
 
+
+
+/*
+ * information stored in t_infomask:
+ */
+#define HEAP_HASNULL			0x0001	/* has null attribute(s) */
+#define HEAP_HASVARWIDTH		0x0002	/* has variable-width attribute(s) */
+#define HEAP_HASEXTERNAL		0x0004	/* has external stored attribute(s) */
+#define HEAP_HASOID				0x0008	/* has an object-id field */
+#define HEAP_XMAX_KEYSHR_LOCK	0x0010	/* xmax is a key-shared locker */
+#define HEAP_COMBOCID			0x0020	/* t_cid is a combo cid */
+#define HEAP_XMAX_EXCL_LOCK		0x0040	/* xmax is exclusive locker */
+#define HEAP_XMAX_LOCK_ONLY		0x0080	/* xmax, if valid, is only a locker */
+
+ /* xmax is a shared locker */
+#define HEAP_XMAX_SHR_LOCK	(HEAP_XMAX_EXCL_LOCK | HEAP_XMAX_KEYSHR_LOCK)
+
+#define HEAP_LOCK_MASK	(HEAP_XMAX_SHR_LOCK | HEAP_XMAX_EXCL_LOCK | \
+						 HEAP_XMAX_KEYSHR_LOCK)
+#define HEAP_XMIN_COMMITTED		0x0100	/* t_xmin committed */
+#define HEAP_XMIN_INVALID		0x0200	/* t_xmin invalid/aborted */
+#define HEAP_XMIN_FROZEN		(HEAP_XMIN_COMMITTED|HEAP_XMIN_INVALID)
+#define HEAP_XMAX_COMMITTED		0x0400	/* t_xmax committed */
+#define HEAP_XMAX_INVALID		0x0800	/* t_xmax invalid/aborted */
+#define HEAP_XMAX_IS_MULTI		0x1000	/* t_xmax is a MultiXactId */
+#define HEAP_UPDATED			0x2000	/* this is UPDATEd version of row */
+#define HEAP_MOVED_OFF			0x4000	/* moved to another place by pre-9.0
+										 * VACUUM FULL; kept for binary
+										 * upgrade support */
+#define HEAP_MOVED_IN			0x8000	/* moved from another place by pre-9.0
+										 * VACUUM FULL; kept for binary
+										 * upgrade support */
+#define HEAP_MOVED (HEAP_MOVED_OFF | HEAP_MOVED_IN)
+
+#define HEAP_XACT_MASK			0xFFF0	/* visibility-related bits */
+
+
+
+
 /*
  * MaxHeapTuplesPerPage is an upper bound on the number of tuples that can
  * fit on one heap page.  (Note that indexes could have more, because they
@@ -172,4 +211,12 @@ struct HeapTupleHeaderData
 			(MAXALIGN_s(SizeofHeapTupleHeader) + sizeof(ItemIdData))))
 
 
+/* prototypes for functions in common/heaptuple.c */
+extern Size heap_compute_data_size_s(TupleDesc tupleDesc,
+					   Datum *values, bool *isnull);
+
+extern void heap_fill_tuple_s(TupleDesc tupleDesc,
+				Datum *values, bool *isnull,
+				char *data, Size data_size,
+				uint16 *infomask, bits8 *bit);
 #endif /* SOE_HTUP_DETAILS_H */

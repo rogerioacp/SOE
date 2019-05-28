@@ -6,8 +6,11 @@
 #include "Enclave_t.h"
 #endif
 
+#include "ops.h"
+
 #include "access/soe_heapam.h"
 #include "storage/soe_bufmgr.h"
+#include "access/soe_hash.h"
 #include "storage/soe_hash_ofile.h"
 #include "storage/soe_heap_ofile.h"
 #include "logger/logger.h"
@@ -26,28 +29,39 @@
 
 ORAMState stateTable = NULL;
 ORAMState stateIndex = NULL;
+
 VRelation oTable;
 VRelation oIndex;
+
 Amgr* tamgr;
 Amgr* iamgr;
+
 BlockNumber blkno;
 OffsetNumber off;
-
+IndexScanDesc scan;
 
 void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
-    unsigned int tOid, unsigned int iOid){
+    unsigned int tOid, unsigned int iOid, unsigned int functionOid, char* attrDesc, unsigned int attrDescLength){
     //VALGRIND_DO_LEAK_CHECK;
 
     //selog(DEBUG1, "Initializing SOE for relation %s and index  %s", tName, iName);
-    
     stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, 0);
     stateIndex = initORAMState(iName, iNBlocks, &hash_ofileCreate, 1);
     oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
     oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &hash_pageInit);
-
+    
     blkno=0;
     off=1;
+  
+    oIndex->foid = functionOid;
+    oIndex->tDesc->natts = 1;
+    oIndex->tDesc->attrs = (FormData_pg_attribute*) malloc(sizeof(struct FormData_pg_attribute));
+    memcpy(oIndex->tDesc->attrs, attrDesc, attrDescLength);
+    selog(DEBUG1, "the key length is %d", oIndex->tDesc->attrs->attlen);
+    _hash_init_s(oIndex, 0);
+    scan = NULL;
 }
+
 
  ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(), int isIndex){
     Amgr* amgr;
@@ -67,18 +81,35 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
     return init_oram(name, fileSize, BLCKSZ, BKCAP, amgr);
  }
 
-void insert(const char* heapTuple, unsigned int size){
-//    HeapTuple tupleData = (HeapTuple) heapTuple;
+void insert(const char* heapTuple, unsigned int tupleSize,  const char* datum, unsigned int datumSize){
 
+    HeapTuple hTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+
+    
+    Item tuple = (Item) heapTuple;
+    if(tupleSize <= MAX_TUPLE_SIZE){
+        //selog(DEBUG1, "Going to insert tuple of size %d", tupleSize);
+        heap_insert_s(oTable, tuple, (uint32) tupleSize, hTuple);
+        hashinsert_s(oIndex, &(hTuple->t_self), datum, datumSize);
+
+    }else{
+        selog(WARNING, "Can't insert tuple of size %d", tupleSize);
+    }
+
+    free(hTuple);
 }
 
-int getTuple(const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
-    HeapTuple heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+int getTuple(unsigned int opmode, const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
+    
+    HeapTuple heapTuple;
     ItemPointerData tid;
-    int hasNext = 0;
+    int hasNext;
+    bool hasMore = false;
 
+    heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+    hasNext = 0;
 
-    if(strcmp(key, "NEXT")==0){
+    if(opmode == TEST_MODE){
 
          /**
          * If there are no more blocks or the current block has no more tuples.
@@ -104,6 +135,28 @@ int getTuple(const char* key, int scanKeySize, char* tuple, unsigned int tupleLe
         }
        
 
+    }else{
+
+        if(scan == NULL){
+            scan = hashbeginscan_s(oIndex, key, scanKeySize);
+        }
+
+        hasMore =  hashgettuple_s(scan);
+
+        if(!hasMore){
+            hasNext = 0;
+            selog(DEBUG1, "Going to free scan resources");
+            hashendscan_s(scan);
+            scan = NULL;
+            free(heapTuple);
+            return 1;
+        }else{
+            selog(DEBUG1, "Going to access the heap");
+            tid =  scan->xs_ctup.t_self;
+            heap_gettuple_s(oTable, &tid, heapTuple);
+        }
+
+
     }
 
      if(heapTuple->t_len > MAX_TUPLE_SIZE){
@@ -124,36 +177,20 @@ int getTuple(const char* key, int scanKeySize, char* tuple, unsigned int tupleLe
 
 void insertHeap(const char* heapTuple, unsigned int tupleSize){
 
+    HeapTuple hTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+
     
     Item tuple = (Item) heapTuple;
     if(tupleSize <= MAX_TUPLE_SIZE){
         selog(DEBUG1, "Going to insert tuple of size %d", tupleSize);
-        heap_insert_s(oTable, tuple, (uint32) tupleSize);
+        heap_insert_s(oTable, tuple, (uint32) tupleSize, hTuple);
+
     }else{
         selog(WARNING, "Can't insert tuple of size %d", tupleSize);
     }
+
+    free(hTuple);
     
-
-}
-
-void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
-
-    HeapTuple heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
-    ItemPointerData tid;
-
-    ItemPointerSet_s(&tid, BufferGetBlockNumber_s((BlockNumber) blkno),  (OffsetNumber) offnum);
-    heap_gettuple_s(oTable, &tid, heapTuple);
-
-    //selog(DEBUG1, "Input tuple len %d, output tuple len %d", tupleLen, heapTuple->t_len);
-
-    if(heapTuple->t_len > MAX_TUPLE_SIZE){
-        selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
-    }else{
-        selog(DEBUG1, "Going to copy tuple of size %d", tupleDataLen);
-        memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
-        memcpy(tupleData, (char*) (heapTuple->t_data), tupleDataLen);
-    }
-    free(heapTuple);
 }
 
 
@@ -163,8 +200,6 @@ void closeSoe(){
     closeVRelation(oIndex);
     free(tamgr);
     free(iamgr);
-    //VALGRIND_DO_LEAK_CHECK;
-
 }
 /*
 * This function is never used. 

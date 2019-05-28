@@ -23,11 +23,13 @@ VRelation InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, 
     vrel->totalBlocks = total_blocks;
     vrel->pageinit = pg_f;
     vrel->fsm = (int*) malloc(sizeof(int)*total_blocks);
-
+    vrel->rd_amcache = NULL;
     for(offset=0; offset < total_blocks; offset++){
         vrel->fsm[offset] = 0;
     }
 	list_new(&(vrel->buffer));
+    vrel->tDesc = (TupleDesc) malloc(sizeof(struct tupleDesc));
+    vrel->tDesc->attrs = NULL;
 	return vrel;
 }
 
@@ -157,7 +159,7 @@ void MarkBufferDirty_s(VRelation relation, Buffer buffer){
         }
     }
 
-    //selog(DEBUG1, "GOING to oblivsiou write to real blkno %d", vblock->id);
+    selog(DEBUG1, "GOING to oblivious write to real blkno %d", vblock->id);
     result  = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram);
 
     if(result != BLCKSZ){
@@ -172,20 +174,25 @@ void ReleaseBuffer_s(VRelation relation, Buffer buffer){
     VBlock vblock;
     void* element;
     void* toFree;
+    bool found;
 
+    found = false;
     list_iter_init(&iter, relation->buffer);
 
     //Search with virtual block with buffer
     while(list_iter_next(&iter, &element) != CC_ITER_END){
         vblock = (VBlock) element;
         if(vblock->id == buffer){
+            found = true;
             break;
         }
     }
-    
-    list_remove(relation->buffer, vblock, &toFree);
-    free(((VBlock)toFree)->page);
-    free(toFree);
+    //The hash index might request to release buffer that has already been released previously during the search for a tuple.
+    if(found){
+        list_remove(relation->buffer, vblock, &toFree);
+        free(((VBlock)toFree)->page);
+        free(toFree);
+    }
 }
 
 
@@ -223,6 +230,13 @@ void closeVRelation(VRelation rel){
     close_oram(rel->oram);
     list_remove_all_cb(rel->buffer, &destroyVBlcok);
     list_destroy(rel->buffer);
+    if(rel->rd_amcache != NULL){
+        free(rel->rd_amcache);
+    }
+    if(rel->tDesc->attrs != NULL){
+     free(rel->tDesc->attrs);
+    }
+    free(rel->tDesc);
     free(rel->fsm);
     free(rel);
 }

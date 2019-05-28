@@ -15,7 +15,7 @@
 typedef struct IndexScanDescData
 {
 	/* scan parameters */
-	VRelation	heapRelation;	/* heap relation descriptor, or NULL */
+	//VRelation	heapRelation;	/* heap relation descriptor, or NULL */
 	VRelation	indexRelation;	/* index relation descriptor */
 	ScanKey		keyData;		/* array of index qualifier descriptors */
 

@@ -14,8 +14,9 @@
  */
 
 #include "access/soe_hash.h"
+#include "logger/logger.h"
 
-static bool _hash_readpage_s(IndexScanDesc scan, Buffer *bufP);
+static bool _hash_readpage_s(IndexScanDesc scan, Buffer bufP);
 static int _hash_load_qualified_items_s(IndexScanDesc scan, Page page,
 						   OffsetNumber offnum);
 static inline void _hash_saveitem_s(HashScanOpaque so, int itemIndex,
@@ -54,14 +55,13 @@ _hash_next_s(IndexScanDesc scan)
 	 * killed items.
 	 */
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
-	{
-
+	{ //Read the next page if every item is read from the current page.
+		selog(DEBUG1, "Going to move to next page");
 		blkno = so->currPos.nextPage;
 		if (BlockNumberIsValid_s(blkno))
 		{
 			buf = _hash_getbuf_s(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
-			//TestForOldSnapshot(scan->xs_snapshot, rel, BufferGetPage(buf));
-			if (!_hash_readpage_s(scan, &buf))
+			if (!_hash_readpage_s(scan, buf))
 				end_of_scan = true;
 		}
 		else
@@ -69,9 +69,9 @@ _hash_next_s(IndexScanDesc scan)
 	}
 	
 	
-
 	if (end_of_scan)
 	{
+		selog(DEBUG1, "End of scan");
 		_hash_dropscanbuf_s(rel, so);
 		HashScanPosInvalidate_s(so->currPos);
 		return false;
@@ -92,28 +92,28 @@ _hash_next_s(IndexScanDesc scan)
  */
 static void
 _hash_readnext_s(IndexScanDesc scan,
-			   Buffer *bufp, Page *pagep, HashPageOpaque *opaquep)
+			   Buffer* bufp, Page *pagep, HashPageOpaque *opaquep)
 {
 	BlockNumber blkno;
 	VRelation	rel = scan->indexRelation;
-//	HashScanOpaque so = (HashScanOpaque) scan->opaque;
+	HashScanOpaque so = (HashScanOpaque) scan->opaque;
 	bool		block_found = false;
 
 	blkno = (*opaquep)->hasho_nextblkno;
-
+	selog(DEBUG1, "Next block number is %d", blkno);
 	/*
 	 * Retain the pin on primary bucket page till the end of scan.  Refer the
 	 * comments in _hash_first to know the reason of retaining pin.
 	 */
-	/*if (*bufp == so->hashso_bucket_buf || *bufp == so->hashso_split_bucket_buf)
-		LockBuffer(*bufp, BUFFER_LOCK_UNLOCK);
-	else
-		_hash_relbuf(rel, *bufp);*/
+	if (!(*bufp == so->hashso_bucket_buf || *bufp == so->hashso_split_bucket_buf))
+		ReleaseBuffer_s(rel, *bufp);
+
 
 	*bufp = InvalidBuffer;
 	/* check for interrupts while we're not holding any buffer lock */
 	if (BlockNumberIsValid_s(blkno))
 	{
+		selog(DEBUG1, "Block number is valid %d ",BlockNumberIsValid_s(blkno));
 		*bufp = _hash_getbuf_s(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
 		block_found = true;
 	}
@@ -160,17 +160,6 @@ _hash_first_s(IndexScanDesc scan)
 	/* There may be more than one index qual, but we hash only the first */
 	cur = &scan->keyData[0];
 
-	/* We support only single-column hash indexes */
-	//Assert(cur->sk_attno == 1);
-	/* And there's only one operator strategy, too */
-	//Assert(cur->sk_strategy == HTEqualStrategyNumber);
-
-	/*
-	 * If the constant in the index qual is NULL, assume it cannot match any
-	 * items in the index.
-	 */
-	//if (cur->sk_flags & SK_ISNULL)
-	//	return false;
 
 	/*
 	 * Okay to compute the hash key.  We want to do this before acquiring any
@@ -182,32 +171,22 @@ _hash_first_s(IndexScanDesc scan)
 	 * We support the convention that sk_subtype == InvalidOid means the
 	 * opclass input type; this is a hack to simplify life for ScanKeyInit().
 	 */
-	//TODO: Define how to create hashkey
-	/*if (cur->sk_subtype == rel->rd_opcintype[0] ||
-		cur->sk_subtype == InvalidOid)*/
-	 hashkey = _hash_datum2hashkey_s(rel, cur->sk_argument);
-	/*else
-		hashkey = _hash_datum2hashkey_type(rel, cur->sk_argument,
-										   cur->sk_subtype);*/
 
+	hashkey = _hash_datum2hashkey_s(rel, cur->sk_argument, cur->datumSize);
+	
 	so->hashso_sk_hash = hashkey;
 
 	buf = _hash_getbucketbuf_from_hashkey_s(rel, hashkey, HASH_READ, NULL);
-	//page = BufferGetPage(rel, buf);
-	//opaque = (HashPageOpaque) PageGetSpecialPointer(page);
-	//bucket = opaque->hasho_bucket;
 
 	so->hashso_bucket_buf = buf;
 
-
-	/* remember which buffer we have pinned, if any */
-	//Assert(BufferIsInvalid(so->currPos.buf));
 	so->currPos.buf = buf;
 
+	selog(DEBUG1, "Going to search qualifying tuples on page");
 	/* Now find all the tuples satisfying the qualification from a page */
-	if (!_hash_readpage_s(scan, &buf))
+	if (!_hash_readpage_s(scan, buf))
 		return false;
-
+	selog(DEBUG1, "items were found");
 	/* OK, itemIndex says what to return */
 	currItem = &so->currPos.items[so->currPos.itemIndex];
 	scan->xs_ctup.t_self = currItem->heapTid;
@@ -227,19 +206,17 @@ _hash_first_s(IndexScanDesc scan)
  *	Return true if any matching items are found else return false.
  */
 static bool
-_hash_readpage_s(IndexScanDesc scan, Buffer *bufP)
+_hash_readpage_s(IndexScanDesc scan, Buffer buf)
 {
 	VRelation	rel = scan->indexRelation;
 	HashScanOpaque so = (HashScanOpaque) scan->opaque;
-	Buffer		buf;
 	Page		page;
 	HashPageOpaque opaque;
 	OffsetNumber offnum;
 	uint16		itemIndex;
 
-	buf = *bufP;
-	//Assert(BufferIsValid(buf));
 	_hash_checkpage_s(rel, buf, LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+
 	page = BufferGetPage_s(rel, buf);
 	opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
@@ -251,14 +228,22 @@ _hash_readpage_s(IndexScanDesc scan, Buffer *bufP)
 
 	for (;;)
 	{
+		selog(DEBUG1, "Going to do binary search on page");
 		/* new page, locate starting position by binary search */
 		offnum = _hash_binsearch_s(page, so->hashso_sk_hash);
-
+		selog(DEBUG1, "Found binary search location start %d", offnum);
 		itemIndex = _hash_load_qualified_items_s(scan, page, offnum);
+		selog(DEBUG1, "Found %d matches", itemIndex);
 
 		if (itemIndex != 0)
 			break;
+		/*
+		 * Could not find any matching tuples in the current page, move to
+		 * the next page. Before leaving the current page, deal with any
+		 * killed items.
+		 */
 
+		selog(DEBUG1, "Going to move to the next page");
 
 		/*
 		 * If this is a primary bucket page, hasho_prevblkno is not a real
@@ -269,15 +254,18 @@ _hash_readpage_s(IndexScanDesc scan, Buffer *bufP)
 			prev_blkno = InvalidBlockNumber;
 		else
 			prev_blkno = opaque->hasho_prevblkno;
-
+		selog(DEBUG1, "Going to read next page");
 		_hash_readnext_s(scan, &buf, &page, &opaque);
+
 		if (BufferIsValid_s(rel, buf))
 		{
+			selog(DEBUG1, "Next page is valid");
 			so->currPos.buf = buf;
 			so->currPos.currPage = BufferGetBlockNumber_s(buf);
 		}
 		else
 		{
+			selog(DEBUG1, "Next page is invalid");
 			/*
 			 * Remember next and previous block numbers for scrollable
 			 * cursors to know the start position and return false
@@ -300,10 +288,9 @@ _hash_readpage_s(IndexScanDesc scan, Buffer *bufP)
 
 	so->currPos.prevPage = opaque->hasho_prevblkno;
 	so->currPos.nextPage = opaque->hasho_nextblkno;
-	_hash_relbuf_s(rel, so->currPos.buf);
+	ReleaseBuffer_s(rel, so->currPos.buf);
 	so->currPos.buf = InvalidBuffer;
 
-	//Assert(so->currPos.firstItem <= so->currPos.lastItem);
 	return true;
 }
 
@@ -333,6 +320,7 @@ _hash_load_qualified_items_s(IndexScanDesc scan, Page page,
 		if (so->hashso_sk_hash == _hash_get_indextuple_hashkey_s(itup)) /* &&
 			_hash_checkqual(scan, itup))*/
 		{
+			selog(DEBUG1, "Qualified item found");
 			/* tuple is qualified, so remember it */
 			_hash_saveitem_s(so, itemIndex, offnum, itup);
 			itemIndex++;

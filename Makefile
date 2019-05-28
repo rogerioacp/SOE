@@ -297,11 +297,21 @@ soe_hash_ofile.o: src/backend/storage/buffer/soe_hash_ofile.c
 soe_heapam.o: src/backend/access/heap/soe_heapam.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
+soe_heaptuple.o: src/backend/access/common/soe_heaptuple.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+
+soe_indextuple.o: src/backend/access/common/soe_indextuple.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+
+soe_hashfunc.o: src/backend/access/hash/soe_hashfunc.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+
+
 soe.o: src/backend/soe.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 
-$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe.o 
+$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe_hashfunc.o soe.o 
 	$(CC) $(SGX_COMMON_CFLAGS)  $^ -o $@ -static $(SOE_LADD)  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -312,7 +322,7 @@ $(Signed_Enclave_Lib): $(Enclave_Lib)
 $(Untrusted_Lib): enclave_u.o
 	$(CC) -shared  $^ -o $@ 
 
-$(Unsafe_Lib):  soe.o logger.o  soe_heapam.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_hash.o soe_orandom.o 
+$(Unsafe_Lib):  soe.o logger.o soe_heapam.o soe_hashfunc.o soe_heaptuple.o soe_indextuple.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_hash.o soe_orandom.o 
 	$(CC) $(Utrust_Flags) $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD)
 
 .PHONY: install
@@ -324,6 +334,7 @@ install:
 	cp $(Signed_Enclave_Lib) $(INSTALL_PATH)/lib/soe
 	cp $(Untrusted_Lib) $(INSTALL_PATH)/lib/soe
 	cp src/include/backend/enclave/* $(INSTALL_PATH)/include/soe
+	cp src/include/backend/ops.h $(INSTALL_PATH)/include/soe
 	chmod 755 $(INSTALL_PATH)/lib/soe/$(Signed_Enclave_Lib)
 	chmod 755 $(INSTALL_PATH)/lib/soe/$(Untrusted_Lib)
 	chmod 644 $(INSTALL_PATH)/include/soe/*
@@ -333,6 +344,7 @@ install:
 	mkdir -p $(INSTALL_PATH)/include/soe
 	cp $(Unsafe_Lib) $(INSTALL_PATH)/lib/soe
 	cp src/include/backend/enclave/* $(INSTALL_PATH)/include/soe
+	cp src/include/backend/ops.h $(INSTALL_PATH)/include/soe
 	chmod 755 $(INSTALL_PATH)/lib/soe/$(Unsafe_Lib)
 	chmod 644 $(INSTALL_PATH)/include/soe/*		
 endif

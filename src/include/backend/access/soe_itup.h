@@ -21,6 +21,8 @@
 //Oriignal postgres include, does not need to be modified.
 #include "storage/soe_itemptr.h"
 
+#include "access/soe_tupdesc.h"
+
 
 typedef struct IndexAttributeBitMapData
 {
@@ -34,7 +36,9 @@ typedef IndexAttributeBitMapData * IndexAttributeBitMap;
 #define INDEX_AM_RESERVED_BIT 0x2000	/* reserved for index-AM specific
 										 * usage */
 
+#define INDEX_VAR_MASK	0x4000
 #define INDEX_NULL_MASK 0x8000
+
 
 
 /*
@@ -109,5 +113,8 @@ typedef IndexTupleData *IndexTuple;
 	) \
 )
 
+/* routines in indextuple.c */
+extern IndexTuple index_form_tuple_s(TupleDesc tupleDescriptor,
+				 Datum *values, bool *isnull);
 
 #endif

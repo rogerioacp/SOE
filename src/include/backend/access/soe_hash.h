@@ -25,7 +25,8 @@
 #include "storage/soe_bufmgr.h"
 #include "storage/soe_item.h"
 
-
+#define HASH_MIN_FILLFACTOR			10
+#define HASH_DEFAULT_FILLFACTOR		75
 
 /*
  * Mapping from hash bucket number to physical block number of bucket's
@@ -59,12 +60,13 @@ typedef uint32 Bucket;
  */
 typedef struct HashPageOpaqueData
 {
-	int o_blkno; /* real block number or Dummy Block*/
 	BlockNumber hasho_prevblkno;	/* see above */
 	BlockNumber hasho_nextblkno;	/* see above */
 	Bucket		hasho_bucket;	/* bucket number this pg belongs to */
 	uint16		hasho_flag;		/* page type code + flag bits, see above */
 	uint16		hasho_page_id;	/* for identification of hash indexes */
+	int o_blkno; /* real block number or Dummy Block*/
+	
 } HashPageOpaqueData;
 
 typedef HashPageOpaqueData *HashPageOpaque;
@@ -144,9 +146,7 @@ typedef struct HashScanOpaqueData
 	 * referred only when hashso_buc_populated is true.
 	 */
 	bool		hashso_buc_split;
-	/* info about killed items if any (killedItems is NULL if never used) */
-	int		   *killedItems;	/* currPos.items indexes of killed items */
-	int			numKilled;		/* number of currently stored items */
+
 
 	/*
 	 * Identify all the matching items on a page and save them in
@@ -238,6 +238,9 @@ typedef HashScanOpaqueData *HashScanOpaque;
 #define HashPageGetBitmap_s(page) \
 	((uint32 *) PageGetContents_s(page))
 
+#define HashGetMaxBitmapSize_s(page) \
+	(PageGetPageSize_s((Page) page) - \
+	 (MAXALIGN_s(SizeOfPageHeaderData) + MAXALIGN_s(sizeof(HashPageOpaqueData))))
 
 typedef struct HashMetaPageData
 {
@@ -327,8 +330,17 @@ typedef HashMetaPageData *HashMetaPage;
  *	Hash on the heap tuple's key, form an index tuple with hash code.
  *	Find the appropriate location for the new tuple, and put it there.
  */
-bool
-hashinsert_s(VRelation rel, IndexTuple tuple);
+
+
+
+/*public routines*/
+
+extern bool hashinsert_s(VRelation rel, ItemPointer ht_ctid, const char* datum, unsigned int datumSize);
+
+extern void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple);
+
+extern IndexScanDesc hashbeginscan_s(VRelation rel, const char* key, int keysize);
+extern bool hashgettuple_s(IndexScanDesc scan);
 
 
 /* private routines */
@@ -336,7 +348,7 @@ hashinsert_s(VRelation rel, IndexTuple tuple);
 /* hashsearch.c */
 extern bool _hash_next_s(IndexScanDesc scan);
 extern bool _hash_first_s(IndexScanDesc scan);
-
+extern void hashendscan_s(IndexScanDesc scan);
 
 /* hashinsert.c */
 extern void _hash_doinsert_s(VRelation rel, IndexTuple itup);
@@ -354,11 +366,16 @@ extern uint32 _hash_get_totalbuckets_s(uint32 splitpoint_phase);
 extern void _hash_pgaddmultitup_s(VRelation rel, Buffer buf, IndexTuple *itups,
 					OffsetNumber *itup_offsets, uint16 nitups);
 extern uint32 _hash_spareindex_s(uint32 num_bucket);
-extern uint32 _hash_datum2hashkey_s(VRelation rel, Datum key);
+extern uint32 _hash_datum2hashkey_s(VRelation rel, const char* datum, unsigned int datumSize);
 extern bool _hash_checkqual_s(IndexScanDesc scan, IndexTuple itup);
+extern uint32 _hash_log2_s(uint32 num);
 
 
 /* hashpage.c */
+extern uint32 _hash_init_s(VRelation rel, double num_tuples);
+
+extern void _hash_init_metabuffer_s(VRelation rel, Buffer buf, double num_tuples, uint16 ffactor);
+
 extern Buffer _hash_getinitbuf_s(VRelation rel, BlockNumber blkno);
 
 extern Buffer _hash_getbuf_s(VRelation rel, BlockNumber blkno,
@@ -396,6 +413,10 @@ extern void hashbucketcleanup_s(VRelation rel, Bucket cur_bucket,
 				  Buffer bucket_buf, BlockNumber bucket_blkno,
 				  uint32 maxbucket, uint32 highmask, uint32 lowmask);
 
+extern Datum hash_any_s(register const unsigned char *k, register int keylen);
 
+extern bool _hash_convert_tuple_s(VRelation index,
+					const char *datum, unsigned int datumSize,
+					Datum *index_values, bool *index_isnull);
 
 #endif							/* SOE_HASH_H */

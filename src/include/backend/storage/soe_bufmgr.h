@@ -69,6 +69,12 @@ typedef struct VRelation{
 	*/
 	void *rd_amcache;
 	pageinit_function pageinit;
+
+	//Funciton oid to hash values
+	unsigned int foid;
+
+	//FormData_pg_attribute* indexTupleDesc;
+ 	TupleDesc tDesc;
 } *VRelation;
 
 typedef struct VBlock{

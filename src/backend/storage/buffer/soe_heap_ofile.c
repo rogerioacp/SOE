@@ -110,7 +110,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 	if(block->blkno == DUMMY_BLOCK){
 		//selog(DEBUG1, "Requested write of DUMMY_BLOCK");
 		/**
-		* When the blocks to write to the fully are dummy, they have to be
+		* When the blocks to write to the file are dummy, they have to be
 		* initialized to keep a consistent state for next reads. We might
 		* be able to optimize and
 		* remove this extra step by removing some verifications

@@ -8,13 +8,13 @@ typedef unsigned int sgx_status_t;
 
 
 
-void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid);
+void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, char* attrDesc, unsigned int attrDescLength);
 
-void insert(const char* heapTuple, unsigned int tupleSize);
+void insert(const char* heapTuple, unsigned int tupleSize,  const char* datum, unsigned int datumSize);
 void insertHeap(const char* heapTuple, unsigned int tupleSize);
 
-int getTuple(const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
-void getTupleTID(unsigned int blkno, unsigned int offnum, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
+int getTuple(unsigned int opmode, const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
+
 
 void closeSoe();
 

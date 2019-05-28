@@ -38,17 +38,20 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	Size		itemsz;
 	bool		do_expand;
 	uint32		hashkey;
+	//OffsetNumber itup_off;
+
 	//Bucket		bucket;
 
 	/*
 	 * Get the hash key for the item (it's stored in the index tuple itself).
 	 */
 	hashkey = _hash_get_indextuple_hashkey_s(itup);
-
+	selog(DEBUG1, "Hash key for tuple is %d", hashkey);
 	/* compute item size too */
 	itemsz = IndexTupleSize_s(itup);
 	itemsz = MAXALIGN_s(itemsz);	/* be safe, PageAddItem will do this but we
 								 * need to be consistent */
+	selog(DEBUG1, "tuple size is %d", itemsz);
 
 	/*
 	 * Read the metapage.  We don't lock it yet; HashMaxItemSize() will
@@ -56,6 +59,7 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	 * without a lock.
 	 */
 	metabuf = _hash_getbuf_s(rel, HASH_METAPAGE, HASH_NOLOCK, LH_META_PAGE);
+	selog(DEBUG1, "Going to get metapage");
 	metapage = BufferGetPage_s(rel, metabuf);
 
 	/*
@@ -66,32 +70,27 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	 * XXX this is useless code if we are only storing hash keys.
 	 */
 	if (itemsz > HashMaxItemSize_s(metapage))
-		//log error
-		/*ereport(ERROR,
-				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-				 errmsg("index row size %zu exceeds hash maximum %zu",
-						itemsz, HashMaxItemSize(metapage)),
-				 errhint("Values larger than a buffer page cannot be indexed.")));*/
+		selog(ERROR, "Index row size %zu exceeds hash maximum %zu",
+						itemsz, HashMaxItemSize_s(metapage));
+	
+	selog(DEBUG1, "Going to get buffer from hashkey");
 
 	/* Lock the primary bucket page for the target bucket. */
 	buf = _hash_getbucketbuf_from_hashkey_s(rel, hashkey, HASH_WRITE,
 										  &usedmetap);
-	//Assert(usedmetap != NULL);
 
-
+	selog(DEBUG1, "The buffer selected was %d", buf);
 	/* remember the primary bucket buffer to release the pin on it at end. */
 	bucket_buf = buf;
 
 	page = BufferGetPage_s(rel, buf);
 	pageopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
-	//bucket = pageopaque->hasho_bucket;
 
 	/* Do the insertion */
 	while (PageGetFreeSpace_s(page) < itemsz)
 	{
 		BlockNumber nextblkno;
-
-
+		selog(DEBUG1, "Page has no free space. Going to search for page with space");
 		/*
 		 * no space on this page; check for an overflow page
 		 */
@@ -114,12 +113,8 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 			buf = _hash_addovflpage_s(rel, metabuf, buf, (buf == bucket_buf) ? true : false);
 			page = BufferGetPage_s(rel, buf);
 
-			/* should fit now, given test above */
-			//Assert(PageGetFreeSpace(page) >= itemsz);
 		}
 		pageopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
-		//Assert((pageopaque->hasho_flag & LH_PAGE_TYPE) == LH_OVERFLOW_PAGE);
-		//Assert(pageopaque->hasho_bucket == bucket);
 	}
 
 	/*
@@ -128,8 +123,9 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	 */
 
 	/* found page with enough space, so add the item here */
-	//itup_off = _hash_pgaddtup(rel, buf, itemsz, itup);
-
+	selog(DEBUG1, "Going to add tuple to page %d", buf);
+	//itup_off = _hash_pgaddtup_s(rel, buf, itemsz, itup);
+	_hash_pgaddtup_s(rel, buf, itemsz, itup);
 	MarkBufferDirty_s(rel, buf);
 
 	/* metapage operations */
@@ -141,10 +137,11 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 		(double) metap->hashm_ffactor * (metap->hashm_maxbucket + 1);
 
 	MarkBufferDirty_s(rel, metabuf);
-
+	selog(DEBUG1,"Meta page and bucket page updated to disk");
 
 	/* Attempt to split if a split is needed */
 	if (do_expand)
+		selog(DEBUG1, "Going to expand table");
 		_hash_expandtable_s(rel, metabuf);
 
 }
@@ -172,7 +169,9 @@ _hash_pgaddtup_s(VRelation rel, Buffer buf, Size itemsize, IndexTuple itup)
 
 	/* Find where to insert the tuple (preserving page's hashkey ordering) */
 	hashkey = _hash_get_indextuple_hashkey_s(itup);
+	selog(DEBUG1, "Going to find location to insert tuple");
 	itup_off = _hash_binsearch_s(page, hashkey);
+	selog(DEBUG1, "Going to insert in offset %d", itup_off);
 	//Page add item extended. already have an example of a function to add a page.
 	PageAddItem_s(page, (Item) itup, itemsize, itup_off, false, false);
 	//if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)

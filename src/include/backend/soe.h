@@ -15,11 +15,8 @@
 #define SOE_H
 
 #include <oram/oram.h>
-
 #include "soe_c.h"
-
 #include "access/soe_htup.h"
-
 #include <oram/ofile.h>
 
 
@@ -40,20 +37,22 @@ typedef int16 AttrNumber;
 typedef uint16 StrategyNumber;
 
 
-typedef struct PScanKey{
-	int			sk_flags;		/* flags, see below */
-	AttrNumber	sk_attno;		/* table or index column number */
-	StrategyNumber sk_strategy; /* operator strategy number */
-	Oid			sk_subtype;		/* strategy subtype */
-	Oid			sk_collation;	/* collation to use, if needed */
-	Datum		sk_argument;	/* data to compare */
-} ScanKeyData;
-typedef ScanKeyData *ScanKey;
+//typedef struct PScanKey{
+//	int			sk_flags;		/* flags, see below */
+//	AttrNumber	sk_attno;		/* table or index column number */
+//	StrategyNumber sk_strategy; /* operator strategy number */
+//	Oid			sk_subtype;		/* strategy subtype */
+//	Oid			sk_collation;	/* collation to use, if needed */
+//	Datum		sk_argument;	/* data to compare */
+//} ScanKeyData;
+//typedef ScanKeyData *ScanKey;
 
 
 //extern declarations
 
 extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(), int isIndex);
+
+extern void FormIndexDatum_s(HeapTuple tuple, Datum *values, bool *isnull);
 
 
 #endif 	/* SOE_H */

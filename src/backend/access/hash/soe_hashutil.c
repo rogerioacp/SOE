@@ -13,6 +13,7 @@
  *-------------------------------------------------------------------------
  */
 
+
 #include "access/soe_hash.h"
 #include "logger/logger.h"
 
@@ -28,8 +29,31 @@
  * "primary" hash function that's tracked for us by the generic index code.
  */
 uint32
-_hash_datum2hashkey_s(VRelation rel, Datum key)
+_hash_datum2hashkey_s(VRelation rel, const char* datum, unsigned int datumSize)
 {
+
+	Datum		result;
+
+	/* 
+	 * For the prototype we choose the function to hash the datum
+	 * based on the foid defined when the soe is initialized.
+	 * On the final version of the prototype this function will
+	 * be a secure hash function.
+	 */
+	//Use the function hashbpchar which uses the hash_any
+	if(rel->foid == 1080)
+	{
+		result = hash_any_s((unsigned char *) datum, datumSize);
+
+	}else{
+		result = -1;
+		selog(ERROR, "invalid function oid, can't hash tuple");
+	}
+
+
+	return DatumGetUInt32_s(result);
+
+
 	//FmgrInfo   *procinfo;
 	//Oid			collation;
 
@@ -191,6 +215,8 @@ _hash_checkpage_s(VRelation rel, Buffer buf, int flags)
 	 * case, however.
 	 */
 	if (PageIsNew_s(page))
+		selog(ERROR, "index contains unexpected zero page at block %u",
+						BufferGetBlockNumber_s(buf));
 		/*TODO: error messages*/
 		/*ereport(ERROR,
 				(errcode(ERRCODE_INDEX_CORRUPTED),
@@ -290,7 +316,7 @@ _hash_get_indextuple_hashkey_s(IndexTuple itup)
  */
 bool
 _hash_convert_tuple_s(VRelation index,
-					Datum *user_values, bool *user_isnull,
+					const char *datum, unsigned int datumSize,
 					Datum *index_values, bool *index_isnull)
 {
 	uint32		hashkey;
@@ -299,10 +325,10 @@ _hash_convert_tuple_s(VRelation index,
 	 * We do not insert null values into hash indexes.  This is okay because
 	 * the only supported search operator is '=', and we assume it is strict.
 	 */
-	if (user_isnull[0])
+	if (datumSize < 0)
 		return false;
 
-	hashkey = _hash_datum2hashkey_s(index, user_values[0]);
+	hashkey = _hash_datum2hashkey_s(index, datum, datumSize);
 	index_values[0] = UInt32GetDatum_s(hashkey);
 	index_isnull[0] = false;
 	return true;

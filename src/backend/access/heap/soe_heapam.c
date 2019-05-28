@@ -4,7 +4,7 @@
 #include "logger/logger.h"
 
 void
-heap_insert_s(VRelation rel, Item tup, Size len){
+heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple){
 
 	Buffer buffer;
 	Page page;
@@ -57,22 +57,34 @@ heap_insert_s(VRelation rel, Item tup, Size len){
 
 	offnum = PageAddItem_s(page, tup, len, InvalidOffsetNumber, false, true);
 
+
+	tuple->t_data = (HeapTupleHeader) tup;
+	tuple->t_len = len;
+	tuple->t_tableOid = RelationGetRelid_s(rel);
+	
 	/* Update tuple->t_self to the actual position where it was stored */
-	//ItemPointerSet(&(tup->t_self), BufferGetBlockNumber(buffer), offnum);
+	ItemPointerSet_s(&(tuple->t_self), BufferGetBlockNumber_s(buffer), offnum);
+
+/*
+	 * Insert the correct position into CTID of the stored tuple, too (unless
+	 * this is a speculative insertion, in which case the token is held in
+	 * CTID field instead)
+	 */
 
 	ItemId itemId = PageGetItemId_s(page, offnum);
 	HeapTupleHeader item = (HeapTupleHeader) PageGetItem_s(page, itemId);
-	ItemPointerSet_s(&(item->t_ctid), BufferGetBlockNumber_s(buffer), offnum);
+	item->t_ctid = tuple->t_self;
+	//ItemPointerSet_s(&(item->t_ctid), BufferGetBlockNumber_s(buffer), offnum);
 	//selog(DEBUG1, "ITEM inserted in block %d and offnum %d", BufferGetBlockNumber(buffer), offnum );
 	//selog(DEBUG1, "Inserted item id has offset %d and length %d", ItemIdGetOffset(itemId),  ItemIdGetLength(itemId));
 	if (!ItemIdIsNormal_s(itemId)){
 		selog(ERROR, "Item ID is not normal");
-	}
-	//item->t_ctid = tup->t_self;
+	}	
 
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
 	UpdateFSM(rel);
+
 
 }
 
