@@ -465,15 +465,11 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 
 	/* this will catch invalid or out-of-order itemnos[] */
 	if (nextitm != nitems)
-		// Log error
-		//elog(ERROR, "incorrect index offsets supplied");
+		selog(ERROR, "incorrect index offsets supplied");
 
 	if (totallen > (Size) (pd_special - pd_lower))
-		// Log error
-		/*ereport(ERROR,
-				(errcode(ERRCODE_DATA_CORRUPTED),
-				 errmsg("corrupted item lengths: total %u, available space %u",
-						(unsigned int) totallen, pd_special - pd_lower)));*/
+		selog(ERROR, "corrupted item lengths: total %u, available space %u",
+						(unsigned int) totallen, pd_special - pd_lower);
 
 	/*
 	 * Looks good. Overwrite the line pointers with the copy, from which we've
@@ -481,7 +477,7 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 	 */
 	memcpy(phdr->pd_linp, newitemids, nused * sizeof(ItemIdData));
 	phdr->pd_lower = SizeOfPageHeaderData + nused * sizeof(ItemIdData);
-
+	selog(DEBUG1, "Going to compact tuples of old page");
 	/* and compactify the tuple data */
 	compactify_tuples_s(itemidbase, nused, page);
 }

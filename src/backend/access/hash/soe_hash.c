@@ -20,6 +20,7 @@
 #include "access/soe_hash.h"
 #include "access/soe_itup.h"
 #include "access/soe_genam.h"
+#include "access/soe_itup.h"
 #include "logger/logger.h"
 
 /*
@@ -59,7 +60,7 @@ hashinsert_s(VRelation rel, ItemPointer ht_ctid, const char* datum, unsigned int
 	 */
 	itup = index_form_tuple_s(rel->tDesc, index_values, index_isnull);
 	itup->t_tid = *ht_ctid;
-	selog(DEBUG1, "indexed value is %s, has size %d and  key %d", datum, datumSize, DatumGetInt32_s(index_values[0]));
+	//selog(DEBUG1, "indexed value is %s, has size %d and  key %d", datum, datumSize, DatumGetInt32_s(index_values[0]));
 	_hash_doinsert_s(rel, itup);
 	free(itup);
 	return false;
@@ -84,12 +85,12 @@ hashgettuple_s(IndexScanDesc scan)
 	 * get the first item in the scan.
 	 */
 	if (!HashScanPosIsValid_s(so->currPos)){
-		selog(DEBUG1, "Going to search first match");
+		//selog(DEBUG1, "Going to search first match");
 		res = _hash_first_s(scan);
 	}
 	else
 	{
-		selog(DEBUG1, "Going to continue search for next match");
+		//selog(DEBUG1, "Going to continue search for next match");
 		/*
 		 * Now continue the scan.
 		 */
@@ -204,9 +205,9 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		Page		page;
 		OffsetNumber deletable[MaxOffsetNumber];
 		int			ndeletable = 0;
-		//bool		retain_pin = false;
+		bool		retain_pin = false;
 		// bool		clear_dead_marking = false;
-
+		//selog(DEBUG1, "Accessing page of buffer %d to cleanup", buf);
 		page = BufferGetPage_s(rel, buf);
 		opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 
@@ -216,14 +217,12 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 			 offno <= maxoffno;
 			 offno = OffsetNumberNext_s(offno))
 		{
-//			ItemPointer htup;
 			IndexTuple	itup;
 			Bucket		bucket;
 			bool		kill_tuple = false;
 
 			itup = (IndexTuple) PageGetItem_s(page,
 											PageGetItemId_s(page, offno));
-			//htup = &(itup->t_tid);
 			
 			/* delete the tuples that are moved by split. */
 			bucket = _hash_hashkey2bucket_s(_hash_get_indextuple_hashkey_s(itup),
@@ -233,6 +232,7 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 			/* mark the item for deletion */
 			if (bucket != cur_bucket)
 			{
+				//selog(DEBUG1, "Going to kill tuple at offset %d", offno);
 				/*
 				 * We expect tuples to either belong to current bucket or
 				 * new_bucket.  This is ensured because we don't allow
@@ -251,10 +251,10 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		}
 
 		/* retain the pin on primary bucket page till end of bucket scan */
-		/*if (blkno == bucket_blkno)
+		if (blkno == bucket_blkno)
 			retain_pin = true;
 		else
-			retain_pin = false;*/
+			retain_pin = false;
 
 		blkno = opaque->hasho_nextblkno;
 
@@ -264,30 +264,30 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		if (ndeletable > 0)
 		{
 			/* No ereport(ERROR) until changes are logged */
-
+			//selog(DEBUG1, "Going to delete tuples from page");
 			PageIndexMultiDelete_s(page, deletable, ndeletable);
 			bucket_dirty = true;
+			//selog(DEBUG1, "Page has been clean");
 
 			MarkBufferDirty_s(rel, buf);
-
 		
 		}
-
+		//selog(DEBUG1, "Next block number is %d", blkno);
 		/* bail out if there are no more pages to scan. */
-		if (!BlockNumberIsValid_s(blkno))
+		if (!BlockNumberIsValid_s(blkno)){
+			//selog(DEBUG1, "Bucket has no more pages to scan");
 			break;
-
+		}
 		next_buf = _hash_getbuf_with_strategy_s(rel, blkno, LH_OVERFLOW_PAGE);
+		//selog(DEBUG1, "Moving to next overflow page %d", next_buf);
 
 		/*
 		 * release the lock on previous page after acquiring the lock on next
 		 * page
 		 */
-		//if (retain_pin)
-		//	LockBuffer(buf, BUFFER_LOCK_UNLOCK);
-		//else
-		//	_hash_relbuf(rel, buf);
-
+		if (!retain_pin){
+			ReleaseBuffer_s(rel, buf);
+		}
 		buf = next_buf;
 	}
 
@@ -298,7 +298,8 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 	 */
 	if (buf != bucket_buf)
 	{
-		_hash_relbuf_s(rel, buf);
+		//selog(DEBUG1, "Going to release buffer after cleanup %d", buf);
+		ReleaseBuffer_s(rel, buf);
 		//LockBuffer(bucket_buf, BUFFER_LOCK_EXCLUSIVE);
 	}
 
@@ -308,11 +309,9 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 	 * so that after restart, vacuum shouldn't again try to delete the moved
 	 * by split tuples.
 	 */
-	//if (split_cleanup)
-	/*This function is only used for split_cleanup*/
-	
 	HashPageOpaque bucket_opaque;
 	Page		page;
+	//selog(DEBUG1, "Going to clear flags on page of bucket %d",bucket_buf);
 
 	page = BufferGetPage_s(rel, bucket_buf);
 	bucket_opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
@@ -332,8 +331,10 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 	//if (bucket_dirty && IsBufferCleanupOK(bucket_buf))
 	//Assuming that its always ok to cleanup.  
 	// TODO:Check if buffer locks used by soe always enable cleanup in this point.
-	if (bucket_dirty)
+	if (bucket_dirty){
+		//selog(DEBUG1, "going to squeeze bucket %d", bucket_blkno);
 		_hash_squeezebucket_s(rel, cur_bucket, bucket_blkno, bucket_buf);
+	}
 	//else
 	//	LockBuffer(bucket_buf, BUFFER_LOCK_UNLOCK);
 }

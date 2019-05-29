@@ -31,7 +31,7 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	Buffer		bucket_buf;
 	Buffer		metabuf;
 	HashMetaPage metap;
-	HashMetaPage usedmetap = NULL;
+	//HashMetaPage usedmetap = NULL;
 	Page		metapage;
 	Page		page;
 	HashPageOpaque pageopaque;
@@ -46,12 +46,12 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	 * Get the hash key for the item (it's stored in the index tuple itself).
 	 */
 	hashkey = _hash_get_indextuple_hashkey_s(itup);
-	selog(DEBUG1, "Hash key for tuple is %d", hashkey);
+	//selog(DEBUG1, "Hash key for tuple is %d", hashkey);
 	/* compute item size too */
 	itemsz = IndexTupleSize_s(itup);
 	itemsz = MAXALIGN_s(itemsz);	/* be safe, PageAddItem will do this but we
 								 * need to be consistent */
-	selog(DEBUG1, "tuple size is %d", itemsz);
+	//selog(DEBUG1, "tuple size is %d", itemsz);
 
 	/*
 	 * Read the metapage.  We don't lock it yet; HashMaxItemSize() will
@@ -59,8 +59,13 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	 * without a lock.
 	 */
 	metabuf = _hash_getbuf_s(rel, HASH_METAPAGE, HASH_NOLOCK, LH_META_PAGE);
-	selog(DEBUG1, "Going to get metapage");
+	//selog(DEBUG1, "Going to get metapage");
 	metapage = BufferGetPage_s(rel, metabuf);
+
+	//moved the next line to here from a line that only appears afterwards.
+	metap = HashPageGetMeta_s(metapage);
+
+	//selog(DEBUG1, "Metapage retrieved has hashm_maxbucket set to %d", HashPageGetMeta_s(metapage)->hashm_maxbucket);
 
 	/*
 	 * Check whether the item can fit on a hash page at all. (Eventually, we
@@ -73,13 +78,12 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 		selog(ERROR, "Index row size %zu exceeds hash maximum %zu",
 						itemsz, HashMaxItemSize_s(metapage));
 	
-	selog(DEBUG1, "Going to get buffer from hashkey");
+	//selog(DEBUG1, "Going to get buffer from hashkey");
 
 	/* Lock the primary bucket page for the target bucket. */
-	buf = _hash_getbucketbuf_from_hashkey_s(rel, hashkey, HASH_WRITE,
-										  &usedmetap);
+	buf = _hash_getbucketbuf_from_hashkey_s(rel, hashkey, HASH_WRITE, metap);
 
-	selog(DEBUG1, "The buffer selected was %d", buf);
+	//selog(DEBUG1, "The buffer selected was %d", buf);
 	/* remember the primary bucket buffer to release the pin on it at end. */
 	bucket_buf = buf;
 
@@ -90,14 +94,17 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	while (PageGetFreeSpace_s(page) < itemsz)
 	{
 		BlockNumber nextblkno;
-		selog(DEBUG1, "Page has no free space. Going to search for page with space");
+		//selog(DEBUG1, "Page has no free space. Going to search for page with space");
 		/*
 		 * no space on this page; check for an overflow page
 		 */
 		nextblkno = pageopaque->hasho_nextblkno;
-
+		//selog(DEBUG1, "Next block page is %d", nextblkno);
 		if (BlockNumberIsValid_s(nextblkno))
 		{
+
+			if (buf != bucket_buf)
+				ReleaseBuffer_s(rel, buf);
 
 			buf = _hash_getbuf_s(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
 			page = BufferGetPage_s(rel, buf);
@@ -108,9 +115,11 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 			 * we're at the end of the bucket chain and we haven't found a
 			 * page with enough room.  allocate a new overflow page.
 			 */
-
+			//selog(DEBUG1, "Going to add overflow page %d to buffer %d", buf, bucket_buf);
 			/* chain to a new overflow page */
 			buf = _hash_addovflpage_s(rel, metabuf, buf, (buf == bucket_buf) ? true : false);
+			//selog(DEBUG1, "Overflow page is %d", buf);
+
 			page = BufferGetPage_s(rel, buf);
 
 		}
@@ -123,13 +132,14 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 	 */
 
 	/* found page with enough space, so add the item here */
-	selog(DEBUG1, "Going to add tuple to page %d", buf);
+	//selog(DEBUG1, "Going to add tuple to page %d", buf);
 	//itup_off = _hash_pgaddtup_s(rel, buf, itemsz, itup);
 	_hash_pgaddtup_s(rel, buf, itemsz, itup);
 	MarkBufferDirty_s(rel, buf);
 
 	/* metapage operations */
-	metap = HashPageGetMeta_s(metapage);
+	//original line.
+	//metap = HashPageGetMeta_s(metapage);
 	metap->hashm_ntuples += 1;
 
 	/* Make sure this stays in sync with _hash_expandtable() */
@@ -137,12 +147,18 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 		(double) metap->hashm_ffactor * (metap->hashm_maxbucket + 1);
 
 	MarkBufferDirty_s(rel, metabuf);
-	selog(DEBUG1,"Meta page and bucket page updated to disk");
+	//selog(DEBUG1,"Meta page and bucket page updated to disk");
 
+	ReleaseBuffer_s(rel, buf);
+	if (buf != bucket_buf)
+		ReleaseBuffer_s(rel, bucket_buf);
 	/* Attempt to split if a split is needed */
-	if (do_expand)
-		selog(DEBUG1, "Going to expand table");
+	if (do_expand){
+		//selog(DEBUG1, "Going to expand table");
 		_hash_expandtable_s(rel, metabuf);
+	}
+//	selog(DEBUG1, "Going to release meta page which has hashm_maxbucket set to %d",metap->hashm_maxbucket);
+	ReleaseBuffer_s(rel, metabuf);
 
 }
 

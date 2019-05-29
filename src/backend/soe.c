@@ -57,7 +57,7 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
     oIndex->tDesc->natts = 1;
     oIndex->tDesc->attrs = (FormData_pg_attribute*) malloc(sizeof(struct FormData_pg_attribute));
     memcpy(oIndex->tDesc->attrs, attrDesc, attrDescLength);
-    selog(DEBUG1, "the key length is %d", oIndex->tDesc->attrs->attlen);
+    //selog(DEBUG1, "the key length is %d", oIndex->tDesc->attrs->attlen);
     _hash_init_s(oIndex, 0);
     scan = NULL;
 }
@@ -145,13 +145,13 @@ int getTuple(unsigned int opmode, const char* key, int scanKeySize, char* tuple,
 
         if(!hasMore){
             hasNext = 0;
-            selog(DEBUG1, "Going to free scan resources");
+            //selog(DEBUG1, "Going to free scan resources");
             hashendscan_s(scan);
             scan = NULL;
             free(heapTuple);
             return 1;
         }else{
-            selog(DEBUG1, "Going to access the heap");
+            //selog(DEBUG1, "Going to access the heap");
             tid =  scan->xs_ctup.t_self;
             heap_gettuple_s(oTable, &tid, heapTuple);
         }
@@ -160,9 +160,9 @@ int getTuple(unsigned int opmode, const char* key, int scanKeySize, char* tuple,
     }
 
      if(heapTuple->t_len > MAX_TUPLE_SIZE){
-        selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
+        //selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
     }else{
-        selog(DEBUG1, "Going to copy tuple of size %d", heapTuple->t_len);
+        //selog(DEBUG1, "Going to copy tuple of size %d", heapTuple->t_len);
         memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
         memcpy(tupleData, (char*) (heapTuple->t_data), (heapTuple->t_len));
     }
@@ -182,7 +182,7 @@ void insertHeap(const char* heapTuple, unsigned int tupleSize){
     
     Item tuple = (Item) heapTuple;
     if(tupleSize <= MAX_TUPLE_SIZE){
-        selog(DEBUG1, "Going to insert tuple of size %d", tupleSize);
+        //selog(DEBUG1, "Going to insert tuple of size %d", tupleSize);
         heap_insert_s(oTable, tuple, (uint32) tupleSize, hTuple);
 
     }else{

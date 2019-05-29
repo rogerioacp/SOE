@@ -32,15 +32,21 @@ typedef struct ms_initSOE_t {
 	int ms_nBlocks;
 	unsigned int ms_tOid;
 	unsigned int ms_iOid;
+	unsigned int ms_functionOid;
+	char* ms_pg_attr_desc;
+	unsigned int ms_pgDescSize;
 } ms_initSOE_t;
 
 typedef struct ms_insert_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
+	const char* ms_datum;
+	unsigned int ms_datumSize;
 } ms_insert_t;
 
 typedef struct ms_getTuple_t {
 	int ms_retval;
+	unsigned int ms_opmode;
 	const char* ms_scanKey;
 	int ms_scanKeySize;
 	char* ms_tuple;
@@ -99,9 +105,14 @@ static sgx_status_t SGX_CDECL sgx_initSOE(void* pms)
 	const char* _tmp_iName = ms->ms_iName;
 	size_t _len_iName = ms->ms_iName_len ;
 	char* _in_iName = NULL;
+	char* _tmp_pg_attr_desc = ms->ms_pg_attr_desc;
+	unsigned int _tmp_pgDescSize = ms->ms_pgDescSize;
+	size_t _len_pg_attr_desc = _tmp_pgDescSize;
+	char* _in_pg_attr_desc = NULL;
 
 	CHECK_UNIQUE_POINTER(_tmp_tName, _len_tName);
 	CHECK_UNIQUE_POINTER(_tmp_iName, _len_iName);
+	CHECK_UNIQUE_POINTER(_tmp_pg_attr_desc, _len_pg_attr_desc);
 
 	//
 	// fence after pointer checks
@@ -146,11 +157,25 @@ static sgx_status_t SGX_CDECL sgx_initSOE(void* pms)
 			goto err;
 		}
 	}
+	if (_tmp_pg_attr_desc != NULL && _len_pg_attr_desc != 0) {
+		_in_pg_attr_desc = (char*)malloc(_len_pg_attr_desc);
+		if (_in_pg_attr_desc == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
 
-	initSOE((const char*)_in_tName, (const char*)_in_iName, ms->ms_tNBlocks, ms->ms_nBlocks, ms->ms_tOid, ms->ms_iOid);
+		if (memcpy_s(_in_pg_attr_desc, _len_pg_attr_desc, _tmp_pg_attr_desc, _len_pg_attr_desc)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+
+	initSOE((const char*)_in_tName, (const char*)_in_iName, ms->ms_tNBlocks, ms->ms_nBlocks, ms->ms_tOid, ms->ms_iOid, ms->ms_functionOid, _in_pg_attr_desc, _tmp_pgDescSize);
 err:
 	if (_in_tName) free(_in_tName);
 	if (_in_iName) free(_in_iName);
+	if (_in_pg_attr_desc) free(_in_pg_attr_desc);
 
 	return status;
 }
@@ -168,8 +193,13 @@ static sgx_status_t SGX_CDECL sgx_insert(void* pms)
 	unsigned int _tmp_tupleSize = ms->ms_tupleSize;
 	size_t _len_heapTuple = _tmp_tupleSize;
 	char* _in_heapTuple = NULL;
+	const char* _tmp_datum = ms->ms_datum;
+	unsigned int _tmp_datumSize = ms->ms_datumSize;
+	size_t _len_datum = _tmp_datumSize;
+	char* _in_datum = NULL;
 
 	CHECK_UNIQUE_POINTER(_tmp_heapTuple, _len_heapTuple);
+	CHECK_UNIQUE_POINTER(_tmp_datum, _len_datum);
 
 	//
 	// fence after pointer checks
@@ -189,10 +219,24 @@ static sgx_status_t SGX_CDECL sgx_insert(void* pms)
 		}
 
 	}
+	if (_tmp_datum != NULL && _len_datum != 0) {
+		_in_datum = (char*)malloc(_len_datum);
+		if (_in_datum == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
 
-	insert((const char*)_in_heapTuple, _tmp_tupleSize);
+		if (memcpy_s(_in_datum, _len_datum, _tmp_datum, _len_datum)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+
+	insert((const char*)_in_heapTuple, _tmp_tupleSize, (const char*)_in_datum, _tmp_datumSize);
 err:
 	if (_in_heapTuple) free(_in_heapTuple);
+	if (_in_datum) free(_in_datum);
 
 	return status;
 }
@@ -258,7 +302,7 @@ static sgx_status_t SGX_CDECL sgx_getTuple(void* pms)
 		memset((void*)_in_tupleData, 0, _len_tupleData);
 	}
 
-	ms->ms_retval = getTuple((const char*)_in_scanKey, _tmp_scanKeySize, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
+	ms->ms_retval = getTuple(ms->ms_opmode, (const char*)_in_scanKey, _tmp_scanKeySize, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
 err:
 	if (_in_scanKey) free(_in_scanKey);
 	if (_in_tuple) {

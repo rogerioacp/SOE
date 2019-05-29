@@ -386,7 +386,7 @@ extern void _hash_relbuf_s(VRelation rel, Buffer buf);
 
 extern Buffer _hash_getbucketbuf_from_hashkey_s(VRelation rel, uint32 hashkey,
 								int access,
-								HashMetaPage *cachedmetap);
+								HashMetaPage cachedmetap);
 
 extern void _hash_expandtable_s(VRelation rel, Buffer metabuf);
 

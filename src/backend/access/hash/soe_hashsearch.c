@@ -56,7 +56,7 @@ _hash_next_s(IndexScanDesc scan)
 	 */
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
 	{ //Read the next page if every item is read from the current page.
-		selog(DEBUG1, "Going to move to next page");
+		//selog(DEBUG1, "Going to move to next page");
 		blkno = so->currPos.nextPage;
 		if (BlockNumberIsValid_s(blkno))
 		{
@@ -71,7 +71,7 @@ _hash_next_s(IndexScanDesc scan)
 	
 	if (end_of_scan)
 	{
-		selog(DEBUG1, "End of scan");
+		//selog(DEBUG1, "End of scan");
 		_hash_dropscanbuf_s(rel, so);
 		HashScanPosInvalidate_s(so->currPos);
 		return false;
@@ -100,7 +100,7 @@ _hash_readnext_s(IndexScanDesc scan,
 	bool		block_found = false;
 
 	blkno = (*opaquep)->hasho_nextblkno;
-	selog(DEBUG1, "Next block number is %d", blkno);
+	//selog(DEBUG1, "Next block number is %d", blkno);
 	/*
 	 * Retain the pin on primary bucket page till the end of scan.  Refer the
 	 * comments in _hash_first to know the reason of retaining pin.
@@ -113,7 +113,7 @@ _hash_readnext_s(IndexScanDesc scan,
 	/* check for interrupts while we're not holding any buffer lock */
 	if (BlockNumberIsValid_s(blkno))
 	{
-		selog(DEBUG1, "Block number is valid %d ",BlockNumberIsValid_s(blkno));
+		//selog(DEBUG1, "Block number is valid %d ",BlockNumberIsValid_s(blkno));
 		*bufp = _hash_getbuf_s(rel, blkno, HASH_READ, LH_OVERFLOW_PAGE);
 		block_found = true;
 	}
@@ -182,11 +182,11 @@ _hash_first_s(IndexScanDesc scan)
 
 	so->currPos.buf = buf;
 
-	selog(DEBUG1, "Going to search qualifying tuples on page");
+	//selog(DEBUG1, "Going to search qualifying tuples on page");
 	/* Now find all the tuples satisfying the qualification from a page */
 	if (!_hash_readpage_s(scan, buf))
 		return false;
-	selog(DEBUG1, "items were found");
+	//selog(DEBUG1, "items were found");
 	/* OK, itemIndex says what to return */
 	currItem = &so->currPos.items[so->currPos.itemIndex];
 	scan->xs_ctup.t_self = currItem->heapTid;
@@ -228,12 +228,12 @@ _hash_readpage_s(IndexScanDesc scan, Buffer buf)
 
 	for (;;)
 	{
-		selog(DEBUG1, "Going to do binary search on page");
+		//selog(DEBUG1, "Going to do binary search on page");
 		/* new page, locate starting position by binary search */
 		offnum = _hash_binsearch_s(page, so->hashso_sk_hash);
-		selog(DEBUG1, "Found binary search location start %d", offnum);
+		//selog(DEBUG1, "Found binary search location start %d", offnum);
 		itemIndex = _hash_load_qualified_items_s(scan, page, offnum);
-		selog(DEBUG1, "Found %d matches", itemIndex);
+		//selog(DEBUG1, "Found %d matches", itemIndex);
 
 		if (itemIndex != 0)
 			break;
@@ -243,7 +243,7 @@ _hash_readpage_s(IndexScanDesc scan, Buffer buf)
 		 * killed items.
 		 */
 
-		selog(DEBUG1, "Going to move to the next page");
+		//selog(DEBUG1, "Going to move to the next page");
 
 		/*
 		 * If this is a primary bucket page, hasho_prevblkno is not a real
@@ -254,18 +254,18 @@ _hash_readpage_s(IndexScanDesc scan, Buffer buf)
 			prev_blkno = InvalidBlockNumber;
 		else
 			prev_blkno = opaque->hasho_prevblkno;
-		selog(DEBUG1, "Going to read next page");
+		//selog(DEBUG1, "Going to read next page");
 		_hash_readnext_s(scan, &buf, &page, &opaque);
 
 		if (BufferIsValid_s(rel, buf))
 		{
-			selog(DEBUG1, "Next page is valid");
+			//selog(DEBUG1, "Next page is valid");
 			so->currPos.buf = buf;
 			so->currPos.currPage = BufferGetBlockNumber_s(buf);
 		}
 		else
 		{
-			selog(DEBUG1, "Next page is invalid");
+			//selog(DEBUG1, "Next page is invalid");
 			/*
 			 * Remember next and previous block numbers for scrollable
 			 * cursors to know the start position and return false
@@ -320,7 +320,7 @@ _hash_load_qualified_items_s(IndexScanDesc scan, Page page,
 		if (so->hashso_sk_hash == _hash_get_indextuple_hashkey_s(itup)) /* &&
 			_hash_checkqual(scan, itup))*/
 		{
-			selog(DEBUG1, "Qualified item found");
+			//selog(DEBUG1, "Qualified item found");
 			/* tuple is qualified, so remember it */
 			_hash_saveitem_s(so, itemIndex, offnum, itup);
 			itemIndex++;

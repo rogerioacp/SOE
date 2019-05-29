@@ -3,7 +3,7 @@ enclave{
 	trusted{
 			//Entry points to the enclave
 
-			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, [in, size=pgDescSize] pg_attr_desc, unsigned int pgDescSize);
+			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, [in, size=pgDescSize] char* pg_attr_desc, unsigned int pgDescSize);
 
 			public void insert([in, size=tupleSize] const char*  heapTuple, unsigned int tupleSize,  [in, size=datumSize] const char* datum, unsigned int datumSize);
 

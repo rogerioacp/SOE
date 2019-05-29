@@ -131,9 +131,13 @@ Page BufferGetPage_s(VRelation relation, Buffer buffer)
     while(list_iter_next(&iter, &element) != CC_ITER_END){
         vblock = (VBlock) element;
         if(vblock->id == buffer){
+            //selog(DEBUG1, "found page for buffer %d", buffer);
             return vblock->page;
         }
     }
+
+    //selog(DEBUG1, "could not find page for buffer %d", buffer);
+
     return NULL;
 }
 
@@ -144,6 +148,8 @@ void MarkBufferDirty_s(VRelation relation, Buffer buffer){
     ListIter iter;
     VBlock vblock;
     void* element;
+    bool found = false;
+    result = 0;
     //OblivPageOpaque oopaque;
 
     list_iter_init(&iter, relation->buffer);
@@ -152,15 +158,20 @@ void MarkBufferDirty_s(VRelation relation, Buffer buffer){
     while(list_iter_next(&iter, &element) != CC_ITER_END){
         vblock = (VBlock) element;
         if(vblock->id == buffer){
+            found = true;
             //oopaque = (OblivPageOpaque) PageGetSpecialPointer( (Page) vblock->page);
             //selog(DEBUG1, "Found page on buffer list with blkno %d and special %d", vblock->id, oopaque->o_blkno);
 
             break;
         }
     }
-
-    selog(DEBUG1, "GOING to oblivious write to real blkno %d", vblock->id);
-    result  = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram);
+    if(found){
+        //selog(DEBUG1,  "Found buffer %d to update", buffer);
+        //selog(DEBUG1, "GOING to oblivious write to real blkno %d", vblock->id);
+        result  = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram);
+    }else{
+        selog(DEBUG1, "Did not find buffer %d to update",buffer);
+    }
 
     if(result != BLCKSZ){
         selog(ERROR, "Write failed to write a complete page");
@@ -189,9 +200,12 @@ void ReleaseBuffer_s(VRelation relation, Buffer buffer){
     }
     //The hash index might request to release buffer that has already been released previously during the search for a tuple.
     if(found){
+        //selog(DEBUG1, "Going to release buffer %d", buffer);
         list_remove(relation->buffer, vblock, &toFree);
         free(((VBlock)toFree)->page);
         free(toFree);
+    }else{
+        selog(DEBUG1, "Could not find buffer %d to release", buffer);
     }
 }
 
@@ -204,7 +218,7 @@ BufferGetBlockNumber_s(Buffer buffer)
 
 BlockNumber FreeSpaceBlock_s(VRelation rel){
 
-    selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
+    //selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
 
     if(rel->fsm[rel->currentBlock] == 0){
         return P_NEW;
