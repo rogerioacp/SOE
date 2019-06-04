@@ -325,5 +325,8 @@ extern OffsetNumber PageAddItemExtended_s(Page page, Item item, Size size,
 					OffsetNumber offsetNumber, int flags);
 extern Size PageGetFreeSpaceForMultipleTuples_s(Page page, int ntups);
 extern IndexTuple CopyIndexTuple_s(IndexTuple source);
+extern Page PageGetTempPage_s(Page page);
+extern Size PageGetExactFreeSpace_s(Page page);
+extern void PageRestoreTempPage_s(Page tempPage, Page oldPage);
 
 #endif /* SOE_BUFPAGE_H */

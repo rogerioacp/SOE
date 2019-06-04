@@ -20,3 +20,7 @@ unsigned int getRandomInt(void){
 	return val;
 	#endif
 }
+
+unsigned int getRandomInt_nb(void){
+	return getRandomInt();
+}

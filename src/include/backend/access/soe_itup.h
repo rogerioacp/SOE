@@ -113,6 +113,20 @@ typedef IndexTupleData *IndexTuple;
 	) \
 )
 
+/* ----------------
+ *		index_getattr_s
+ *		Bare bones copy of index_getattr defnied in postgres that assumes
+ *      no nulls and that the scan key data is the first attrib
+ *		This gets called many times, so we macro the cacheable and NULL
+ *		lookups, and call nocache_index_getattr() for the rest.
+ *
+ * ----------------
+ */
+#define index_getattr_s(tup) \
+	((char *) (tup) + IndexInfoFindDataOffset_s((tup)->t_info))
+
+
+
 /* routines in indextuple.c */
 extern IndexTuple index_form_tuple_s(TupleDesc tupleDescriptor,
 				 Datum *values, bool *isnull);

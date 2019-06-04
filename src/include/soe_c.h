@@ -100,7 +100,11 @@ typedef unsigned long long int uint64;
 #define INT64_FORMAT "%" INT64_MODIFIER "d"
 #define UINT64_FORMAT "%" INT64_MODIFIER "u"
 
-
+/*
+ * Common Postgres datatype names (as used in the catalogs)
+ */
+typedef float float4;
+typedef double float8;
 
 /*
  * Maximum number of columns in an index.  There is little point in making
@@ -797,6 +801,40 @@ typedef uintptr_t Datum;
 #define DOUBLEALIGN_S(LEN)		TYPEALIGN_s(ALIGNOF_DOUBLE, (LEN))
 
 
+#define MAX_INT_s(a,b) \
+	 a > b ? a : b
+
+
+/*
+ * Strategy numbers identify the semantics that particular operators have
+ * with respect to particular operator classes.  In some cases a strategy
+ * subtype (an OID) is used as further information.
+ */
+typedef uint16 StrategyNumber;
+
+/*
+ * Strategy numbers for B-tree indexes.
+ */
+#define BTLessStrategyNumber			1
+#define BTLessEqualStrategyNumber		2
+#define BTEqualStrategyNumber			3
+#define BTGreaterEqualStrategyNumber	4
+#define BTGreaterStrategyNumber			5
+
+#define BTMaxStrategyNumber				5
+
+#define PG_INT32_MAX	(0x7FFFFFFF)
+
+/*
+ * The random() function is expected to yield values between 0 and
+ * MAX_RANDOM_VALUE.  Currently, all known implementations yield
+ * 0..2^31-1, so we just hardwire this constant.  We could do a
+ * configure test if it proves to be necessary.  CAUTION: Think not to
+ * replace this with RAND_MAX.  RAND_MAX defines the maximum value of
+ * the older rand() function, which is often different from --- and
+ * considerably inferior to --- random().
+ */
+#define MAX_RANDOM_VALUE  PG_INT32_MAX
 
 
 #endif /* SOE_C_H */

@@ -483,3 +483,60 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 }
 
 
+
+/*
+ * PageGetExactFreeSpace
+ *		Returns the size of the free (allocatable) space on a page,
+ *		without any consideration for adding/removing line pointers.
+ */
+Size
+PageGetExactFreeSpace_s(Page page)
+{
+	int			space;
+
+	/*
+	 * Use signed arithmetic here so that we behave sensibly if pd_lower >
+	 * pd_upper.
+	 */
+	space = (int) ((PageHeader) page)->pd_upper -
+		(int) ((PageHeader) page)->pd_lower;
+
+	if (space < 0)
+		return 0;
+
+	return (Size) space;
+}
+
+/*
+ * PageRestoreTempPage
+ *		Copy temporary page back to permanent page after special processing
+ *		and release the temporary page.
+ */
+void
+PageRestoreTempPage_s(Page tempPage, Page oldPage)
+{
+	Size		pageSize;
+
+	pageSize = PageGetPageSize_s(tempPage);
+	memcpy((char *) oldPage, (char *) tempPage, pageSize);
+
+	free(tempPage);
+}
+
+
+/*
+ * PageGetTempPage
+ *		Get a temporary page in local memory for special processing.
+ *		The returned page is not initialized at all; caller must do that.
+ */
+Page
+PageGetTempPage_s(Page page)
+{
+	Size		pageSize;
+	Page		temp;
+
+	pageSize = PageGetPageSize_s(page);
+	temp = (Page) malloc(pageSize);
+
+	return temp;
+}

@@ -1,0 +1,209 @@
+/*-------------------------------------------------------------------------
+ *
+ * soe_nbtree.c
+ * Bare bones copy of the Implementation of Lehman and Yao's btree management 
+ * algorithm for Postgres. This implementation iis developed to be executed 
+ * inside a secure enclave.
+ *
+ * NOTES
+ *	  This file contains only the public interface routines.
+ *
+ *
+ * Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1994, Regents of the University of California
+ *
+ * IDENTIFICATION
+ *	  src/backend/access/nbtree/nbtree.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
+#include "storage/soe_bufpage.h"
+#include "access/soe_nbtree.h"
+#include "access/soe_itup.h"
+#include "access/soe_genam.h"
+#include "access/soe_itup.h"
+#include "logger/logger.h"
+
+
+/*
+ * BTPARALLEL_NOT_INITIALIZED indicates that the scan has not started.
+ *
+ * BTPARALLEL_ADVANCING indicates that some process is advancing the scan to
+ * a new page; others must wait.
+ *
+ * BTPARALLEL_IDLE indicates that no backend is currently advancing the scan
+ * to a new page; some process can start doing that.
+ *
+ * BTPARALLEL_DONE indicates that the scan is complete (including error exit).
+ * We reach this state once for every distinct combination of array keys.
+ */
+
+
+/*
+ *	btbuildempty() -- build an empty btree index in the initialization fork
+ */
+void
+nbtree_init_s(VRelation rel)
+{
+	Buffer buf;
+	Page metapage;
+
+	buf = ReadBuffer_s(rel, 0);
+	metapage = BufferGetPage_s(rel, buf);
+
+	/* Construct metapage. */
+	_bt_initmetapage_s(metapage, P_NONE, 0);
+	
+	MarkBufferDirty_s(rel, buf);
+	ReleaseBuffer_s(rel, buf);
+}
+
+/*
+ *	btinsert() -- insert an index tuple into a btree.
+ *
+ *		Descend the tree recursively, find the appropriate location for our
+ *		new tuple, and put it there.
+ */
+bool
+btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_ctid,  char* datum, unsigned int datumSize)
+{
+	bool		result;
+	IndexTuple	itup;
+
+	Datum		index_values[1];
+	bool		index_isnull[1];
+	
+	index_values[0] = PointerGetDatum_s(datum);
+	index_isnull[0] = false;
+
+	//enable 
+	//bool checkUnique = UNIQUE_CHECK_NO; //enable duplicate?
+	/* generate an index tuple */
+	itup = index_form_tuple_s(indexRel->tDesc, index_values, index_isnull);
+	itup->t_tid = *ht_ctid;
+
+	result = _bt_doinsert_s(indexRel, itup, datum, datumSize, heapRel);
+
+	free(itup);
+
+	return result;
+}
+
+/*
+ *	btgettuple() -- Get the next tuple in the scan.
+ */
+bool
+btgettuple_s(IndexScanDesc scan)
+{
+	BTScanOpaque so = (BTScanOpaque) scan->opaque;
+	bool		res;
+
+
+	/*
+	 * If we have any array keys, initialize them during first call for a
+	 * scan.  We can't do this in btrescan because we don't know the scan
+	 * direction at that time.
+	 */
+	//if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos))
+	//{
+		/* punt if we have any unsatisfiable array keys */
+	//	if (so->numArrayKeys < 0)
+	//		return false;
+//
+//		_bt_start_array_keys(scan, dir);
+//	}
+
+	/* This loop handles advancing to the next array elements, if any */
+	//do
+	//{
+		/*
+		 * If we've already initialized this scan, we can just advance it in
+		 * the appropriate direction.  If we haven't done so yet, we call
+		 * _bt_first() to get the first item in the scan.
+		 */
+		if (!BTScanPosIsValid_s(so->currPos))
+			res = _bt_first_s(scan);
+		else
+		{
+
+			/*
+			 * Now continue the scan.
+			 */
+			res = _bt_next_s(scan);
+		}
+
+		/* If we have a tuple, return it ... */
+		//if (res)
+		//	break;
+		/* ... otherwise see if we have more array keys to deal with */
+	//} while (so->numArrayKeys && _bt_advance_array_keys(scan, dir));
+
+	return res;
+}
+
+/*
+ *	btbeginscan() -- start a scan on a btree index
+ */
+IndexScanDesc
+btbeginscan_s(VRelation rel,  char* key, int keysize)
+{
+	IndexScanDesc scan;
+	BTScanOpaque so;
+	ScanKey scanKey;
+
+	scanKey = (ScanKey) malloc(sizeof(ScanKeyData));
+	scanKey->sk_subtype = rel->foid;
+	scanKey->sk_argument = (char*) malloc(keysize);
+	memcpy(scanKey->sk_argument, key, keysize);
+	scanKey->datumSize = keysize;
+
+	/* allocate private workspace */
+	so = (BTScanOpaque) malloc(sizeof(BTScanOpaqueData));
+	BTScanPosInvalidate_s(so->currPos);
+	BTScanPosInvalidate_s(so->markPos);
+	/*so->keyData = malloc(sizeof(ScanKeyData));
+	so->arrayKeyData = NULL;
+	so->numArrayKeys = 0;*/
+	/*
+	 * We don't know yet whether the scan will be index-only, so we do not
+	 * allocate the tuple workspace arrays until btrescan.  However, we set up
+	 * scan->xs_itupdesc whether we'll need it or not, since that's so cheap.
+	 */
+	so->currTuples = so->markTuples = NULL;
+
+	/* get the scan */
+	scan = (IndexScanDesc) malloc(sizeof(IndexScanDescData));
+	scan->indexRelation = rel;
+	scan->keyData = scanKey;
+	scan->opaque = so;
+
+	ItemPointerSetInvalid_s(&scan->xs_ctup.t_self);
+	scan->xs_ctup.t_data = NULL;
+	scan->xs_cbuf = InvalidBuffer;
+	scan->xs_continue_hot = false;
+
+	return scan;
+}
+
+
+/*
+ *	btendscan() -- close down a scan
+ */
+void
+btendscan_s(IndexScanDesc scan)
+{
+	BTScanOpaque so = (BTScanOpaque) scan->opaque;
+
+
+	so->markItemIndex = -1;
+
+	/* No need to invalidate positions, the RAM is about to be freed. */
+
+	/* Release storage */
+	if (so->keyData != NULL)
+		free(so->keyData);
+	/* so->markTuples should not be pfree'd, see btrescan */
+	free(so);
+}
+

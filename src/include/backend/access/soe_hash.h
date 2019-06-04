@@ -15,8 +15,8 @@
  *
  *-------------------------------------------------------------------------
  */
-#ifndef HASH_H
-#define HASH_H
+#ifndef SOE_HASH_H
+#define SOE_HASH_H
 
 
 #include "access/soe_itup.h"
