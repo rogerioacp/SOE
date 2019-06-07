@@ -37,9 +37,9 @@ void SGX_UBRIDGE(SGX_NOCONVENTION, outFileWrite, (const char* block, const char*
 void SGX_UBRIDGE(SGX_NOCONVENTION, outFileClose, (const char* filename));
 #endif
 
-sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, char* pg_attr_desc, unsigned int pgDescSize);
-sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize, const char* datum, unsigned int datumSize);
-sgx_status_t getTuple(sgx_enclave_id_t eid, int* retval, unsigned int opmode, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
+sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char* pg_attr_desc, unsigned int pgDescSize);
+sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize, char* datum, unsigned int datumSize);
+sgx_status_t getTuple(sgx_enclave_id_t eid, int* retval, unsigned int opmode, unsigned int opoid, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 sgx_status_t insertHeap(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize);
 
 #ifdef __cplusplus

@@ -80,9 +80,11 @@ index_form_tuple_s(TupleDesc tupleDescriptor,
 	hoff = IndexInfoFindDataOffset_s(infomask);
 	data_size = heap_compute_data_size_s(tupleDescriptor,
 									   values, isnull);
+
+	//selog(DEBUG1, "info mask offset %d <-> heap compute data size is %d", hoff, data_size);
 	size = hoff + data_size;
 	size = MAXALIGN_s(size);		/* be conservative */
-
+	//selog(DEBUG1, "maxalign data size is %d", size);
 	tp = (char *) malloc(size);
 	tuple = (IndexTuple) tp;
 

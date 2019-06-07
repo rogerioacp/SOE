@@ -11,6 +11,7 @@ typedef struct ms_initSOE_t {
 	unsigned int ms_tOid;
 	unsigned int ms_iOid;
 	unsigned int ms_functionOid;
+	unsigned int ms_indexHandler;
 	char* ms_pg_attr_desc;
 	unsigned int ms_pgDescSize;
 } ms_initSOE_t;
@@ -18,13 +19,14 @@ typedef struct ms_initSOE_t {
 typedef struct ms_insert_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
-	const char* ms_datum;
+	char* ms_datum;
 	unsigned int ms_datumSize;
 } ms_insert_t;
 
 typedef struct ms_getTuple_t {
 	int ms_retval;
 	unsigned int ms_opmode;
+	unsigned int ms_opoid;
 	const char* ms_scanKey;
 	int ms_scanKeySize;
 	char* ms_tuple;
@@ -121,7 +123,7 @@ static const struct {
 		(void*)Enclave_outFileClose,
 	}
 };
-sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, char* pg_attr_desc, unsigned int pgDescSize)
+sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char* pg_attr_desc, unsigned int pgDescSize)
 {
 	sgx_status_t status;
 	ms_initSOE_t ms;
@@ -134,13 +136,14 @@ sgx_status_t initSOE(sgx_enclave_id_t eid, const char* tName, const char* iName,
 	ms.ms_tOid = tOid;
 	ms.ms_iOid = iOid;
 	ms.ms_functionOid = functionOid;
+	ms.ms_indexHandler = indexHandler;
 	ms.ms_pg_attr_desc = pg_attr_desc;
 	ms.ms_pgDescSize = pgDescSize;
 	status = sgx_ecall(eid, 0, &ocall_table_Enclave, &ms);
 	return status;
 }
 
-sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize, const char* datum, unsigned int datumSize)
+sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tupleSize, char* datum, unsigned int datumSize)
 {
 	sgx_status_t status;
 	ms_insert_t ms;
@@ -152,11 +155,12 @@ sgx_status_t insert(sgx_enclave_id_t eid, const char* heapTuple, unsigned int tu
 	return status;
 }
 
-sgx_status_t getTuple(sgx_enclave_id_t eid, int* retval, unsigned int opmode, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen)
+sgx_status_t getTuple(sgx_enclave_id_t eid, int* retval, unsigned int opmode, unsigned int opoid, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen)
 {
 	sgx_status_t status;
 	ms_getTuple_t ms;
 	ms.ms_opmode = opmode;
+	ms.ms_opoid = opoid;
 	ms.ms_scanKey = scanKey;
 	ms.ms_scanKeySize = scanKeySize;
 	ms.ms_tuple = tuple;

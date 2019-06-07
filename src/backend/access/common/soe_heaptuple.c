@@ -51,7 +51,11 @@ heap_compute_data_size_s(TupleDesc tupleDesc,
 		//data_length = data_length + (strlen((char*) val)+1);
 
 		//README atti->attlen has an invalid value
-		data_length = data_length + atti->attlen;
+		if(tupleDesc->isnbtree){
+			data_length = data_length + (strlen((char*) val)+1);
+		}else{
+			data_length = data_length + atti->attlen;
+		}		
 	}
 
 	return data_length;
@@ -71,7 +75,8 @@ fill_val_s(Form_pg_attribute att,
 		 char **dataP,
 		 uint16 *infomask,
 		 Datum datum,
-		 bool isnull)
+		 bool isnull,
+		 Size data_size)
 {
 	Size		data_length;
 	char	   *data = *dataP;
@@ -111,11 +116,25 @@ fill_val_s(Form_pg_attribute att,
 		store_att_byval_s(data, datum, att->attlen);
 		data_length = att->attlen;
 	}
+	else if (att->attlen == -1){
+
+		/***
+		 *
+		 * The original postgres had more conditions. This is just working
+		 * for btees on strings with small size.
+		 *
+		 */
+		Pointer		val = DatumGetPointer_s(datum);
+		data_length = data_size;
+	 	//selog(DEBUG1, "Insert char datum with size %d", data_length);
+		
+		memcpy(data, val, data_length);
+	}
 	else
 	{
 		data_length = 0;
 
-		selog(ERROR, "ERROR - Unexpected condition on fill_val_s");
+		selog(ERROR, "ERROR - Unexpected condition on fill_val_s - 2");
 		/***
 		 * The Original postgres code had more conditions which were discarded
 		 * because after debuging the code only the first condition was used
@@ -173,8 +192,10 @@ heap_fill_tuple_s(TupleDesc tupleDesc,
 				 &data,
 				 infomask,
 				 values ? values[i] : PointerGetDatum_s(NULL),
-				 isnull ? isnull[i] : true);
+				 isnull ? isnull[i] : true, data_size);
 	}
-
+	//if((data-start) != data_size){
+		//selog(DEBUG1, "datum was not copied correctly")
+	//}
 }
 

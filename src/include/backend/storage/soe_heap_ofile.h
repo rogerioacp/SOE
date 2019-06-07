@@ -15,7 +15,7 @@ typedef struct OblivPageOpaqueData
 
 typedef OblivPageOpaqueData *OblivPageOpaque;
 
-void heap_pageInit(Page page, BlockNumber blkno, Size blocksize);
+void heap_pageInit(Page page, int blkno, Size blocksize);
 
 extern AMOFile *heap_ofileCreate();
 

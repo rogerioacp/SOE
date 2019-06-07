@@ -50,7 +50,7 @@ typedef uint16 StrategyNumber;
 
 //extern declarations
 
-extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(), int isIndex);
+extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(), bool isHeap);
 
 extern void FormIndexDatum_s(HeapTuple tuple, Datum *values, bool *isnull);
 

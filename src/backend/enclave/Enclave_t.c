@@ -33,6 +33,7 @@ typedef struct ms_initSOE_t {
 	unsigned int ms_tOid;
 	unsigned int ms_iOid;
 	unsigned int ms_functionOid;
+	unsigned int ms_indexHandler;
 	char* ms_pg_attr_desc;
 	unsigned int ms_pgDescSize;
 } ms_initSOE_t;
@@ -40,13 +41,14 @@ typedef struct ms_initSOE_t {
 typedef struct ms_insert_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
-	const char* ms_datum;
+	char* ms_datum;
 	unsigned int ms_datumSize;
 } ms_insert_t;
 
 typedef struct ms_getTuple_t {
 	int ms_retval;
 	unsigned int ms_opmode;
+	unsigned int ms_opoid;
 	const char* ms_scanKey;
 	int ms_scanKeySize;
 	char* ms_tuple;
@@ -171,7 +173,7 @@ static sgx_status_t SGX_CDECL sgx_initSOE(void* pms)
 
 	}
 
-	initSOE((const char*)_in_tName, (const char*)_in_iName, ms->ms_tNBlocks, ms->ms_nBlocks, ms->ms_tOid, ms->ms_iOid, ms->ms_functionOid, _in_pg_attr_desc, _tmp_pgDescSize);
+	initSOE((const char*)_in_tName, (const char*)_in_iName, ms->ms_tNBlocks, ms->ms_nBlocks, ms->ms_tOid, ms->ms_iOid, ms->ms_functionOid, ms->ms_indexHandler, _in_pg_attr_desc, _tmp_pgDescSize);
 err:
 	if (_in_tName) free(_in_tName);
 	if (_in_iName) free(_in_iName);
@@ -193,7 +195,7 @@ static sgx_status_t SGX_CDECL sgx_insert(void* pms)
 	unsigned int _tmp_tupleSize = ms->ms_tupleSize;
 	size_t _len_heapTuple = _tmp_tupleSize;
 	char* _in_heapTuple = NULL;
-	const char* _tmp_datum = ms->ms_datum;
+	char* _tmp_datum = ms->ms_datum;
 	unsigned int _tmp_datumSize = ms->ms_datumSize;
 	size_t _len_datum = _tmp_datumSize;
 	char* _in_datum = NULL;
@@ -233,7 +235,7 @@ static sgx_status_t SGX_CDECL sgx_insert(void* pms)
 
 	}
 
-	insert((const char*)_in_heapTuple, _tmp_tupleSize, (const char*)_in_datum, _tmp_datumSize);
+	insert((const char*)_in_heapTuple, _tmp_tupleSize, _in_datum, _tmp_datumSize);
 err:
 	if (_in_heapTuple) free(_in_heapTuple);
 	if (_in_datum) free(_in_datum);
@@ -302,7 +304,7 @@ static sgx_status_t SGX_CDECL sgx_getTuple(void* pms)
 		memset((void*)_in_tupleData, 0, _len_tupleData);
 	}
 
-	ms->ms_retval = getTuple(ms->ms_opmode, (const char*)_in_scanKey, _tmp_scanKeySize, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
+	ms->ms_retval = getTuple(ms->ms_opmode, ms->ms_opoid, (const char*)_in_scanKey, _tmp_scanKeySize, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
 err:
 	if (_in_scanKey) free(_in_scanKey);
 	if (_in_tuple) {

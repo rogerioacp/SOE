@@ -837,5 +837,15 @@ typedef uint16 StrategyNumber;
 #define MAX_RANDOM_VALUE  PG_INT32_MAX
 
 
+
+#define VARATT_IS_1B_s(PTR) \
+	((((varattrib_1b *) (PTR))->va_header & 0x80) == 0x80)
+#define VARATT_IS_SHORT_s(PTR)				VARATT_IS_1B_s(PTR)
+
+#define VARSIZE_1B_s(PTR) \
+	(((varattrib_1b *) (PTR))->va_header & 0x7F)
+
+#define VARSIZE_SHORT_s(PTR)					VARSIZE_1B_s(PTR)
+
 #endif /* SOE_C_H */
 

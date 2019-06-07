@@ -53,7 +53,7 @@
 #define BUFFER_LOCK_SHARE		1
 #define BUFFER_LOCK_EXCLUSIVE	2
 
-typedef void (*pageinit_function) (Page page, BlockNumber blockNum, Size blocksize);
+typedef void (*pageinit_function) (Page page, int blockNum, Size blocksize);
 
 typedef struct VRelation{
 	BlockNumber currentBlock;
@@ -75,7 +75,9 @@ typedef struct VRelation{
 
  	//Funciton oid to hash values
 	unsigned int foid;
+	unsigned int indexOid;
  	int maxDatumSize;
+
 } *VRelation;
 
 typedef struct VBlock{

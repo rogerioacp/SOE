@@ -60,6 +60,7 @@ typedef struct BTPageOpaqueData
 	}			btpo;
 	uint16		btpo_flags;		/* flag bits, see below */
 	//BTCycleId	btpo_cycleid;	/* vacuum cycle ID of latest split */
+	int o_blkno; //block number
 } BTPageOpaqueData;
 
 typedef BTPageOpaqueData *BTPageOpaque;
@@ -380,9 +381,8 @@ typedef BTScanOpaqueData *BTScanOpaque;
 /*
  * external entry points for btree, in nbtree.c
  */
-extern void nbtree_init_s(VRelation rel);
 extern bool btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_ctid, char* datum, unsigned int datumSize);
-extern IndexScanDesc btbeginscan_s(VRelation rel, char* key, int keysize);
+extern IndexScanDesc btbeginscan_s(VRelation rel, const char* key, int keysize);
 extern bool btgettuple_s(IndexScanDesc scan);
 extern void btendscan_s(IndexScanDesc scan);
 
@@ -398,10 +398,9 @@ extern Buffer _bt_getstackbuf_s(VRelation rel, BTStack stack, int access);
 /*
  * prototypes for functions in nbtpage.c
  */
-extern void _bt_initmetapage_s(Page page, BlockNumber rootbknum, uint32 level);
+extern void _bt_initmetapage_s(VRelation rel, BlockNumber rootbknum, uint32 level);
 extern void _bt_upgrademetapage_s(Page page);
 extern Buffer _bt_getroot_s(VRelation rel, int access);
-extern Buffer _bt_gettrueroot_s(VRelation rel);
 extern int	_bt_getrootheight_s(VRelation rel);
 extern void _bt_checkpage_s(VRelation rel, Buffer buf);
 extern Buffer _bt_getbuf_s(VRelation rel, BlockNumber blkno, int access);
@@ -425,7 +424,7 @@ extern bool _bt_next_s(IndexScanDesc scan);
 /*
  * prototypes for functions in nbtutils.c
  */
-extern ScanKey _bt_mkscankey_s(VRelation rel, IndexTuple itup,  char* datum, int dsize);
+extern ScanKey _bt_mkscankey_s(VRelation rel, IndexTuple itup, char* datum, int dsize);
 extern void _bt_freeskey_s(ScanKey skey);
 extern void _bt_freestack_s(BTStack stack);
 extern IndexTuple _bt_checkkeys_s(IndexScanDesc scan,

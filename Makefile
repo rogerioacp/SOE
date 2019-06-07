@@ -331,8 +331,10 @@ soe_nbtsearch.o:  src/backend/access/nbtree/soe_nbtsearch.c
 soe_nbtinsert.o: src/backend/access/nbtree/soe_nbtinsert.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
+soe_nbtree_ofile.o: src/backend/storage/buffer/soe_nbtree_ofile.c
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_heaptuple.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe_hashfunc.o soe_indextuple.o  soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe.o
+$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_heaptuple.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe_hashfunc.o soe_indextuple.o  soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe_nbtree_ofile.o soe.o
 	$(CC) $(SGX_COMMON_CFLAGS)  $^ -o $@ -static $(SOE_LADD)  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -343,7 +345,7 @@ $(Signed_Enclave_Lib): $(Enclave_Lib)
 $(Untrusted_Lib): enclave_u.o
 	$(CC) -shared  $^ -o $@ 
 
-$(Unsafe_Lib):  soe.o logger.o soe_heapam.o soe_hashfunc.o soe_heaptuple.o soe_indextuple.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_hash.o soe_orandom.o soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o
+$(Unsafe_Lib):  soe.o logger.o soe_heapam.o soe_hashfunc.o soe_heaptuple.o soe_indextuple.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_hash.o soe_orandom.o soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe_nbtree_ofile.o
 	$(CC) $(Utrust_Flags) $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD)
 
 .PHONY: install

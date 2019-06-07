@@ -60,7 +60,6 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 
 	/* Get the root page to start with */
 	*bufP = _bt_getroot_s(rel, access);
-
 	/* If index is empty and access = BT_READ, no root page is created. */
 	if (!BufferIsValid_s(rel, *bufP))
 		return (BTStack) NULL;
@@ -94,16 +93,19 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 							  (access == BT_WRITE), stack_in,
 							  BT_READ, snapshot);*/
 
+
 		/* if this is a leaf page, we're done */
 		page = BufferGetPage_s(rel, *bufP);
 		opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
-		if (P_ISLEAF_s(opaque))
+		if (P_ISLEAF_s(opaque)){
 			break;
+		}
 
 		/*
 		 * Find the appropriate item on the internal page, and get the child
 		 * page that it points to.
 		 */
+
 		offnum = _bt_binsrch_s(rel, *bufP, keysz, scankey, nextkey);
 		itemid = PageGetItemId_s(page, offnum);
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
@@ -192,8 +194,10 @@ _bt_binsrch_s(VRelation rel,
 	 * This can never happen on an internal page, however, since they are
 	 * never empty (an internal page must have children).
 	 */
-	if (high < low)
+	if (high < low){
+		//selog(DEBUG1, "No keys on page, returing first slot");
 		return low;
+	}
 
 	/*
 	 * Binary search to find the first key on the page >= scan key, or first
@@ -216,7 +220,6 @@ _bt_binsrch_s(VRelation rel,
 		OffsetNumber mid = low + ((high - low) / 2);
 
 		/* We have low <= mid < high, so mid points at a real slot */
-
 		result = _bt_compare_s(rel, keysz, scankey, page, mid);
 
 		if (result >= cmpval)
@@ -278,11 +281,14 @@ _bt_compare_s(VRelation rel,
 			Page page,
 			OffsetNumber offnum)
 {
-	//TupleDesc	itupdesc = rel->tDesc;
-	BTPageOpaque opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
+	char*	datum;
 	IndexTuple	itup;
-	//int			i;
+	int32	result;
+	
+	result = 0;
 
+
+	BTPageOpaque opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
 
 	/*
 	 * Force result ">" if target item is first data item on an internal page
@@ -293,44 +299,18 @@ _bt_compare_s(VRelation rel,
 
 	itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, offnum));
 
-	/*
-	 * The scan key is set up with the attribute number associated with each
-	 * term in the key.  It is important that, if the index is multi-key, the
-	 * scan contain the first k key attributes, and that they be in order.  If
-	 * you think about how multi-key ordering works, you'll understand why
-	 * this is.
-	 *
-	 * We don't test for violation of this condition here, however.  The
-	 * initial setup for the index scan had better have gotten it right (see
-	 * _bt_first).
-	 */
+	
 
-
-	char*	datum;
-	//bool	isNull;
-	int32	result;
-	int datumSize;
-
-	result = 0;
 	datum = index_getattr_s(itup);
-	//datum = DatumGetCString_s(index_getattr_s(itup, scankey->sk_attno, itupdesc, &isNull));
-	datumSize = bpchartruelen_s(datum, rel->maxDatumSize);
 
-	/*if(isNull){
-		selog(ERROR, "Nulls are not supported");
-	}*/
-
-	selog(DEBUG1, "VRelation foid is %d", rel->foid);
-	//We assume we are comparing varchars
+	//We assume we are comparing strings(varchars)
 	if(rel->foid == 1078){
-		result = (int32) strncmp(scankey->sk_argument, datum, MAX_INT_s(datumSize, scankey->datumSize));
+		result = (int32) strcmp(scankey->sk_argument, datum);
 	}
 
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
 		return result;
-
-	scankey++;
 
 	/* if we get here, the keys are equal */
 	return 0;
@@ -373,15 +353,20 @@ _bt_first_s(IndexScanDesc scan)
 	int			keysCount = 0;
 //	int			i;
 //	bool		status = true;
-	StrategyNumber strat_total;
+	//StrategyNumber strat_total;
 	BTScanPosItem *currItem;
 //	BlockNumber blkno;
 
 
 	ScanKey		cur = scan->keyData;
-	//TODO: define strats total
+	/**
+	 * By debugging postgres, a search on a btree with a single leaf and no
+	 * nodes had always the strat_total = BTEqualStrategyNumber despite the
+	 * comparison operator on the where clause.
+	 *
+	 */
 
-	strat_total = 0;
+	//strat_total = BTEqualStrategyNumber;
 
 	/*----------
 	 * Examine the selected initial-positioning strategy to determine exactly
@@ -396,9 +381,11 @@ _bt_first_s(IndexScanDesc scan)
 	 * goback = false, we will start the scan on the located item.
 	 *----------
 	 */
-	switch (strat_total)
+	//selog(DEBUG1, "bt_first scan opoid is %d", scan->opoid);
+	//The protoype currently does not support backward scans.
+	switch (scan->opoid)
 	{
-		case BTLessStrategyNumber:
+		case 1058://BTLessStrategyNumber:
 
 			/*
 			 * Find first item >= scankey, then back up one to arrive at last
@@ -408,9 +395,10 @@ _bt_first_s(IndexScanDesc scan)
 			 */
 			nextkey = false;
 			goback = true;
+			selog(ERROR, "Less or equal strategy requires backward scan no supported");
 			break;
 
-		case BTLessEqualStrategyNumber:
+		case 1059://BTLessEqualStrategyNumber:
 
 			/*
 			 * Find first item > scankey, then back up one to arrive at last
@@ -420,9 +408,10 @@ _bt_first_s(IndexScanDesc scan)
 			 */
 			nextkey = true;
 			goback = true;
+			selog(ERROR, "Less than strategy requires backward scan no supported");
 			break;
 
-		case BTEqualStrategyNumber:
+		case 1054://BTEqualStrategyNumber:
 
 
 		
@@ -430,11 +419,11 @@ _bt_first_s(IndexScanDesc scan)
 				 * This is the same as the <= strategy.  We will check at the
 				 * end whether the found item is actually =.
 				 */
-				nextkey = true;
-				goback = true;
+				nextkey = false;
+				goback = false;
 				break;
 
-		case BTGreaterEqualStrategyNumber:
+		case 1061://BTGreaterEqualStrategyNumber:
 
 			/*
 			 * Find first item >= scankey.  (This is only used for forward
@@ -444,7 +433,7 @@ _bt_first_s(IndexScanDesc scan)
 			goback = false;
 			break;
 
-		case BTGreaterStrategyNumber:
+		case 1060://BTGreaterStrategyNumber:
 
 			/*
 			 * Find first item > scankey.  (This is only used for forward
@@ -456,7 +445,7 @@ _bt_first_s(IndexScanDesc scan)
 
 		default:
 			/* can't get here, but keep compiler quiet */
-			selog(ERROR, "unrecognized strat_total: %d", (int) strat_total);
+			selog(ERROR, "unrecognized strat_total: %d", (int) scan->opoid);
 			return false;
 	}
 
@@ -464,17 +453,18 @@ _bt_first_s(IndexScanDesc scan)
 	 * Use the manufactured insertion scan key to descend the tree and
 	 * position ourselves on the target leaf page.
 	 */
+	//selog(DEBUG1, "Going to search for page");
 	stack = _bt_search_s(rel, 1, cur, nextkey, &buf, BT_READ);
-
+	//selog(DEBUG1, "Going to free search stack");
 	/* don't need to keep the stack around... */
 	_bt_freestack_s(stack);
-
+	//selog(DEBUG1, "GOING to initialize more data");
 
 	_bt_initialize_more_data_s(so);
-
+	//selog(DEBUG1, "Going to search for tuple");
 	/* position to the precise item on the page */
 	offnum = _bt_binsrch_s(rel, buf, keysCount, cur, nextkey);
-
+	//selog(DEBUG1, "Found match on offset %d", offnum);
 	/*
 	 * If nextkey = false, we are positioned at the first item >= scan key, or
 	 * possibly at the end of a page on which all the existing items are less
@@ -493,8 +483,11 @@ _bt_first_s(IndexScanDesc scan)
 	 * _bt_readpage will report no items found, and then we'll step to the
 	 * next page as needed.)
 	 */
-	if (goback)
+	if (goback){
 		offnum = OffsetNumberPrev_s(offnum);
+		selog(DEBUG1, "Found match on offset prev %d", offnum);
+	}
+	
 
 	/* remember which buffer we have pinned, if any */
 	//Assert(!BTScanPosIsValid(so->currPos));
@@ -505,6 +498,7 @@ _bt_first_s(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_s(scan, offnum))
 	{
+		//selog(DEBUG1, "Page has no match, move to next page!");
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
@@ -513,12 +507,13 @@ _bt_first_s(IndexScanDesc scan)
 		if (!_bt_steppage_s(scan))
 			return false;
 	}
-	else
-	{
-		selog(DEBUG1, "Maybe something needs to happen");
+	//else
+	//{
+		//selog(DEBUG1, "Match found! Maybe something needs to happen");
+		//selog(DEBUG1, "current pos is %d", so->currPos.itemIndex);
 		/* Drop the lock, and maybe the pin, on the current page */
 		///_bt_drop_lock_and_maybe_pin(scan, &so->currPos);
-	}
+	//}
 
 //readcomplete:
 	/* OK, itemIndex says what to return */
@@ -552,7 +547,7 @@ _bt_next_s(IndexScanDesc scan)
 	 * Advance to next tuple on current page; or if there's no more, try to
 	 * step to the next page with data.
 	 */
-
+	//selog(DEBUG1, "lastItem is %d", so->currPos.lastItem);
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
 	{
 		if (!_bt_steppage_s(scan))
@@ -608,11 +603,13 @@ _bt_readpage_s(IndexScanDesc scan, OffsetNumber offnum)
 
 	page = BufferGetPage_s(scan->indexRelation, so->currPos.buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
+	//selog(DEBUG1, "Going to read page on buffer %d with special %d", so->currPos.buf, opaque->o_blkno);
 
 
 	minoff = P_FIRSTDATAKEY_s(opaque);
 	maxoff = PageGetMaxOffsetNumber_s(page);
-
+	//selog(DEBUG1, "minoff is %d and maxoff is %d", minoff, maxoff);
+	
 	/*
 	 * We note the buffer's block number so that we can release the pin later.
 	 * This allows us to re-read the buffer if it is needed again for hinting.
@@ -626,6 +623,7 @@ _bt_readpage_s(IndexScanDesc scan, OffsetNumber offnum)
 	 * corresponding need for the left-link, since splits always go right.
 	 */
 	so->currPos.nextPage = opaque->btpo_next;
+	//selog(DEBUG1, "next page is %d", so->currPos.nextPage);
 
 	/* initialize tuple workspace to empty */
 	so->currPos.nextTupleOffset = 0;
@@ -642,9 +640,10 @@ _bt_readpage_s(IndexScanDesc scan, OffsetNumber offnum)
 	itemIndex = 0;
 
 	offnum = Max_s(offnum, minoff);
-
+	//Only forward scans are supported on the prototype.
 	while (offnum <= maxoff)
 	{
+		//selog(DEBUG1, "Going to check key on offset %d", offnum);
 		itup = _bt_checkkeys_s(scan, page, offnum, &continuescan);
 		if (itup != NULL)
 		{

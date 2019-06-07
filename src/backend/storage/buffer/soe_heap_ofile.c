@@ -35,7 +35,7 @@
 
 
 
-void heap_pageInit(Page page, BlockNumber blkno, Size blocksize){
+void heap_pageInit(Page page, int blkno, Size blocksize){
     OblivPageOpaque oopaque;
 	PageInit_s(page,  blocksize, sizeof(OblivPageOpaqueData));
 	oopaque = (OblivPageOpaque) PageGetSpecialPointer_s(page);

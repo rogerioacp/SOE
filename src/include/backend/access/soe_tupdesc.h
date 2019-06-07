@@ -96,6 +96,7 @@ typedef struct tupleConstr
 typedef struct tupleDesc
 {
 	int			natts;			/* number of attributes in the tuple */
+	bool 		isnbtree;
 	FormData_pg_attribute* attrs;
 }	 *TupleDesc;
 

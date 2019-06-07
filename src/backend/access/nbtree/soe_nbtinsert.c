@@ -97,11 +97,10 @@ _bt_doinsert_s(VRelation rel, IndexTuple itup, char* datum, int size, VRelation 
 	BTStack		stack = NULL;
 	Buffer		buf;
 	OffsetNumber offset;
-	bool		fastpath;
+	//bool		fastpath;
 
 	//We currently only support indexing a single column.
-	indnkeyatts = 1; //IndexRelationGetNumberOfKeyAttributes_s(rel);
-	//Assert(indnkeyatts != 0);
+	indnkeyatts = 1; 
 
 	/* we need an insertion scan key to do our search, so build one */
 	itup_scankey = _bt_mkscankey_s(rel, itup, datum, size);
@@ -125,7 +124,7 @@ _bt_doinsert_s(VRelation rel, IndexTuple itup, char* datum, int size, VRelation 
 	 * other backend might be concurrently inserting into the page, thus
 	 * reducing our chances to finding an insertion place in this page.
 	 */
-	fastpath = false;
+	//fastpath = false;
 	offset = InvalidOffsetNumber;
 
 	/* find the first page containing this key */
@@ -138,19 +137,16 @@ _bt_doinsert_s(VRelation rel, IndexTuple itup, char* datum, int size, VRelation 
 	 * excruciatingly precise description.
 	 */
 	//Concurrent splits are not supported on the prototype.
-	//buf = _bt_moveright(rel, buf, indnkeyatts, itup_scankey, false,
-	//					true, stack, BT_WRITE, NULL);
-
+	
 	//Enable duplicate keys.
 
 	/* do the insertion */
 	_bt_findinsertloc_s(rel, &buf, &offset, indnkeyatts, itup_scankey, itup,
 					  stack, heapRel);
+
 	_bt_insertonpg_s(rel, buf, InvalidBuffer, stack, itup, offset, false);
 	
-	/* just release the buffer */
-	ReleaseBuffer_s(rel, buf);
-	
+
 
 	/* be tidy */
 	if (stack)
@@ -252,7 +248,7 @@ _bt_findinsertloc_s(VRelation rel,
 	{
 		Buffer		rbuf;
 		BlockNumber rblkno;
-
+		//selog(DEBUG1, "Page has no free space, going to find next");
 		/*
 		 * before considering moving right, see if we can obtain enough space
 		 * by erasing LP_DEAD items
@@ -321,12 +317,16 @@ _bt_findinsertloc_s(VRelation rel,
 	 * around making the hint invalid. If we didn't move right or can't use
 	 * the hint, find the position by searching.
 	 */
-	if (movedright)
+	if (movedright){
 		newitemoff = P_FIRSTDATAKEY_s(lpageop);
-	else if (firstlegaloff != InvalidOffsetNumber && !vacuumed)
+	}
+	else if (firstlegaloff != InvalidOffsetNumber && !vacuumed){
 		newitemoff = firstlegaloff;
-	else
+	}
+	else{
+		//selog(DEBUG1, "Going to find offset to insert tuple");
 		newitemoff = _bt_binsrch_s(rel, buf, keysz, scankey, false);
+	}
 
 	*bufptr = buf;
 	*offsetptr = newitemoff;
@@ -404,7 +404,7 @@ _bt_insertonpg_s(VRelation rel,
 		bool		is_only = P_LEFTMOST_s(lpageop) && P_RIGHTMOST_s(lpageop);
 		bool		newitemonleft;
 		Buffer		rbuf;
-
+		
 		/*
 		 * If we're here then a pagesplit is needed. We should never reach
 		 * here if we're using the fastpath since we should have checked for
@@ -426,9 +426,11 @@ _bt_insertonpg_s(VRelation rel,
 									  newitemoff, itemsz,
 									  &newitemonleft);
 
+
 		/* split the buffer into left and right halves */
 		rbuf = _bt_split_s(rel, buf, cbuf, firstright,
 						 newitemoff, itemsz, itup, newitemonleft);
+		selog(DEBUG1, "Page %d was split. Right buf is %d", buf, rbuf);
 
 		/*----------
 		 * By here,
@@ -453,11 +455,9 @@ _bt_insertonpg_s(VRelation rel,
 		Buffer		metabuf = InvalidBuffer;
 		Page		metapg = NULL;
 		BTMetaPageData *metad = NULL;
-		OffsetNumber itup_off;
+		//OffsetNumber itup_off;
 		BlockNumber itup_blkno;
-//		BlockNumber cachedBlock = InvalidBlockNumber;
-
-		itup_off = newitemoff;
+		//itup_off = newitemoff;
 		itup_blkno = BufferGetBlockNumber_s(buf);
 
 		/*
@@ -507,15 +507,6 @@ _bt_insertonpg_s(VRelation rel,
 			MarkBufferDirty_s(rel, cbuf);
 		}
 
-		/*
-		 * Cache the block information if we just inserted into the rightmost
-		 * leaf page of the index and it's not the root page.  For very small
-		 * index where root is also the leaf, there is no point trying for any
-		 * optimization.
-		 */
-		//if (P_RIGHTMOST_s(lpageop) && P_ISLEAF_s(lpageop) && !P_ISROOT_s(lpageop))
-		//	cachedBlock = BufferGetBlockNumber_s(buf);
-		//Fast  path optimization not supported.
 
 		/* release buffers */
 		if (BufferIsValid_s(rel, metabuf))
@@ -523,23 +514,6 @@ _bt_insertonpg_s(VRelation rel,
 		if (BufferIsValid_s(rel, cbuf))
 			ReleaseBuffer_s(rel, cbuf);
 		ReleaseBuffer_s(rel, buf);
-
-		/*
-		 * If we decided to cache the insertion target block, then set it now.
-		 * But before that, check for the height of the tree and don't go for
-		 * the optimization for small indexes. We defer that check to this
-		 * point to ensure that we don't call _bt_getrootheight while holding
-		 * lock on any other block.
-		 *
-		 * We do this after dropping locks on all buffers. So the information
-		 * about whether the insertion block is still the rightmost block or
-		 * not may have changed in between. But we will deal with that during
-		 * next insert operation. No special care is required while setting
-		 * it.
-		 */
-		//if (BlockNumberIsValid_s(cachedBlock) &&
-		//	_bt_getrootheight_s(rel) >= BTREE_FASTPATH_MIN_LEVEL)
-		//	RelationSetTargetBlock(rel, cachedBlock);
 	}
 }
 
@@ -605,6 +579,7 @@ _bt_split_s(VRelation rel, Buffer buf, Buffer cbuf, OffsetNumber firstright,
 	leftpage = PageGetTempPage_s(origpage);
 	rightpage = BufferGetPage_s(rel, rbuf);
 
+
 	origpagenumber = BufferGetBlockNumber_s(buf);
 	rightpagenumber = BufferGetBlockNumber_s(rbuf);
 
@@ -637,6 +612,7 @@ _bt_split_s(VRelation rel, Buffer buf, Buffer cbuf, OffsetNumber firstright,
 	ropaque->btpo_prev = origpagenumber;
 	ropaque->btpo_next = oopaque->btpo_next;
 	lopaque->btpo.level = ropaque->btpo.level = oopaque->btpo.level;
+	lopaque->o_blkno = oopaque->o_blkno;
 	/* Since we already have write-lock on both pages, ok to read cycleid */
 	//lopaque->btpo_cycleid = _bt_vacuum_cycleid(rel);
 	//ropaque->btpo_cycleid = lopaque->btpo_cycleid;
@@ -686,27 +662,9 @@ _bt_split_s(VRelation rel, Buffer buf, Buffer cbuf, OffsetNumber firstright,
 		item = (IndexTuple) PageGetItem_s(origpage, itemid);
 	}
 
-	/*
-	 * Truncate non-key (INCLUDE) attributes of the high key item before
-	 * inserting it on the left page.  This only needs to happen at the leaf
-	 * level, since in general all pivot tuple values originate from leaf
-	 * level high keys.  This isn't just about avoiding unnecessary work,
-	 * though; truncating unneeded key attributes (more aggressive suffix
-	 * truncation) can only be performed at the leaf level anyway.  This is
-	 * because a pivot tuple in a grandparent page must guide a search not
-	 * only to the correct parent page, but also to the correct leaf page.
-	 */
-	//Attributes are never truncated, GDB did not step into this if.
-	/*if (indnatts != indnkeyatts && isleaf)
-	{
-		lefthikey = _bt_nonkey_truncate(rel, item);
-		itemsz = IndexTupleSize(lefthikey);
-		itemsz = MAXALIGN(itemsz);
-	}
-	else*/
+	
 	lefthikey = item;
 
-	//Assert(BTreeTupleGetNAtts(lefthikey, rel) == indnkeyatts);
 	if (PageAddItem_s(leftpage, (Item) lefthikey, itemsz, leftoff,
 					false, false) == InvalidOffsetNumber)
 	{
@@ -738,6 +696,7 @@ _bt_split_s(VRelation rel, Buffer buf, Buffer cbuf, OffsetNumber firstright,
 		{
 			if (newitemonleft)
 			{
+
 				if (!_bt_pgaddtup_s(leftpage, newitemsz, newitem, leftoff))
 				{
 					memset(rightpage, 0, BufferGetPageSize_s(rel, rbuf));
@@ -837,7 +796,6 @@ _bt_split_s(VRelation rel, Buffer buf, Buffer cbuf, OffsetNumber firstright,
 		 * cycleid then it could not contain any tuples that were in A when
 		 * the vacuum started.
 		 */
-		//if (sopaque->btpo_cycleid != ropaque->btpo_cycleid)
 		ropaque->btpo_flags |= BTP_SPLIT_END;
 	}
 
@@ -870,7 +828,6 @@ _bt_split_s(VRelation rel, Buffer buf, Buffer cbuf, OffsetNumber firstright,
 
 	MarkBufferDirty_s(rel, buf);
 	MarkBufferDirty_s(rel, rbuf);
-
 	if (!P_RIGHTMOST_s(ropaque))
 	{
 		sopaque->btpo_prev = rightpagenumber;
@@ -1196,9 +1153,9 @@ _bt_insert_parent_s(VRelation rel,
 	if (is_root)
 	{
 		Buffer		rootbuf;
-
 		/* create a new root node and update the metapage */
 		rootbuf = _bt_newroot_s(rel, buf, rbuf);
+		selog(DEBUG1, "Root split. New root is %d", rootbuf);
 		/* release the split buffers */
 		ReleaseBuffer_s(rel, rootbuf);
 		ReleaseBuffer_s(rel, rbuf);
@@ -1213,24 +1170,6 @@ _bt_insert_parent_s(VRelation rel,
 //		BTStackData fakestack;
 		IndexTuple	ritem;
 		Buffer		pbuf;
-
-		if (stack == NULL)
-		{
-			//BTPageOpaque lpageop;
-			//We assume concurrent root page splits do not happen
-			selog(ERROR, "concurrent ROOT page split");
-			//lpageop = (BTPageOpaque) PageGetSpecialPointer_s(page);
-			/* Find the leftmost page at the next level up */
-			//pbuf = _bt_get_endpoint_s(rel, lpageop->btpo.level + 1, false,
-			//						NULL);
-			/* Set up a phony stack entry pointing there */
-			//stack = &fakestack;
-			//stack->bts_blkno = BufferGetBlockNumber_s(pbuf);
-			//stack->bts_offset = InvalidOffsetNumber;
-			//stack->bts_btentry = InvalidBlockNumber;
-			//stack->bts_parent = NULL;
-			//ReleaseBuffer_s(rel, pbuf);
-		}
 
 		/* get high key from left page == lower bound for new right page */
 		ritem = (IndexTuple) PageGetItem_s(page,
@@ -1427,6 +1366,10 @@ _bt_newroot_s(VRelation rel, Buffer lbuf, Buffer rbuf)
 	Page		metapg;
 	BTMetaPageData *metad;
 
+	//BTPageOpaque ropaquea,
+	//			lopaquea,
+	//			mopaquea;
+	//selog(DEBUG1, "creating new root");
 	lbkno = BufferGetBlockNumber_s(lbuf);
 	rbkno = BufferGetBlockNumber_s(rbuf);
 	lpage = BufferGetPage_s(rel, lbuf);
@@ -1436,12 +1379,13 @@ _bt_newroot_s(VRelation rel, Buffer lbuf, Buffer rbuf)
 	rootbuf = _bt_getbuf_s(rel, P_NEW, BT_WRITE);
 	rootpage = BufferGetPage_s(rel, rootbuf);
 	rootblknum = BufferGetBlockNumber_s(rootbuf);
+	selog(DEBUG1, "New root buf is %d and has rootblknum %d", rootbuf, rootblknum);
 
 	/* acquire lock on the metapage */
 	metabuf = _bt_getbuf_s(rel, BTREE_METAPAGE, BT_WRITE);
 	metapg = BufferGetPage_s(rel, metabuf);
 	metad = BTPageGetMeta_s(metapg);
-
+//	selog(DEBUG1, "Acquired metabuf %d", metabuf);
 	/*
 	 * Create downlink item for left page (old root).  Since this will be the
 	 * first item in a non-leaf page, it implicitly has minus-infinity key
@@ -1462,26 +1406,32 @@ _bt_newroot_s(VRelation rel, Buffer lbuf, Buffer rbuf)
 	item = (IndexTuple) PageGetItem_s(lpage, itemid);
 	right_item = CopyIndexTuple_s(item);
 	BTreeInnerTupleSetDownLink_s(right_item, rbkno);
+	//selog(DEBUG1, "Right item is going to point to %d", rbkno);
 
 	/* NO EREPORT(ERROR) from here till newroot op is logged */
 	//START_CRIT_SECTION();
 
 	/* upgrade metapage if needed */
-	if (metad->btm_version < BTREE_VERSION)
-		_bt_upgrademetapage_s(metapg);
+	//if (metad->btm_version < BTREE_VERSION){
+//		selog(DEBUG1, "Update meta page");
+//		_bt_upgrademetapage_s(metapg);
+//	}
 
 	/* set btree special data */
 	rootopaque = (BTPageOpaque) PageGetSpecialPointer_s(rootpage);
+	//selog(DEBUG1, "rootpage has special pointer %d", rootopaque->o_blkno);
 	rootopaque->btpo_prev = rootopaque->btpo_next = P_NONE;
 	rootopaque->btpo_flags = BTP_ROOT;
 	rootopaque->btpo.level =
 		((BTPageOpaque) PageGetSpecialPointer_s(lpage))->btpo.level + 1;
-
+	//rootopaque->o_blkno = rootbuf;
+	//selog(DEBUG1, "rootpage level is %d", rootopaque->btpo.level);
 	/* update metapage data */
 	metad->btm_root = rootblknum;
 	metad->btm_level = rootopaque->btpo.level;
 	metad->btm_fastroot = rootblknum;
 	metad->btm_fastlevel = rootopaque->btpo.level;
+	//selog(DEBUG1, "Metapage current root is %d and level is %d",metad->btm_root,metad->btm_level);
 
 	/*
 	 * Insert the left page pointer into the new root page.  The root page is
@@ -1509,11 +1459,16 @@ _bt_newroot_s(VRelation rel, Buffer lbuf, Buffer rbuf)
 			 " while splitting block %u",
 			 BufferGetBlockNumber_s(lbuf));
 
+	//selog(DEBUG1, "Going to write buffers to disk %d, %d, %d", lbuf, rootbuf, metabuf);
+	//lopaquea =  (BTPageOpaque) PageGetSpecialPointer_s(lpage);
+	//ropaquea =  (BTPageOpaque) PageGetSpecialPointer_s(rootpage);
+	//mopaquea =  (BTPageOpaque) PageGetSpecialPointer_s(metapg);
+	//selog(DEBUG1, "buffer special pointers are %d, %d, %d", lopaquea->o_blkno, ropaquea->o_blkno, mopaquea->o_blkno);
+
 	/* Clear the incomplete-split flag in the left child */
 	//Assert(P_INCOMPLETE_SPLIT(lopaque));
 	lopaque->btpo_flags &= ~BTP_INCOMPLETE_SPLIT;
 	MarkBufferDirty_s(rel, lbuf);
-
 	MarkBufferDirty_s(rel, rootbuf);
 	MarkBufferDirty_s(rel, metabuf);
 

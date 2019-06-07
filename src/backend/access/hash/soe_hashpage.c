@@ -551,8 +551,6 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	uint32		maxbucket;
 	uint32		highmask;
 	uint32		lowmask;
-//	bool		metap_update_masks = false;
-//	bool		metap_update_splitpoint = false;
 
 
 	_hash_checkpage_s(rel, metabuf, LH_META_PAGE);
@@ -601,9 +599,7 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	new_bucket = metap->hashm_maxbucket + 1;
 
 	old_bucket = (new_bucket & metap->hashm_lowmask);
-	//selog(DEBUG1, "Old bucket to split is %d", old_bucket);
 	start_oblkno = BUCKET_TO_BLKNO_s(metap, old_bucket);
-	//selog(DEBUG1, "Start block number is %d", start_oblkno);
 	buf_oblkno = _hash_getbuf_with_condlock_cleanup_s(rel, start_oblkno, LH_BUCKET_PAGE);
 	if (!buf_oblkno)
 		goto fail;
@@ -621,19 +617,15 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	 * where we are going to put a new splitpoint's worth of buckets.
 	 */
 	start_nblkno = BUCKET_TO_BLKNO_s(metap, new_bucket);
-	//selog(DEBUG1, "new bucket block number is %d", start_nblkno);
 	/*
 	 * If the split point is increasing we need to allocate a new batch of
 	 * bucket pages.
 	 */
 	spare_ndx = _hash_spareindex_s(new_bucket + 1);
-	//selog(DEBUG1, "spare_ndx is %d", spare_ndx);
 	if (spare_ndx > metap->hashm_ovflpoint)
 	{
 		uint32		buckets_to_add;
 
-		//Assert(spare_ndx == metap->hashm_ovflpoint + 1);
-		//selog(DEBUG1, "New buckets are needed");
 		/*
 		 * We treat allocation of buckets as a separate WAL-logged action.
 		 * Even if we fail after this operation, won't leak bucket pages;
@@ -641,7 +633,6 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 		 * without failure we don't use all the space in one split operation.
 		 */
 		buckets_to_add = _hash_get_totalbuckets_s(spare_ndx) - new_bucket;
-		//selog(DEBUG1, "Going to allocate %d buckets", buckets_to_add);
 		if (!_hash_alloc_buckets_s(rel, start_nblkno, buckets_to_add))
 		{
 			//selog(DEBUG1, "Cant't split due to Block number overflow");
@@ -658,20 +649,12 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	 * bucket as no other backend could find this bucket unless meta page is
 	 * updated.  However, it is good to be consistent with old bucket locking.
 	 */
-	//selog(DEBUG1, "Going to initiate new bucket %d", start_nblkno);
 	buf_nblkno = _hash_getnewbuf_s(rel, start_nblkno);
-	/*if (!IsBufferCleanupOK(buf_nblkno))
-	{
-		_hash_relbuf(rel, buf_oblkno);
-		_hash_relbuf(rel, buf_nblkno);
-		goto fail;
-	}*/
-	//selog(DEBUG1, "New bucket %d initiated", buf_nblkno);
+
 	/*
 	 * Okay to proceed with split.  Update the metapage bucket mapping info.
 	 */
 	metap->hashm_maxbucket = new_bucket;
-	//selog(DEBUG1, "Increased metapage hashm_maxbucke to %d", new_bucket);
 
 	if (new_bucket > metap->hashm_highmask)
 	{
@@ -692,7 +675,6 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 		metap->hashm_ovflpoint = spare_ndx;
 		//metap_update_splitpoint = true;
 	}
-	//selog(DEBUG1, "Going to update meta page which has maxbucket set to %d", metap->hashm_maxbucket);
 	MarkBufferDirty_s(rel, metabuf);
 
 	/*
@@ -717,7 +699,6 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	 */
 	oopaque->hasho_flag |= LH_BUCKET_BEING_SPLIT;
 	oopaque->hasho_prevblkno = maxbucket;
-	//selog(DEBUG1, "Going to update old bucket %d", buf_oblkno);
 	MarkBufferDirty_s(rel, buf_oblkno);
 
 	npage = BufferGetPage_s(rel, buf_nblkno);
@@ -733,17 +714,14 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	nopaque->hasho_flag = LH_BUCKET_PAGE | LH_BUCKET_BEING_POPULATED;
 	nopaque->hasho_page_id = HASHO_PAGE_ID;
 
-	//selog(DEBUG1, "Going to update new bucket %d", buf_nblkno);
 	MarkBufferDirty_s(rel, buf_nblkno);
 
-	//selog(DEBUG1, "Going to split buckets");
 	/* Relocate records to the new bucket */
 	_hash_splitbucket_s(rel, metabuf,
 					  old_bucket, new_bucket,
 					  buf_oblkno, buf_nblkno,
 					  maxbucket, highmask, lowmask);
 
-	//selog(DEBUG1, "Buckets have been split");
 	/* all done, now release the pins on primary buckets. */
 	ReleaseBuffer_s(rel, buf_oblkno);
 	ReleaseBuffer_s(rel, buf_nblkno);

@@ -30,16 +30,16 @@ ScanKey
 _bt_mkscankey_s(VRelation rel, IndexTuple itup, char* datum, int dsize)
 {
 	ScanKey		skey;
-	TupleDesc	itupdesc;
-	int			indnatts;
-	int			indnkeyatts;
+	//TupleDesc	itupdesc;
+	//int			indnatts;
+	//int			indnkeyatts;
 	//int16	   *indoption;
 	//int			i;
 
 	//currently we only support indexing a single column.
-	itupdesc = rel->tDesc;
-	indnatts = 1; //IndexRelationGetNumberOfAttributes(rel);
-	indnkeyatts = 1; // IndexRelationGetNumberOfKeyAttributes(rel);
+	//itupdesc = rel->tDesc;
+	//indnatts = 1; //IndexRelationGetNumberOfAttributes(rel);
+	//indnkeyatts = 1; // IndexRelationGetNumberOfKeyAttributes(rel);
 	//indoption = rel->rd_indoption;
 
 	/*
@@ -106,15 +106,13 @@ _bt_checkkeys_s(IndexScanDesc scan,
 			  bool *continuescan)
 {
 	ItemId		iid = PageGetItemId_s(page, offnum);
-	bool		tuple_alive;
 	IndexTuple	tuple;
-	TupleDesc	tupdesc;
-	BTScanOpaque so;
-	int			keysz;
-	//int			ikey;
-	//ScanKey		key;
+	char*		keyValue;
+	char* 		datum;
+	int 		test;
 
-	*continuescan = true;		/* default assumption */
+
+	*continuescan = false;		/* default assumption */
 
 	/*
 	 * If the scan specifies not to return killed tuples, then we treat a
@@ -125,35 +123,25 @@ _bt_checkkeys_s(IndexScanDesc scan,
 	 * index keys to prevent uselessly advancing to the next page.
 	 */
 
-	tuple_alive = true;
 
 	tuple = (IndexTuple) PageGetItem_s(page, iid);
-
-	tupdesc = scan->indexRelation->tDesc;
-	so = (BTScanOpaque) scan->opaque;
-	keysz = so->numberOfKeys;
-
-	char*		datum;
-	//bool		isNull;
-	//Datum		test;
-
-		//Assert(key->sk_attno <= BTreeTupleGetNAtts(tuple, scan->indexRelation));
-		/* row-comparison keys need special processing */
-
 	datum = index_getattr_s(tuple);
+	//datumSize = strlen(datum)+1;
+	keyValue = scan->keyData->sk_argument;
+	//the prototype assumes string comparisons
+	test = (int32) strcmp(datum, keyValue);
+	/**
+	* Look at soe_nbtsearch.c function _bt_first_s to which operations the
+	* opoids correspond to.
+	*/
+	if((scan->opoid == 1058 && test<0) || (scan->opoid == 1059 && test <=0) || (scan->opoid == 1054 && test == 0) || (scan->opoid == 1061 && test >=0) || (scan->opoid == 1060 && test >0)){
+		*continuescan = true;
+		return tuple;
+	}else{
+		*continuescan = false;
+		return NULL;
 
-	//TODO: Put test to check if tuple is ok and checks key.
-
-
-		//test = FunctionCall2Coll(&key->sk_func, key->sk_collation,
-								// datum, key->sk_argument);
-
-	/* Check for failure due to it being a killed tuple. */
-	//if (!tuple_alive)
-	//	return NULL;
-
-	/* If we get here, the tuple passes all index quals. */
-	return tuple;
+	}
 }
 
 

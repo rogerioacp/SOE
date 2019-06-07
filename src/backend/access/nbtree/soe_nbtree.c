@@ -18,14 +18,28 @@
  *-------------------------------------------------------------------------
  */
 
+#ifdef UNSAFE
+#include "Enclave_dt.h"
+#else
+#include "sgx_trts.h"
+#include "Enclave_t.h"
+#endif
+
+#include "access/soe_nbtree.h"
+#include "logger/logger.h"
+#include "storage/soe_nbtree_ofile.h"
+#include "storage/soe_bufpage.h"
+/*
 #include "storage/soe_bufpage.h"
 #include "access/soe_nbtree.h"
 #include "access/soe_itup.h"
 #include "access/soe_genam.h"
 #include "access/soe_itup.h"
 #include "logger/logger.h"
-
-
+*/
+#include <oram/plblock.h>
+#include <string.h>
+#include <stdlib.h>
 /*
  * BTPARALLEL_NOT_INITIALIZED indicates that the scan has not started.
  *
@@ -40,24 +54,6 @@
  */
 
 
-/*
- *	btbuildempty() -- build an empty btree index in the initialization fork
- */
-void
-nbtree_init_s(VRelation rel)
-{
-	Buffer buf;
-	Page metapage;
-
-	buf = ReadBuffer_s(rel, 0);
-	metapage = BufferGetPage_s(rel, buf);
-
-	/* Construct metapage. */
-	_bt_initmetapage_s(metapage, P_NONE, 0);
-	
-	MarkBufferDirty_s(rel, buf);
-	ReleaseBuffer_s(rel, buf);
-}
 
 /*
  *	btinsert() -- insert an index tuple into a btree.
@@ -122,11 +118,13 @@ btgettuple_s(IndexScanDesc scan)
 		 * the appropriate direction.  If we haven't done so yet, we call
 		 * _bt_first() to get the first item in the scan.
 		 */
-		if (!BTScanPosIsValid_s(so->currPos))
+		if (!BTScanPosIsValid_s(so->currPos)){
+			//selog(DEBUG1, "Going to first scan");
 			res = _bt_first_s(scan);
+		}
 		else
 		{
-
+			//selog(DEBUG1, "Going to continue for next");
 			/*
 			 * Now continue the scan.
 			 */
@@ -146,7 +144,7 @@ btgettuple_s(IndexScanDesc scan)
  *	btbeginscan() -- start a scan on a btree index
  */
 IndexScanDesc
-btbeginscan_s(VRelation rel,  char* key, int keysize)
+btbeginscan_s(VRelation rel, const char* key, int keysize)
 {
 	IndexScanDesc scan;
 	BTScanOpaque so;
@@ -195,15 +193,16 @@ btendscan_s(IndexScanDesc scan)
 {
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 
-
 	so->markItemIndex = -1;
 
 	/* No need to invalidate positions, the RAM is about to be freed. */
 
 	/* Release storage */
-	if (so->keyData != NULL)
-		free(so->keyData);
+	//if (so->keyData != NULL)
+	free(scan->keyData->sk_argument);
+	free(scan->keyData);
 	/* so->markTuples should not be pfree'd, see btrescan */
 	free(so);
+	free(scan);
 }
 

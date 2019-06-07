@@ -15,9 +15,9 @@
 extern "C" {
 #endif
 
-void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, char* pg_attr_desc, unsigned int pgDescSize);
-void insert(const char* heapTuple, unsigned int tupleSize, const char* datum, unsigned int datumSize);
-int getTuple(unsigned int opmode, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
+void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char* pg_attr_desc, unsigned int pgDescSize);
+void insert(const char* heapTuple, unsigned int tupleSize, char* datum, unsigned int datumSize);
+int getTuple(unsigned int opmode, unsigned int opoid, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 void insertHeap(const char* heapTuple, unsigned int tupleSize);
 
 sgx_status_t SGX_CDECL oc_logger(const char* str);

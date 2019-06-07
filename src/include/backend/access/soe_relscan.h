@@ -27,9 +27,11 @@ typedef struct IndexScanDescData
 	HeapTupleData xs_ctup;		/* current heap tuple, if any */
 	Buffer		xs_cbuf;		/* current heap buffer in scan, if any */
 
-
 	/* state data for traversing HOT chains in index_getnext */
 	bool		xs_continue_hot;	/* T if must keep walking HOT chain */
+
+	unsigned int opoid; //oid of where comparison clause.
+
 
 }			IndexScanDescData;
 
