@@ -185,9 +185,9 @@ _hash_pgaddtup_s(VRelation rel, Buffer buf, Size itemsize, IndexTuple itup)
 
 	/* Find where to insert the tuple (preserving page's hashkey ordering) */
 	hashkey = _hash_get_indextuple_hashkey_s(itup);
-	selog(DEBUG1, "Going to find location to insert tuple");
+	//selog(DEBUG1, "Going to find location to insert tuple");
 	itup_off = _hash_binsearch_s(page, hashkey);
-	selog(DEBUG1, "Going to insert in offset %d", itup_off);
+	//selog(DEBUG1, "Going to insert in offset %d", itup_off);
 	//Page add item extended. already have an example of a function to add a page.
 	PageAddItem_s(page, (Item) itup, itemsize, itup_off, false, false);
 	//if (PageAddItem(page, (Item) itup, itemsize, itup_off, false, false)

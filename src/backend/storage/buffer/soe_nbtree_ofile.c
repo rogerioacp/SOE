@@ -28,6 +28,7 @@
 #include "logger/logger.h"
 #include "storage/soe_nbtree_ofile.h"
 #include "storage/soe_bufpage.h"
+#include "common/soe_pe.h"
 
 #include <oram/plblock.h>
 #include <string.h>
@@ -58,15 +59,18 @@ void
 nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
 	sgx_status_t status;
 	char* blocks;
-	char* page;
+	char* destPage;
 	int offset;
 	status = SGX_SUCCESS;
-	blocks = (char*) malloc(blocksize*nblocks);
+	
+	blocks = (char*) malloc(BLCKSZ*nblocks);
+	char* tmpPage = malloc(blocksize);
 	//BTPageOpaque oopaque;
 
 	for(offset = 0; offset < nblocks; offset++){
-		page =  blocks + (offset * BLCKSZ);
-		nbtree_pageInit(page, DUMMY_BLOCK, (Size) blocksize);
+		destPage =  blocks + (offset * BLCKSZ);
+		nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+		page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
 		//memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize);
 		//oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
 		//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
@@ -78,6 +82,7 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 		selog(ERROR, "Could not initialize relation %s\n", filename);
 	}
 	free(blocks);
+	free(tmpPage);
 }
 
 
@@ -85,11 +90,15 @@ void
 nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	sgx_status_t status;
 	BTPageOpaque oopaque;
-	//selog(DEBUG1, "hash_fileRead %d", ob_blkno);
+	selog(DEBUG1, "nbtree_fileRead %d", ob_blkno);
 	status = SGX_SUCCESS;
- 	block->block = (void*) malloc(BLCKSZ);
+	char* ciphertextBlock;
 
-	status = outFileRead(block->block, filename, ob_blkno, BLCKSZ);
+ 	block->block = (void*) malloc(BLCKSZ);
+ 	ciphertextBlock = (char*) malloc(BLCKSZ);
+
+	status = outFileRead(ciphertextBlock, filename, ob_blkno, BLCKSZ);
+	page_decryption((unsigned char*) ciphertextBlock, (unsigned char*) block->block);
 
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
@@ -98,7 +107,8 @@ nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno)
 	oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
-	//selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
+	free(ciphertextBlock);
+	selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
 }
 
 
@@ -106,7 +116,9 @@ void
 nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	sgx_status_t status = SGX_SUCCESS;
 	//BTPageOpaque oopaque = NULL;
+	char* encpage;
 
+	encpage = (char*) malloc(BLCKSZ);
 
 	if(block->blkno == DUMMY_BLOCK){
 		//selog(DEBUG1, "Requested write of DUMMY_BLOCK");
@@ -130,11 +142,13 @@ nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob
 
 	//selog(DEBUG1, "hash_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, oopaque->o_blkno);
 	//selog(DEBUG1, "hash_fileWrite for file %s", filename);
-	status = outFileWrite(block->block, filename, ob_blkno, BLCKSZ);
+	page_encryption((unsigned char*) block->block, (unsigned char*) encpage);
+	status = outFileWrite(encpage, filename, ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
 	}
+	free(encpage);
 }
 
 

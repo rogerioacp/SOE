@@ -27,6 +27,8 @@
 
 #include "logger/logger.h"
 #include "storage/soe_heap_ofile.h"
+#include "common/soe_pe.h"
+
 
 #include <oram/plblock.h>
 #include <oram/ofile.h>
@@ -53,24 +55,31 @@ void
 heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
 	sgx_status_t status;
 	char* blocks;
-	Page page;
+	char* tmpPage;
+
+	Page destPage;
 	int offset;
 	status = SGX_SUCCESS;
 
-	blocks = (char*) malloc(blocksize*nblocks);
+	blocks = (char*) malloc(BLCKSZ*nblocks);
+	tmpPage = (char*) malloc(blocksize);
+
 	//selog(DEBUG1, "going to initialize %u pages of relation  %s\n", nblocks, filename);
 
 	for(offset = 0; offset < nblocks; offset++){
-		page =  blocks + (offset * BLCKSZ);
-		heap_pageInit(page, DUMMY_BLOCK, (Size) blocksize);
+		destPage =  blocks + (offset * BLCKSZ);
+		heap_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+		page_encryption((unsigned char*) tmpPage, (unsigned char*)destPage);
 	}
 
 
-	status = outFileInit(filename, blocks, nblocks, blocksize, nblocks*BLCKSZ);
+	status = outFileInit(filename, blocks, nblocks, BLCKSZ, nblocks*BLCKSZ);
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not initialize relation %s\n", filename);
 	}
+
 	free(blocks);
+	free(tmpPage);
 	
 }
 
@@ -82,11 +91,15 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	//selog(DEBUG1, "heap_fileRead %d", ob_blkno);
 	sgx_status_t status;
 	OblivPageOpaque oopaque = NULL;
-
+	char* ciphertexBlock;
 	status = SGX_SUCCESS;
- 	block->block = (void*) malloc(BLCKSZ);
 
-	status = outFileRead(block->block, filename, ob_blkno, BLCKSZ);
+ 	block->block = (void*) malloc(BLCKSZ);
+ 	ciphertexBlock = (char*) malloc(BLCKSZ);
+
+	//status = outFileRead(block->block, filename, ob_blkno, BLCKSZ);
+ 	status = outFileRead(ciphertexBlock, filename, ob_blkno, BLCKSZ);
+ 	page_decryption((unsigned char*) ciphertexBlock, (unsigned char*) block->block);
 
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
@@ -95,7 +108,7 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	oopaque = (OblivPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
-
+	free(ciphertexBlock);
 	//selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
 
 }
@@ -104,8 +117,8 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 void 
 heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	sgx_status_t status = SGX_SUCCESS;
+	char* encPage = (char*) malloc(BLCKSZ);
 	//OblivPageOpaque oopaque = NULL;
-
 
 	if(block->blkno == DUMMY_BLOCK){
 		//selog(DEBUG1, "Requested write of DUMMY_BLOCK");
@@ -119,14 +132,16 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 		//selog(DEBUG1, "Going to write DUMMY_BLOCK");
 		heap_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
+	page_encryption((unsigned char*) block->block, (unsigned char*) encPage);
 	//oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block);
 	//selog(DEBUG1, "heap_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, oopaque->o_blkno);
 	//selog(DEBUG1, "heap_fileWrite for file %s", filename);
-	status = outFileWrite(block->block, filename, ob_blkno, BLCKSZ);
+	status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
 	}
+	free(encPage);
 }
 
 

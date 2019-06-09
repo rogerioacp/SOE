@@ -25,6 +25,7 @@
 #endif
 
 #include "access/soe_hash.h"
+#include "common/soe_pe.h"
 #include "logger/logger.h"
 #include "storage/soe_hash_ofile.h"
 #include "storage/soe_bufpage.h"
@@ -58,17 +59,23 @@ void hash_pageInit(Page page, int blkno, Size blocksize){
 void 
 hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
 	sgx_status_t status;
+
 	char* blocks;
-	char* page;
+	char* tmpPage;
+
+	Page destPage;
 	int offset;
 	status = SGX_SUCCESS;
+	
 	blocks = (char*) malloc(blocksize*nblocks);
+	tmpPage = (char*) malloc(blocksize);
+
 //	HashPageOpaque oopaque;
 
 	for(offset = 0; offset < nblocks; offset++){
-		page =  blocks + (offset * BLCKSZ);
-		hash_pageInit(page, DUMMY_BLOCK, (Size) blocksize);
-		//memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize);
+		destPage  =  blocks + (offset * BLCKSZ);
+		hash_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+		page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
 		//oopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 		//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
 
@@ -78,7 +85,9 @@ hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not initialize relation %s\n", filename);
 	}
+
 	free(blocks);
+	free(tmpPage);
 }
 
 
@@ -88,9 +97,15 @@ hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	HashPageOpaque oopaque;
 	//selog(DEBUG1, "hash_fileRead %d", ob_blkno);
 	status = SGX_SUCCESS;
- 	block->block = (void*) malloc(BLCKSZ);
+	char* ciphertexBlock;
 
-	status = outFileRead(block->block, filename, ob_blkno, BLCKSZ);
+ 	block->block = (void*) malloc(BLCKSZ);
+ 	ciphertexBlock = (char*) malloc(BLCKSZ);
+
+
+
+	status = outFileRead(ciphertexBlock, filename, ob_blkno, BLCKSZ);
+ 	page_decryption((unsigned char*) ciphertexBlock, (unsigned char*) block->block);
 
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
@@ -99,6 +114,7 @@ hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	oopaque = (HashPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
+	free(ciphertexBlock);
 	//selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
 }
 
@@ -106,6 +122,8 @@ hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 void 
 hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	sgx_status_t status = SGX_SUCCESS;
+	char* encPage = (char*) malloc(BLCKSZ);
+
 	//HashPageOpaque oopaque = NULL;
 
 
@@ -121,15 +139,18 @@ hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 		//selog(DEBUG1, "Going to write DUMMY_BLOCK");
 		hash_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
+	page_encryption((unsigned char*) block->block, (unsigned char*) encPage);
 
 	//oopaque = (HashPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	//selog(DEBUG1, "hash_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, oopaque->o_blkno);
 	//selog(DEBUG1, "hash_fileWrite for file %s", filename);
-	status = outFileWrite(block->block, filename, ob_blkno, BLCKSZ);
+	status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
 	}
+
+	free(encPage);
 }
 
 
