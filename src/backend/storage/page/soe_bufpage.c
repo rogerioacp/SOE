@@ -359,7 +359,7 @@ compactify_tuples_s(itemIdSort itemidbase, int nitems, Page page)
 	PageHeader	phdr = (PageHeader) page;
 	Offset		upper;
 	int			i;
-
+	//selog(DEBUG1, "sort items to compact");
 	/* sort itemIdSortData array into decreasing itemoff order */
 	qsort_s((char *) itemidbase, nitems, sizeof(itemIdSortData),
 		  itemoffcompare_s);
@@ -377,7 +377,7 @@ compactify_tuples_s(itemIdSort itemidbase, int nitems, Page page)
 				itemidptr->alignedlen);
 		lp->lp_off = upper;
 	}
-
+	//selog(DEBUG1, "Page has %d items and New upper position is %d", nitems, upper);
 	phdr->pd_upper = upper;
 }
 
@@ -420,7 +420,7 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 		pd_upper > pd_special ||
 		pd_special > BLCKSZ ||
 		pd_special != MAXALIGN_s(pd_special)){
-		selog(ERROR, "corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special);
+		selog(ERROR, "1-corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special);
 	}
 	
 
@@ -443,7 +443,7 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 		if (offset < pd_upper ||
 			(offset + size) > pd_special ||
 			offset != MAXALIGN_s(offset)){
-			selog(ERROR, "corrupted item pointer: offset = %u, length = %u",offset, (unsigned int) size);
+			selog(ERROR, "2-corrupted item pointer: offset = %u, length = %u",offset, (unsigned int) size);
 		}
 
 		if (nextitm < nitems && offnum == itemnos[nextitm])
@@ -477,7 +477,7 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 	 */
 	memcpy(phdr->pd_linp, newitemids, nused * sizeof(ItemIdData));
 	phdr->pd_lower = SizeOfPageHeaderData + nused * sizeof(ItemIdData);
-	selog(DEBUG1, "Going to compact tuples of old page");
+	//selog(DEBUG1, "Going to compact tuples of old page");
 	/* and compactify the tuple data */
 	compactify_tuples_s(itemidbase, nused, page);
 }

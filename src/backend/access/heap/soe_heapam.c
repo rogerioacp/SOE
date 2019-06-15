@@ -47,7 +47,7 @@ heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple){
 
 	if (alignedSize + saveFreeSpace > pageFreeSpace)
 	{
-		//selog(WARNING, "Page has no free space");
+		//selog(WARNING, "Page has no free space %d",buffer);
 		BufferFull_s(rel, buffer);
 
 		ReleaseBuffer_s(rel, buffer);

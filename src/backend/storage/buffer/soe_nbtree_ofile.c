@@ -90,7 +90,7 @@ void
 nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	sgx_status_t status;
 	BTPageOpaque oopaque;
-	selog(DEBUG1, "nbtree_fileRead %d", ob_blkno);
+	//selog(DEBUG1, "nbtree_fileRead %d", ob_blkno);
 	status = SGX_SUCCESS;
 	char* ciphertextBlock;
 
@@ -108,7 +108,7 @@ nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno)
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
 	free(ciphertextBlock);
-	selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
+	//selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
 }
 
 

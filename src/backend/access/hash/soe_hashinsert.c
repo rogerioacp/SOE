@@ -154,7 +154,7 @@ _hash_doinsert_s(VRelation rel, IndexTuple itup)
 		ReleaseBuffer_s(rel, bucket_buf);
 	/* Attempt to split if a split is needed */
 	if (do_expand){
-		//selog(DEBUG1, "Going to expand table");
+		//selog(DEBUG1, "Going to expand hash that has maxbucket %d", metap->hashm_maxbucket);
 		_hash_expandtable_s(rel, metabuf);
 	}
 //	selog(DEBUG1, "Going to release meta page which has hashm_maxbucket set to %d",metap->hashm_maxbucket);

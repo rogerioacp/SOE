@@ -28,7 +28,7 @@
 #define BKCAP 1
 
 /* Predefined max tuple size for sgx to copy the real tuple to*/
-#define MAX_TUPLE_SIZE 200
+#define MAX_TUPLE_SIZE 300
 
 ORAMState stateTable = NULL;
 ORAMState stateIndex = NULL;

@@ -460,7 +460,7 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	nextblkno = ovflopaque->hasho_nextblkno;
 	prevblkno = ovflopaque->hasho_prevblkno;
 	writeblkno = BufferGetBlockNumber_s(wbuf);
-
+	//selog(DEBUG1, "Domed page %d has prev %d and next %d", ovflblkno, prevblkno, nextblkno);
 	/*
 	 * Fix up the bucket chain.  this is a doubly-linked list, so we must fix
 	 * up the bucket chain members behind and ahead of the overflow page being
@@ -469,17 +469,24 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	 */
 	if (BlockNumberIsValid_s(prevblkno))
 	{
-		if (prevblkno == writeblkno)
+		if (prevblkno == writeblkno){
+			//selog(DEBUG1, "Prevblkno is equal to writeblkno %d %d %d %d", prevblkno, writeblkno, prevbuf, wbuf);
 			prevbuf = wbuf;
-		else
+		}
+		else{
 			prevbuf = _hash_getbuf_with_strategy_s(rel,
 												 prevblkno,
 												 LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+			//selog(DEBUG1, " 2- Fixing chain. Prev poins to %d and was asked to %d", prevbuf, prevblkno);
+
+		}
 	}
-	if (BlockNumberIsValid_s(nextblkno))
+	if (BlockNumberIsValid_s(nextblkno)){
+		//selog(DEBUG1, "Next block number is valid?");
 		nextbuf = _hash_getbuf_with_strategy_s(rel,
 											 nextblkno,
 											 LH_OVERFLOW_PAGE);
+	}
 
 	/* Note: bstrategy is intentionally not used for metapage and bitmap */
 
@@ -520,6 +527,7 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	 */
 	if (nitups > 0)
 	{
+		//selog(DEBUG1, "Going to insert tuples on the insert page %d", wbuf);
 		_hash_pgaddmultitup_s(rel, wbuf, itups, itup_offsets, nitups);
 		MarkBufferDirty_s(rel, wbuf);
 	}
@@ -531,7 +539,7 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	 * careful to make the special space valid here so that tools like
 	 * pageinspect won't get confused.
 	 */
-	//selog(DEBUG1, "Going to zero overflow page");
+	//selog(DEBUG1, "Going to zero overflow page %d", ovflbuf);
 	_hash_pageinit_s(ovflpage, BufferGetPageSize_s(rel, ovflbuf));
 
 	ovflopaque = (HashPageOpaque) PageGetSpecialPointer_s(ovflpage);
@@ -547,14 +555,18 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 
 	if (BufferIsValid_s(rel, prevbuf))
 	{
+		//selog(DEBUG1, "Prev page is valid %d", prevbuf);
+
 		Page		prevpage = BufferGetPage_s(rel, prevbuf);
 		HashPageOpaque prevopaque = (HashPageOpaque) PageGetSpecialPointer_s(prevpage);
 
 		prevopaque->hasho_nextblkno = nextblkno;
+		//selog(DEBUG1, "Setting prev next to %d", nextblkno);
 		MarkBufferDirty_s(rel, prevbuf);
 	}
 	if (BufferIsValid_s(rel, nextbuf))
 	{
+		//selog(DEBUG1, "Next page is valid %d and setting prev to %d", nextbuf, prevblkno);
 		Page		nextpage = BufferGetPage_s(rel, nextbuf);
 		HashPageOpaque nextopaque = (HashPageOpaque) PageGetSpecialPointer_s(nextpage);
 
@@ -688,7 +700,7 @@ _hash_squeezebucket_s(VRelation rel,
 	wbuf = bucket_buf;
 	wpage = BufferGetPage_s(rel, wbuf);
 	wopaque = (HashPageOpaque) PageGetSpecialPointer_s(wpage);
-	//selog(DEBUG1, "first bucket to squeze is %d", wbuf);
+	//selog(DEBUG1, "first bucket to squeze is %d and has prev %d and next %d", wbuf, wopaque->hasho_prevblkno, wopaque->hasho_nextblkno);
 	/*
 	 * if there aren't any overflow pages, there's nothing to squeeze. caller
 	 * is responsible for releasing the pin on primary bucket page.
@@ -712,6 +724,7 @@ _hash_squeezebucket_s(VRelation rel,
 	{
 		rblkno = ropaque->hasho_nextblkno;
 		//selog(DEBUG1, "Next page on bucket is %d", rblkno);
+
 		if (rbuf != InvalidBuffer){
 			ReleaseBuffer_s(rel, rbuf);
 		}
@@ -720,6 +733,7 @@ _hash_squeezebucket_s(VRelation rel,
 										  LH_OVERFLOW_PAGE);
 		rpage = BufferGetPage_s(rel, rbuf);
 		ropaque = (HashPageOpaque) PageGetSpecialPointer_s(rpage);
+		//selog(DEBUG1, "Buffer %d has next %d and prev %d", rblkno, ropaque->hasho_nextblkno, ropaque->hasho_prevblkno);
 		//Assert(ropaque->hasho_bucket == bucket);
 	} while (BlockNumberIsValid_s(ropaque->hasho_nextblkno));
 
@@ -871,9 +885,10 @@ readpage:
 		 * _hash_freeovflpage's attempt to update the sibling links of the
 		 * removed page.  In that case, we don't need to lock it again.
 		 */
+		//selog(DEBUG1, "rblkno number is %d", rblkno);
 		rblkno = ropaque->hasho_prevblkno;
 //		Assert(BlockNumberIsValid(rblkno));
-		//selog(DEBUG1, "Going to free overflowpage");
+		//selog(DEBUG1, "Going to free overflowpage %d with first bucket %d and rblkno %d", rbuf, wbuf, rblkno);
 		/* free this overflow page (releases rbuf) */
 		_hash_freeovflpage_s(rel, bucket_buf, rbuf, wbuf, itups, itup_offsets,
 						   tups_size, nitups);
@@ -891,12 +906,12 @@ readpage:
 			}
 			return;
 		}
-
+		//selog(DEBUG1, "GOING to getbuf with strategy blkno  %d", rblkno);
 		rbuf = _hash_getbuf_with_strategy_s(rel,
 										  rblkno,
 										  LH_OVERFLOW_PAGE);
-		//rpage = BufferGetPage_s(rel, rbuf);
-		//ropaque = (HashPageOpaque) PageGetSpecialPointer_s(rpage);
+		rpage = BufferGetPage_s(rel, rbuf);
+		ropaque = (HashPageOpaque) PageGetSpecialPointer_s(rpage);
 		//Assert(ropaque->hasho_bucket == bucket);
 	}
 

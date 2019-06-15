@@ -430,7 +430,7 @@ _bt_insertonpg_s(VRelation rel,
 		/* split the buffer into left and right halves */
 		rbuf = _bt_split_s(rel, buf, cbuf, firstright,
 						 newitemoff, itemsz, itup, newitemonleft);
-		selog(DEBUG1, "Page %d was split. Right buf is %d", buf, rbuf);
+		//selog(DEBUG1, "Page %d was split. Right buf is %d", buf, rbuf);
 
 		/*----------
 		 * By here,

@@ -264,7 +264,7 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		if (ndeletable > 0)
 		{
 			/* No ereport(ERROR) until changes are logged */
-			//selog(DEBUG1, "Going to delete tuples from page");
+			//selog(DEBUG1, "Going to delete tuples from buffer %d", buf);
 			PageIndexMultiDelete_s(page, deletable, ndeletable);
 			bucket_dirty = true;
 			//selog(DEBUG1, "Page has been clean");
@@ -286,6 +286,7 @@ hashbucketcleanup_s(VRelation rel, Bucket cur_bucket, Buffer bucket_buf,
 		 * page
 		 */
 		if (!retain_pin){
+			//selog(DEBUG1, "Going to release buffer %d after multidelete", buf);
 			ReleaseBuffer_s(rel, buf);
 		}
 		buf = next_buf;

@@ -270,7 +270,7 @@ _hash_init_metabuffer_s(VRelation rel, Buffer buf, double num_tuples,
 Buffer
 _hash_getbuf_with_condlock_cleanup_s(VRelation rel, BlockNumber blkno, int flags)
 {
-	Buffer		buf = 0;
+	Buffer		buf = -1;
 
 	if (blkno == P_NEW)
 		selog(ERROR, "hash AM does not use P_NEW");
@@ -600,8 +600,9 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 
 	old_bucket = (new_bucket & metap->hashm_lowmask);
 	start_oblkno = BUCKET_TO_BLKNO_s(metap, old_bucket);
+	//selog(DEBUG1, "expand bucket %d to  bucket %d which has block number %d", old_bucket, new_bucket, start_oblkno);
 	buf_oblkno = _hash_getbuf_with_condlock_cleanup_s(rel, start_oblkno, LH_BUCKET_PAGE);
-	if (!buf_oblkno)
+	if (buf_oblkno==-1)
 		goto fail;
 
 	opage = BufferGetPage_s(rel, buf_oblkno);
@@ -879,6 +880,7 @@ _hash_splitbucket_s(VRelation rel,
 	uint16		nitups = 0;
 
 	bucket_obuf = obuf;
+	//selog(DEBUG1, "Going to split");
 	//selog(DEBUG1, "going to get old page %d", obuf);
 	opage = BufferGetPage_s(rel, obuf);
 	oopaque = (HashPageOpaque) PageGetSpecialPointer_s(opage);
@@ -972,6 +974,7 @@ _hash_splitbucket_s(VRelation rel,
 					//selog(DEBUG1, "Going to add new overflow page");
 					/* chain to a new overflow page */
 					nbuf = _hash_addovflpage_s(rel, metabuf, nbuf, (nbuf == bucket_nbuf) ? true : false);
+					//selog(DEBUG1, "Overflow page is in buffer %d", nbuf);
 					npage = BufferGetPage_s(rel, nbuf);
 					nopaque = (HashPageOpaque) PageGetSpecialPointer_s(npage);
 				}
