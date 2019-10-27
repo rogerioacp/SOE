@@ -47,7 +47,7 @@ heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple){
 
 	if (alignedSize + saveFreeSpace > pageFreeSpace)
 	{
-		selog(WARNING, "Page has no free space %d",buffer);
+		//selog(WARNING, "Page has no free space %d",buffer);
 		BufferFull_s(rel, buffer);
 
 		ReleaseBuffer_s(rel, buffer);
@@ -65,7 +65,8 @@ heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple){
 	/* Update tuple->t_self to the actual position where it was stored */
 	ItemPointerSet_s(&(tuple->t_self), BufferGetBlockNumber_s(buffer), offnum);
 
-/*
+
+	/*
 	 * Insert the correct position into CTID of the stored tuple, too (unless
 	 * this is a speculative insertion, in which case the token is held in
 	 * CTID field instead)
@@ -85,7 +86,36 @@ heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple){
 	ReleaseBuffer_s(rel, buffer);
 	UpdateFSM(rel);
 
+}
 
+void heap_insert_block_s(VRelation rel, char* rpage){
+	Buffer buffer;
+	Page page;
+	BlockNumber freeSpaceBlock;
+	ItemId lp;
+	freeSpaceBlock = FreeSpaceBlock_s(rel);
+	selog(DEBUG1, "Received free space block %d", freeSpaceBlock);
+	buffer = ReadBuffer_s(rel, freeSpaceBlock);
+	page = BufferGetPage_s(rel, buffer);
+	uint32 len;
+	if(buffer == 0){
+		lp = PageGetItemId_s(rpage, 2);
+		len = ItemIdGetLength_s(lp);
+		selog(DEBUG1, "The length of the item in block %d and offset %d is %d", 0,2, len);
+	}
+	memcpy(page, rpage, BLCKSZ);
+
+	if(buffer == 0){
+		lp = PageGetItemId_s(page, 2);
+		len = ItemIdGetLength_s(lp);
+		selog(DEBUG1, "The length of the item in block %d and offset %d is %d", 0,2, len);
+	}
+	MarkBufferDirty_s(rel, buffer);
+	ReleaseBuffer_s(rel, buffer);
+	UpdateFSM(rel);
+	BufferFull_s(rel, buffer);
+
+	selog(DEBUG1, "Update block on buffer %d", buffer);
 }
 
 /**
@@ -103,6 +133,7 @@ void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple){
 	ItemId lp;
 
 	blkno = ItemPointerGetBlockNumber_s(tid);
+	//selog(DEBUG1, "Going to get block %d from heap", blkno);
 	buffer = ReadBuffer_s(rel, blkno);
 
 	if(ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer)){
@@ -112,7 +143,7 @@ void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple){
 	page = BufferGetPage_s(rel, buffer);
 
 	offnum = ItemPointerGetOffsetNumber_s(tid);
-
+	//selog(DEBUG1, "Item offset is %d", offnum);
 	tuple->t_self = *tid;
 
 	lp = PageGetItemId_s(page, offnum);
@@ -121,7 +152,9 @@ void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple){
 		selog(ERROR, "Item ID is not normal");
 	}
 	tuple->t_len = ItemIdGetLength_s(lp);
+	selog(DEBUG1, "Tuple len is %d", tuple->t_len);
 	tuple->t_tableOid = RelationGetRelid_s(rel);
+	selog(DEBUG1, "Table oid is %d", tuple->t_tableOid);
 	tuple->t_data = (HeapTupleHeader) malloc(tuple->t_len);
 	memcpy(tuple->t_data, PageGetItem_s(page, lp),tuple->t_len);
 	ItemPointerSetOffsetNumber_s(&tuple->t_self, offnum);

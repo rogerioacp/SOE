@@ -9,4 +9,4 @@
 void nbtree_pageInit(Page page, int blkno, Size blocksize);
 extern AMOFile *nbtree_ofileCreate();
 
-#endif							/* SOE_HASH_OFILE_H */
+#endif							/* SOE_NBTREE_OFILE_H */

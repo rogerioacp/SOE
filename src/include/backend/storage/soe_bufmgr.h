@@ -1,5 +1,3 @@
-
-
 #ifndef SOE_BUFMGR_H
 #define SOE_BUFMGR_H
 
@@ -85,6 +83,10 @@ typedef struct VBlock{
     char* page;
 } *VBlock;
 
+
+
+
+
 /*
  * RelationGetRelid
  *		Returns the OID of the relation
@@ -118,4 +120,4 @@ extern void BufferFull_s(VRelation rel, Buffer buffer);
 
 extern void closeVRelation(VRelation rel);
 
-#endif /* SOE_BUFPAGE_H */
+#endif /* SOE_BUFMGR_H */

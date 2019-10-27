@@ -60,29 +60,42 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 	sgx_status_t status;
 	char* blocks;
 	char* destPage;
-	int offset;
+	char* tmpPage;
 	status = SGX_SUCCESS;
-	
-	blocks = (char*) malloc(BLCKSZ*nblocks);
-	char* tmpPage = malloc(blocksize);
-	//BTPageOpaque oopaque;
 
-	for(offset = 0; offset < nblocks; offset++){
-		destPage =  blocks + (offset * BLCKSZ);
-		nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-		page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
-		//memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize);
-		//oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
-		//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
+	int tnblocks = nblocks;
+	int offset;
+	int allocBlocks = 0;
+	int boffset = 0;
 
-	}
+	do{
+		//BTPageOpaque oopaque;
+		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 
-	status = outFileInit(filename, blocks, nblocks, blocksize, nblocks*BLCKSZ);
-	if (status != SGX_SUCCESS) {
-		selog(ERROR, "Could not initialize relation %s\n", filename);
-	}
-	free(blocks);
-	free(tmpPage);
+		blocks = (char*) malloc(BLCKSZ*nblocks);
+		tmpPage = malloc(blocksize);
+
+		for(offset = 0; offset < allocBlocks; offset++){
+			destPage =  blocks + (offset * BLCKSZ);
+			nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+			page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
+			//memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize);
+			//oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
+			//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
+
+		}
+
+		status = outFileInit(filename, blocks, allocBlocks, blocksize, allocBlocks*BLCKSZ, boffset);
+
+		if (status != SGX_SUCCESS) {
+			selog(ERROR, "Could not initialize relation %s\n", filename);
+		}
+		free(blocks);
+		free(tmpPage);
+
+		tnblocks -= BATCH_SIZE;
+		boffset += BATCH_SIZE;
+	}while(tnblocks > 0);
 }
 
 

@@ -10,11 +10,14 @@
 
 #include "access/soe_heapam.h"
 #include "storage/soe_bufmgr.h"
+#include "storage/soe_ost_bufmgr.h"
 #include "access/soe_hash.h"
 #include "access/soe_nbtree.h"
+#include "access/soe_ost.h"
 #include "storage/soe_hash_ofile.h"
 #include "storage/soe_heap_ofile.h"
 #include "storage/soe_nbtree_ofile.h"
+#include "storage/soe_ost_ofile.h"
 #include "logger/logger.h"
 
 #include <oram/oram.h>
@@ -33,8 +36,11 @@
 ORAMState stateTable = NULL;
 ORAMState stateIndex = NULL;
 
+OSTreeState ostTable = NULL;
+
 VRelation oTable;
 VRelation oIndex;
+OSTRelation ostIndex;
 
 Amgr* tamgr;
 Amgr* iamgr;
@@ -47,15 +53,16 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
     unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexOid, char* attrDesc, unsigned int attrDescLength){
     //VALGRIND_DO_LEAK_CHECK;
 
-    //selog(DEBUG1, "Initializing SOE for relation %s and index  %s", tName, iName);
+    selog(DEBUG1, "Initializing SOE for relation %s and index  %s", tName, iName);
     stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
     oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
 
     if(indexOid == F_HASHHANDLER){
+        selog(DEBUG1, "going to init oblivious hash file");
         stateIndex = initORAMState(iName, iNBlocks, &hash_ofileCreate, false);
         oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &hash_pageInit);
     }else if(indexOid == F_BTHANDLER){
-        //selog(DEBUG1, "going to init nbtree oblivious heap file");
+        selog(DEBUG1, "going to init nbtree oblivious heap file");
         stateIndex = initORAMState(iName, iNBlocks, &nbtree_ofileCreate, false);
         oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &nbtree_pageInit);
     }else{
@@ -85,12 +92,36 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
     scan = NULL;
 }
 
+void initFSOE(const char* tName, const char* iName, int tNBlocks, int* fanouts, int nlevels, unsigned int tOid, unsigned int iOid, char* attrDesc, unsigned int attrDescLength){
+
+    int fani;
+
+    selog(DEBUG1, "Initializing SOE for relation %s and index %s", tName, iName);
+    stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
+    oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
+
+    //Handle the initialization of the tree index.
+    selog(DEBUG1, "Initializing OST protocol state");
+
+    for(fani = 0; fani < nlevels; fani++){
+        selog(DEBUG1, "level %d has fanout %d", fani, fanouts[fani]);
+    }
+    ostTable = initOSTreeProtocol(iName, iOid, fanouts, nlevels, &ost_ofileCreate);
+
+
+    selog(DEBUG1, "Initializing OST protocol relation");
+    //By default a single attribute is used to compare elements in the tree.
+    ostIndex = InitOSTRelation(ostTable, iOid, attrDesc, attrDescLength);
+
+    scan = NULL;
+}
 
  ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(), bool isHeap){
 
 
  	size_t fileSize = nBlocks * BLCKSZ;
     Amgr* amgr;
+    ORAMState state;
 
     amgr = (Amgr*) malloc(sizeof(Amgr));
     amgr->am_stash = stashCreate();
@@ -103,8 +134,45 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
         iamgr = amgr;
     }
    
+    selog(DEBUG1, "Initiating table oram");
+    state = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr);
+    selog(DEBUG1, "Initialized oram");
+    return state;
+ }
 
-    return init_oram(name, fileSize, BLCKSZ, BKCAP, amgr);
+
+OSTreeState initOSTreeProtocol(const char *name, unsigned int iOid, int* fanouts, int nlevels, AMOFile* (*ofile)()){
+
+    int i;
+    int namelen;
+
+    OSTreeState ost = (OSTreeState) malloc(sizeof(struct OSTreeState));
+    ost->fanouts = (int*) malloc(sizeof(int)*nlevels);
+    memcpy(ost->fanouts, fanouts, sizeof(int)*nlevels);
+    ost->nlevels = nlevels;
+    ost->iOid = iOid;
+    namelen = strlen(name)+1;
+    ost->iname = (char*) malloc(namelen);
+    memcpy(ost->iname, name, namelen);
+
+
+    ost->orams = (ORAMState*) malloc(sizeof(ORAMState)*nlevels);
+
+    ost_status(ost);
+
+    for(i=0; i < nlevels;i++){
+        size_t fileSize =  BLCKSZ * fanouts[i];
+        Amgr* amgr;
+        amgr = (Amgr*) malloc(sizeof(Amgr));
+        amgr->am_stash  = stashCreate();
+        amgr->am_pmap = pmapCreate();
+        amgr->am_ofile = ofile();
+        setclevel(i);
+        //selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i, fileSize);
+        ost->orams[i] = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr);
+    }
+
+    return ost;
  }
 
 void insert(const char* heapTuple, unsigned int tupleSize,  char* datum, unsigned int datumSize){
@@ -133,6 +201,17 @@ void insert(const char* heapTuple, unsigned int tupleSize,  char* datum, unsigne
 
     free(hTuple);
     free(trimedDatum);
+}
+
+
+
+void addIndexBlock(char* block, unsigned int blocksize, unsigned int offset, unsigned int level){
+
+    insert_ost(ostIndex, block, level, offset);
+}
+
+void addHeapBlock(char* block, unsigned int blockSize, unsigned int blkno){
+    heap_insert_block_s(oTable, block);
 }
 
 int getTuple(unsigned int opmode, unsigned int opoid, const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
@@ -233,6 +312,67 @@ int getTuple(unsigned int opmode, unsigned int opoid, const char* key, int scanK
 
     return hasNext;
 }
+
+int getTupleOST(unsigned int opmode, unsigned int opoid, const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen){
+    
+    HeapTuple heapTuple;
+    int hasNext;
+    bool hasMore = false;
+    char* trimedKey = (char*) malloc(scanKeySize+1);
+    heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+    hasNext = 0;
+    memcpy(trimedKey,  key, scanKeySize);
+    trimedKey[scanKeySize] = '\0'; 
+   // selog(DEBUG1, "Going to search for key %s with size %d", trimedKey, scanKeySize);
+
+
+
+    //selog(DEBUG1, "Beginning scan for ost");
+    if(scan == NULL){
+        scan = btbeginscan_ost(ostIndex, trimedKey, scanKeySize+1);
+    }
+    scan->opoid = opoid;
+
+    //selog(DEBUG1, "going to get tuple ost");
+
+    hasMore =  btgettuple_ost(scan);
+
+    //selog(DEBUG1, "going to end scan");
+    if(!hasMore){
+        hasNext = 0;
+        //selog(DEBUG1, "Going to free scan resources");
+      
+        btendscan_ost(scan);
+        scan = NULL;
+        free(heapTuple);
+        free(trimedKey);
+        return 1;
+    }else{
+        //selog(DEBUG1, "Going to access the heap at block %d and offset %d",ItemPointerGetBlockNumber_s(&tid), ItemPointerGetOffsetNumber_s(&tid));
+
+        heap_gettuple_s(oTable, &tid, heapTuple);
+    }
+
+
+    
+
+    if(heapTuple->t_len > MAX_TUPLE_SIZE){
+        selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
+    }else{
+        selog(DEBUG1, "Going to copy tuple of size %d", heapTuple->t_len);
+        memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
+        memcpy(tupleData, (char*) (heapTuple->t_data), (heapTuple->t_len));
+    }
+
+    free(trimedKey);
+    /*TODO: check if heapTuple->t_data should be freed*/
+    free(heapTuple->t_data);
+    free(heapTuple);
+
+
+    return hasNext;
+}
+
 
 
 void insertHeap(const char* heapTuple, unsigned int tupleSize){

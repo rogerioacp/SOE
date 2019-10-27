@@ -1,7 +1,7 @@
 #include "storage/soe_bufmgr.h"
 #include "access/soe_skey.h"
 #include "logger/logger.h"
-#include "storage/soe_heap_ofile.h"
+//#include "storage/soe_heap_ofile.h"
 
 #include <stdlib.h>
 #include <collectc/list.h>
@@ -218,7 +218,7 @@ BufferGetBlockNumber_s(Buffer buffer)
 
 BlockNumber FreeSpaceBlock_s(VRelation rel){
 
-    //selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
+    selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
 
     if(rel->fsm[rel->currentBlock] == 0){
         return P_NEW;
@@ -235,14 +235,14 @@ void BufferFull_s(VRelation rel, Buffer buff){
     rel->currentBlock +=1;
 }
 
-void destroyVBlcok(void* block){
+void destroyVBlock(void* block){
     free(((VBlock) block)->page);
     free(block);
 }
 
 void closeVRelation(VRelation rel){
     close_oram(rel->oram);
-    list_remove_all_cb(rel->buffer, &destroyVBlcok);
+    list_remove_all_cb(rel->buffer, &destroyVBlock);
     list_destroy(rel->buffer);
     if(rel->rd_amcache != NULL){
         free(rel->rd_amcache);

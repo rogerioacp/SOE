@@ -221,63 +221,7 @@ _bt_getroot_s(VRelation rel, int access)
 }
 
 
-/*
- *	_bt_getrootheight() -- Get the height of the btree search tree.
- *
- *		We return the level (counting from zero) of the current fast root.
- *		This represents the number of tree levels we'd have to descend through
- *		to start any btree index search.
- *
- *		This is used by the planner for cost-estimation purposes.  Since it's
- *		only an estimate, slightly-stale data is fine, hence we don't worry
- *		about updating previously cached data.
- */
-int
-_bt_getrootheight_s(VRelation rel)
-{
-	BTMetaPageData *metad;
 
-	/*
-	 * We can get what we need from the cached metapage data.  If it's not
-	 * cached yet, load it.  Sanity checks here must match _bt_getroot().
-	 */
-	if (rel->rd_amcache == NULL)
-	{
-		Buffer		metabuf;
-		Page		metapg;
-		BTPageOpaque metaopaque;
-
-		metabuf = _bt_getbuf_s(rel, BTREE_METAPAGE, BT_READ);
-		metapg = BufferGetPage_s(rel, metabuf);
-		metaopaque = (BTPageOpaque) PageGetSpecialPointer_s(metapg);
-		metad = BTPageGetMeta_s(metapg);
-
-		/* sanity-check the metapage */
-		if (!P_ISMETA_s(metaopaque) ||
-			metad->btm_magic != BTREE_MAGIC)
-			selog(ERROR,"indexis not a btree" );
-
-		if (metad->btm_version < BTREE_MIN_VERSION ||
-			metad->btm_version > BTREE_VERSION)
-			selog(ERROR, "version mismatch in index");
-		/*
-		 * If there's no root page yet, _bt_getroot() doesn't expect a cache
-		 * to be made, so just stop here and report the index height is zero.
-		 * (XXX perhaps _bt_getroot() should be changed to allow this case.)
-		 */
-		if (metad->btm_root == P_NONE)
-		{
-			ReleaseBuffer_s(rel, metabuf);
-			return 0;
-		}
-
-		ReleaseBuffer_s(rel, metabuf);
-	}
-
-	metad = (BTMetaPageData *) rel->rd_amcache;
-	/* We shouldn't have cached it if any of these fail */
-	return metad->btm_fastlevel;
-}
 
 /*
  *	_bt_checkpage() -- Verify that a freshly-read page looks sane.

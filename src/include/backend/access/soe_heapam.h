@@ -24,4 +24,7 @@
 
 extern void heap_insert_s(VRelation relation,  Item tup, Size len, HeapTuple tuple);
 
+//We are assuming blocks are being inserted sequentially
+extern void heap_insert_block_s(VRelation relation, char* page);
+
 #endif							/* SOE_HEAPAM_H */
