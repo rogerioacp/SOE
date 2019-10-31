@@ -54,27 +54,20 @@
  *		Descend the tree recursively, find the appropriate location for our
  *		new tuple, and put it there.
  */
-bool insert_ost(OSTRelation relstate, char* block, int level, int offset)
+bool insert_ost(OSTRelation rel, char* block, int level, int offset)
 {
+	Buffer buffer;
+	Page page;
+	
+	rel->level = level;
 
+	buffer = ReadBuffer_ost(rel, offset);
+	page = BufferGetPage_ost(rel, buffer);
+	
+	memcpy(page, block, BLCKSZ);
 
-	if(level == 0){
-		//selog(DEBUG1, "Going to write root on file with level %d", level);
-		setclevel(level);
-		setclevelo(level);
-		PLBlock pblock;
-		pblock = createBlock(offset, BLCKSZ, block);
-		ost_fileWrite(pblock, relstate->osts->iname, offset);
-		free(pblock->block);
-		free(pblock);
-		//selog(DEBUG1, "Root has been written");
-	}else{
-		//selog(DEBUG1, "Going to write inner node on file with level %d", level);
-		setclevel(level);
-		setclevelo(level);
-		//selog(DEBUG1, "Writing on level %d block %d", level, offset);
-		write_oram(block, BLCKSZ, offset, relstate->osts->orams[level-1]);
-	}
+	MarkBufferDirty_ost(rel, buffer);
+	ReleaseBuffer_ost(rel, buffer);
 
 	return true;
 }
@@ -99,9 +92,9 @@ btgettuple_ost(IndexScanDesc scan)
 		/* punt if we have any unsatisfiable array keys */
 	//	if (so->numArrayKeys < 0)
 	//		return false;
-//
-//		_bt_start_array_keys(scan, dir);
-//	}
+	//
+	//		_bt_start_array_keys(scan, dir);
+	//	}
 
 	/* This loop handles advancing to the next array elements, if any */
 	//do
@@ -112,12 +105,10 @@ btgettuple_ost(IndexScanDesc scan)
 		 * _bt_first() to get the first item in the scan.
 		 */
 		if (!BTScanPosIsValid_OST(so->currPos)){
-			selog(DEBUG1, "Going to first scan");
 			res = _bt_first_ost(scan);
 		}
 		else
 		{
-			selog(DEBUG1, "Going to continue for next");
 			/*
 			 * Now continue the scan.
 			 */

@@ -38,6 +38,7 @@ typedef struct OSTreeState{
     char* iname;
 }*OSTreeState;
 
+
 //Read only Relation to execute the OST protocol.
 typedef struct OSTRelation{
 
@@ -46,8 +47,10 @@ typedef struct OSTRelation{
 
 	void *rd_amcache; //used to cache metapages, I don't think it will be used.
 
-    List *buffer; // Buffer containing relation pages.	
+    List **buffers; // Array of list of buffers. One list of buffer per level.
  	TupleDesc tDesc;
+
+    unsigned int level; // Current level being usd on the hierarchical trees
 } *OSTRelation;
 
 typedef struct OSTVBlock{
@@ -67,12 +70,14 @@ extern Buffer ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum);
 
 extern Page BufferGetPage_ost(OSTRelation relation, Buffer buffer);
 
+void MarkBufferDirty_ost(OSTRelation relation, Buffer buffer);
+
 extern void ReleaseBuffer_ost(OSTRelation relation, Buffer buffer);
 
 extern BlockNumber BufferGetBlockNumber_ost(Buffer buffer);
 
 extern void closeOSTRelation(OSTRelation rel);
 
-extern void setclevel(unsigned int nlevel);
+//extern void setclevel(unsigned int nlevel);
 
 #endif	/* SOE_OST_BUFMGR_H */

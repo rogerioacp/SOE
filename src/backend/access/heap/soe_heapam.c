@@ -92,30 +92,31 @@ void heap_insert_block_s(VRelation rel, char* rpage){
 	Buffer buffer;
 	Page page;
 	BlockNumber freeSpaceBlock;
-	ItemId lp;
+	//ItemId lp;
 	freeSpaceBlock = FreeSpaceBlock_s(rel);
-	selog(DEBUG1, "Received free space block %d", freeSpaceBlock);
+	//selog(DEBUG1, "Received free space block %d", freeSpaceBlock);
 	buffer = ReadBuffer_s(rel, freeSpaceBlock);
 	page = BufferGetPage_s(rel, buffer);
-	uint32 len;
-	if(buffer == 0){
+//	uint32 len;
+	
+	/*if(buffer == 0){
 		lp = PageGetItemId_s(rpage, 2);
 		len = ItemIdGetLength_s(lp);
 		selog(DEBUG1, "The length of the item in block %d and offset %d is %d", 0,2, len);
-	}
+	}*/
 	memcpy(page, rpage, BLCKSZ);
 
-	if(buffer == 0){
+	/*if(buffer == 0){
 		lp = PageGetItemId_s(page, 2);
 		len = ItemIdGetLength_s(lp);
 		selog(DEBUG1, "The length of the item in block %d and offset %d is %d", 0,2, len);
-	}
+	}*/
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
 	UpdateFSM(rel);
 	BufferFull_s(rel, buffer);
 
-	selog(DEBUG1, "Update block on buffer %d", buffer);
+	//selog(DEBUG1, "Update block on buffer %d", buffer);
 }
 
 /**
@@ -152,9 +153,7 @@ void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple){
 		selog(ERROR, "Item ID is not normal");
 	}
 	tuple->t_len = ItemIdGetLength_s(lp);
-	selog(DEBUG1, "Tuple len is %d", tuple->t_len);
 	tuple->t_tableOid = RelationGetRelid_s(rel);
-	selog(DEBUG1, "Table oid is %d", tuple->t_tableOid);
 	tuple->t_data = (HeapTupleHeader) malloc(tuple->t_len);
 	memcpy(tuple->t_data, PageGetItem_s(page, lp),tuple->t_len);
 	ItemPointerSetOffsetNumber_s(&tuple->t_self, offnum);

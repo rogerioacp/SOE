@@ -10,13 +10,14 @@
 #include <oram/ofile.h>
 
 void ost_pageInit(Page page, int blkno, Size blocksize);
-
-void  ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno);
-void 
-ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno);
 extern AMOFile *ost_ofileCreate();
 extern void ost_status(OSTreeState state);
 
-extern void setclevelo(unsigned int nlevel);
+void  ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData);
+void 
+ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData);
+
+
+//extern void setclevelo(unsigned int nlevel);
 
 #endif							/* SOE_OST_OFILE_H */

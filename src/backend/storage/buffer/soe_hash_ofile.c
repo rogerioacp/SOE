@@ -57,7 +57,7 @@ void hash_pageInit(Page page, int blkno, Size blocksize){
  * _hash_alloc_buckets in soe_hashpage.c.
  * */
 void 
-hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
+hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void* appData) {
 	sgx_status_t status;
 
 	char* blocks;
@@ -104,7 +104,7 @@ hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 
 
 void 
-hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status;
 	HashPageOpaque oopaque;
 	//selog(DEBUG1, "hash_fileRead %d", ob_blkno);
@@ -132,7 +132,7 @@ hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 
 
 void 
-hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	char* encPage = (char*) malloc(BLCKSZ);
 
@@ -167,7 +167,7 @@ hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 
 
 void 
-hash_fileClose(const char * filename) {
+hash_fileClose(const char * filename, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	status = outFileClose(filename);
 	

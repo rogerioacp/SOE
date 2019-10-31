@@ -57,7 +57,7 @@ Buffer ReadBuffer_s(VRelation relation, BlockNumber blockNum){
     if(isExtended){
         //selog(DEBUG1, "1 - Going to oram read real block %d", relation->lastFreeBlock);
 
-        result = read_oram(&page, relation->lastFreeBlock, relation->oram);
+        result = read_oram(&page, relation->lastFreeBlock, relation->oram, NULL);
         if( result == DUMMY_BLOCK){
             //selog(DEBUG1, "Found Dummy block, going to initialize to blkno %d", relation->lastFreeBlock);
             /**
@@ -100,7 +100,7 @@ Buffer ReadBuffer_s(VRelation relation, BlockNumber blockNum){
         }
 
         //selog(DEBUG1, "2 - Going to oram read real block %d", blockNum);
-        result = read_oram(&page, blockNum, relation->oram);
+        result = read_oram(&page, blockNum, relation->oram, NULL);
         if(result == DUMMY_BLOCK){
             selog(ERROR, "READ a dummy block on READ BUFFER");
         }
@@ -168,7 +168,7 @@ void MarkBufferDirty_s(VRelation relation, Buffer buffer){
     if(found){
         //selog(DEBUG1,  "Found buffer %d to update", buffer);
         //selog(DEBUG1, "GOING to oblivious write to real blkno %d", vblock->id);
-        result  = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram);
+        result  = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram, NULL);
     }else{
         selog(DEBUG1, "Did not find buffer %d to update",buffer);
     }
@@ -218,8 +218,6 @@ BufferGetBlockNumber_s(Buffer buffer)
 
 BlockNumber FreeSpaceBlock_s(VRelation rel){
 
-    selog(DEBUG1, "Current block is %d and has %d tuples", rel->currentBlock, rel->fsm[rel->currentBlock]);
-
     if(rel->fsm[rel->currentBlock] == 0){
         return P_NEW;
     }else{
@@ -241,7 +239,7 @@ void destroyVBlock(void* block){
 }
 
 void closeVRelation(VRelation rel){
-    close_oram(rel->oram);
+    close_oram(rel->oram, NULL);
     list_remove_all_cb(rel->buffer, &destroyVBlock);
     list_destroy(rel->buffer);
     if(rel->rd_amcache != NULL){

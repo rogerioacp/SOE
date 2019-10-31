@@ -40,13 +40,13 @@ int initialized;
 //number of blocks requested to be allocated for each oram level.
 int *o_nblocks;
 
-unsigned int clevel;
+//unsigned int clevel;
 
-void setclevelo(unsigned int nlevel){
+/*void setclevelo(unsigned int nlevel){
 	//selog(DEBUG1, "setclevelo %d", nlevel);
 	clevel = nlevel;
 }
-
+*/
 void ost_status(OSTreeState state){
 	ostate = state;
 	initialized = 0;
@@ -72,7 +72,7 @@ void ost_pageInit(Page page, int blkno, Size blocksize){
  * multiple times, one for each ORAM.
  * */
 void 
-ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
+ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void* appData) {
 	sgx_status_t status;
 	char* blocks;
 	char* destPage;
@@ -84,6 +84,7 @@ ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize)
 	int allocBlocks = 0;
 	int boffset = 0;
 	int l = 0;
+	int clevel = *((int*) appData);
 	
 	if(!initialized){
 		o_nblocks = (int*) malloc(sizeof(int)*ostate->nlevels);
@@ -133,9 +134,12 @@ ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize)
 
 
 void 
-ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status;
 	BTPageOpaqueOST oopaque;
+	int clevel = *((int*) appData);
+
+
 	//selog(DEBUG1, "ost fileRead %d", ob_blkno);
 	status = SGX_SUCCESS;
 	char* ciphertextBlock;
@@ -173,13 +177,15 @@ ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 
 
 void 
-ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
+
 	sgx_status_t status = SGX_SUCCESS;
 	BTPageOpaqueOST oopaque = NULL;
 	char* encpage;
 	unsigned int l_offset = 0;
 	unsigned int l_index;
 	unsigned int l_ob_blkno = 0;
+	int clevel = *((int*) appData);
 
 	if(clevel > 0){
 		l_offset = 1; // root block
@@ -227,7 +233,7 @@ ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_bl
 
 
 void 
-ost_fileClose(const char * filename) {
+ost_fileClose(const char * filename, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	status = outFileClose(filename);
 	

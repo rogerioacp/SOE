@@ -485,7 +485,7 @@ _bt_first_s(IndexScanDesc scan)
 	 */
 	if (goback){
 		offnum = OffsetNumberPrev_s(offnum);
-		selog(DEBUG1, "Found match on offset prev %d", offnum);
+		//selog(DEBUG1, "Found match on offset prev %d", offnum);
 	}
 	
 

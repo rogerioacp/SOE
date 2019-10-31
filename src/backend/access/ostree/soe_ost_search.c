@@ -60,13 +60,11 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 	BTStackOST		stack_in = NULL;
 	unsigned int height = 0;
 
-	setclevel(height);
-	setclevelo(height);
+	rel->level = height;
+
 	/* Get the root page to start with */
 	*bufP = _bt_getroot_ost(rel, access);
-	/* If index is empty and access = BT_READ, no root page is created. */
-	//if (!BufferIsValid_ost(rel, *bufP))
-	//	return (BTStackOST) NULL;
+
 
 	/* Loop iterates once per level descended in the tree */
 	for (;;)
@@ -99,14 +97,11 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 
 
 		/* if this is a leaf page, we're done */
-		selog(DEBUG1, "Getting page of buffer %d",*bufP);
 		page = BufferGetPage_ost(rel, *bufP);
 		opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
-		selog(DEBUG1, "is page leaf %d", P_ISLEAF_OST(opaque));
 		if (P_ISLEAF_OST(opaque)){
 			break;
 		}
-		selog(DEBUG1, "Going to do binary search on key %s",scankey->sk_argument);
 
 		/*
 		 * Find the appropriate item on the internal page, and get the child
@@ -117,7 +112,6 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		itemid = PageGetItemId_s(page, offnum);
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
 		blkno = BTreeInnerTupleGetDownLink_OST(itup);
-		selog(DEBUG1, "binsearch result is offnum %d to block %d", offnum, blkno);
 
 		par_blkno = BufferGetBlockNumber_ost(*bufP);
 
@@ -139,12 +133,9 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 
 		ReleaseBuffer_ost(rel, *bufP);
 		height +=1;
-		setclevel(height);
-		setclevelo(height);
-		selog(DEBUG1, "Going to get block %d at height %d", blkno, height);
+		rel->level = height;
+
 		*bufP = ReadBuffer_ost(rel, blkno);
-		/* drop the read lock on the parent page, acquire one on the child */
-		//*bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ);
 
 		/* okay, all set to move down a level */
 		stack_in = new_stack;
@@ -316,7 +307,6 @@ _bt_compare_ost(OSTRelation rel,
 
 	//datum = NameStr_s(*DatumGetName_s(index_getattr_s(itup)));
 	datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
-	selog(DEBUG1, "The datum at offset %d is %s", offnum, datum);
 	//We assume we are comparing strings(varchars)
 	//if(rel->foid == 1078){
 	result = (int32) strcmp(scankey->sk_argument, datum);
@@ -467,18 +457,14 @@ _bt_first_ost(IndexScanDesc scan)
 	 * Use the manufactured insertion scan key to descend the tree and
 	 * position ourselves on the target leaf page.
 	 */
-	selog(DEBUG1, "Going to search for page");
 	stack = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST);
-	selog(DEBUG1, "Going to free search stack");
 	/* don't need to keep the stack around... */
 	_bt_freestack_ost(stack);
 	//selog(DEBUG1, "GOING to initialize more data");
 
 	_bt_initialize_more_data_ost(so);
-	selog(DEBUG1, "Going to search for tuple");
 	/* position to the precise item on the page */
 	offnum = _bt_binsrch_ost(rel, buf, keysCount, cur, nextkey);
-	selog(DEBUG1, "Found match on offset %d", offnum);
 	/*
 	 * If nextkey = false, we are positioned at the first item >= scan key, or
 	 * possibly at the end of a page on which all the existing items are less
@@ -499,7 +485,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (goback){
 		offnum = OffsetNumberPrev_s(offnum);
-		selog(DEBUG1, "Found match on offset prev %d", offnum);
+		//selog(DEBUG1, "Found match on offset prev %d", offnum);
 	}
 	
 
@@ -512,7 +498,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		selog(DEBUG1, "Page has no match, move to next page!");
+		//selog(DEBUG1, "Page has no match, move to next page!");
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
@@ -617,12 +603,10 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 
 	page = BufferGetPage_ost(scan->ost, so->currPos.buf);
 	opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
-	selog(DEBUG1, "Going to read page on buffer %d with special %d", so->currPos.buf, opaque->btpo.o_blkno);
 
 
 	minoff = P_FIRSTDATAKEY_OST(opaque);
 	maxoff = PageGetMaxOffsetNumber_s(page);
-	selog(DEBUG1, "minoff is %d and maxoff is %d", minoff, maxoff);
 	
 	/*
 	 * We note the buffer's block number so that we can release the pin later.
@@ -637,7 +621,6 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 	 * corresponding need for the left-link, since splits always go right.
 	 */
 	so->currPos.nextPage = opaque->btpo_next;
-	selog(DEBUG1, "next page is %d", so->currPos.nextPage);
 
 	/* initialize tuple workspace to empty */
 	so->currPos.nextTupleOffset = 0;
@@ -657,11 +640,9 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 	//Only forward scans are supported on the prototype.
 	while (offnum <= maxoff)
 	{
-		selog(DEBUG1, "Going to check key on offset %d", offnum);
 		itup = _bt_checkkeys_ost(scan, page, offnum, &continuescan);
 		if (itup != NULL)
 		{
-			selog(DEBUG1, "Going to save item %d that points to block %d and offset %d", offnum,ItemPointerGetBlockNumber_s(&(itup->t_tid)),ItemPointerGetOffsetNumber_s(&(itup->t_tid)));
 			/* tuple passes all scan key conditions, so remember it */
 			_bt_saveitem_ost(so, itemIndex, offnum, itup);
 			itemIndex++;

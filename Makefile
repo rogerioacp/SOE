@@ -128,8 +128,6 @@ Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX
 Soe_Include_Path :=  -I/usr/local/include -Isrc/include/ -Isrc/include/backend -Isrc/include/backend/enclave -I/usr/local/opt/openssl/include/
 
 COLLECTC_LADD :=  -lcollectc
-ORAM_LADD := -loram
-SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/usr/local/opt/openssl/lib -lssl -lcrypto
 
 
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
@@ -154,6 +152,16 @@ ifeq ($(CPAGES), 1)
 	Enclave_C_Flags += -DCPAGES
 endif
 
+ifeq ($(ORAM_LIB), PATHORAM)
+		Enclave_C_Flags += -DPATHORAM
+		ORAM_LADD := -lpathoram
+else ifeq ($(ORAM_LIB), FORESTORAM)
+		Enclave_C_Flags += -DFORESTORAM
+		ORAM_LADD := -lforestoram
+endif
+
+
+SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/usr/local/opt/openssl/lib -lssl -lcrypto
 Enclave_C_Flags += $(Soe_Include_Path)
 
 

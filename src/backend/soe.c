@@ -94,22 +94,16 @@ void initSOE(const char* tName, const char* iName, int tNBlocks, int iNBlocks,
 
 void initFSOE(const char* tName, const char* iName, int tNBlocks, int* fanouts, int nlevels, unsigned int tOid, unsigned int iOid, char* attrDesc, unsigned int attrDescLength){
 
-    int fani;
 
-    selog(DEBUG1, "Initializing SOE for relation %s and index %s", tName, iName);
+    selog(DEBUG1, "Initializing FSOE for relation %s and index %s", tName, iName);
     stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
     oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
 
     //Handle the initialization of the tree index.
-    selog(DEBUG1, "Initializing OST protocol state");
 
-    for(fani = 0; fani < nlevels; fani++){
-        selog(DEBUG1, "level %d has fanout %d", fani, fanouts[fani]);
-    }
     ostTable = initOSTreeProtocol(iName, iOid, fanouts, nlevels, &ost_ofileCreate);
 
 
-    selog(DEBUG1, "Initializing OST protocol relation");
     //By default a single attribute is used to compare elements in the tree.
     ostIndex = InitOSTRelation(ostTable, iOid, attrDesc, attrDescLength);
 
@@ -135,7 +129,7 @@ void initFSOE(const char* tName, const char* iName, int tNBlocks, int* fanouts, 
     }
    
     selog(DEBUG1, "Initiating table oram");
-    state = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr);
+    state = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr, NULL);
     selog(DEBUG1, "Initialized oram");
     return state;
  }
@@ -167,9 +161,9 @@ OSTreeState initOSTreeProtocol(const char *name, unsigned int iOid, int* fanouts
         amgr->am_stash  = stashCreate();
         amgr->am_pmap = pmapCreate();
         amgr->am_ofile = ofile();
-        setclevel(i);
+        //setclevel(i);
         //selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i, fileSize);
-        ost->orams[i] = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr);
+        ost->orams[i] = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr, &i);
     }
 
     return ost;
@@ -323,6 +317,8 @@ int getTupleOST(unsigned int opmode, unsigned int opoid, const char* key, int sc
     hasNext = 0;
     memcpy(trimedKey,  key, scanKeySize);
     trimedKey[scanKeySize] = '\0'; 
+    ItemPointerData tid;
+
    // selog(DEBUG1, "Going to search for key %s with size %d", trimedKey, scanKeySize);
 
 
@@ -349,20 +345,19 @@ int getTupleOST(unsigned int opmode, unsigned int opoid, const char* key, int sc
         return 1;
     }else{
         //selog(DEBUG1, "Going to access the heap at block %d and offset %d",ItemPointerGetBlockNumber_s(&tid), ItemPointerGetOffsetNumber_s(&tid));
-
+        tid = scan->xs_ctup.t_self;
         heap_gettuple_s(oTable, &tid, heapTuple);
     }
 
 
     
 
-    if(heapTuple->t_len > MAX_TUPLE_SIZE){
+   /* if(heapTuple->t_len > MAX_TUPLE_SIZE){
         selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
-    }else{
-        selog(DEBUG1, "Going to copy tuple of size %d", heapTuple->t_len);
-        memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
-        memcpy(tupleData, (char*) (heapTuple->t_data), (heapTuple->t_len));
-    }
+    }else{*/
+    memcpy(tuple, (char*) heapTuple, sizeof(HeapTupleData));
+    memcpy(tupleData, (char*) (heapTuple->t_data), (heapTuple->t_len));
+    //}
 
     free(trimedKey);
     /*TODO: check if heapTuple->t_data should be freed*/
