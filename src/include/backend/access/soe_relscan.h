@@ -3,6 +3,7 @@
 #define SOE_RELSCAN_H
 
 #include "storage/soe_bufmgr.h"
+#include "storage/soe_ost_bufmgr.h"
 #include "access/soe_skey.h"
 #include "access/soe_itup.h"
 #include "access/soe_htup.h"
@@ -17,6 +18,7 @@ typedef struct IndexScanDescData
 	/* scan parameters */
 	//VRelation	heapRelation;	/* heap relation descriptor, or NULL */
 	VRelation	indexRelation;	/* index relation descriptor */
+	OSTRelation ost;			/* Data to scan with the OST protocol*/
 	ScanKey		keyData;		/* array of index qualifier descriptors */
 
 
@@ -38,6 +40,5 @@ typedef struct IndexScanDescData
 
 /* struct definitions appear in relscan.h */
 typedef struct IndexScanDescData *IndexScanDesc;
-
 
 #endif							/* SOE_RELSCAN_H */

@@ -8,18 +8,22 @@
 #include "common/soe_pe.h"
 #include "logger/logger.h"
 
+#ifndef CPAGES
+
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
 
 unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
 unsigned char *iv = (unsigned char *)"0123456789012345";
+#endif
 
 //#define BUFFLEN  BLCKSZ + SGX_AESGCM_MAC_SIZE + SGX_AESGCM_IV_SIZE
 
 void page_encryption(unsigned char *plaintext, unsigned char* ciphertext)
 {
-
+    //If the pages are not clean
+    #ifndef CPAGES
     EVP_CIPHER_CTX *ctx;
     int ciphertext_len;
     int len;
@@ -63,12 +67,19 @@ void page_encryption(unsigned char *plaintext, unsigned char* ciphertext)
   
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
+    #else
+        //If the pages are in cleartext
+        memcpy(ciphertext, plaintext, BLCKSZ);
+    #endif
 
 }
 
 void page_decryption(unsigned char* ciphertext, unsigned char* plaintext)
 {
-	 EVP_CIPHER_CTX *ctx;
+
+
+    #ifndef CPAGES	
+    EVP_CIPHER_CTX *ctx;
 
     int len;
 
@@ -114,4 +125,8 @@ void page_decryption(unsigned char* ciphertext, unsigned char* plaintext)
   
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
+    #else
+        memcpy(plaintext, ciphertext, BLCKSZ);
+    #endif
+
 }

@@ -5,9 +5,20 @@ enclave{
 
 			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, [in, size=pgDescSize] char* pg_attr_desc, unsigned int pgDescSize);
 
-			public void insert([in, size=tupleSize] const char*  heapTuple, unsigned int tupleSize,  [in, size=datumSize] char* datum, unsigned int datumSize);
+			public void initFSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, [in, size=nlevels] int* fanout,
+			int nlevels, unsigned int tOid, unsigned int iOid, [in, size=pgDescSize] char* pg_attr_desc, unsigned int pgDescSize);
+
+			public void addIndexBlock([in, size=blockSize] char* block,
+			unsigned int blockSize, unsigned int offset, unsigned int level);
+			
+			public void addHeapBlock([in, size=blockSize] char* block,
+			unsigned int blockSize, unsigned int blkno);
+
+			public void insert([in, size=tupleSize] const char* heapTuple, unsigned int tupleSize,  [in, size=datumSize] char* datum, unsigned int datumSize);
 
 			public int getTuple(unsigned int opmode, unsigned int opoid, [in, size=scanKeySize] const char* scanKey, int scanKeySize, [out, size=tupleLen] char* tuple, unsigned int tupleLen, [out, size=tupleDataLen] char* tupleData, unsigned int tupleDataLen);
+
+			public int getTupleOST(unsigned int opmode, unsigned int opoid, [in, size=scanKeySize] const char* scanKey, int scanKeySize, [out, size=tupleLen] char* tuple, unsigned int tupleLen, [out, size=tupleDataLen] char* tupleData, unsigned int tupleDataLen);
 
 			public void insertHeap([in, size=tupleSize] const char* heapTuple, unsigned int tupleSize);		
 	};
@@ -16,7 +27,7 @@ enclave{
 	untrusted{
 		void oc_logger([in, string] const char * str);
 
-		void outFileInit([in, string] const char *filename, [in, size=pagesSize] const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize);
+		void outFileInit([in, string] const char *filename, [in, size=pagesSize] const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize, int initOffset);
 
 		void outFileRead([out, size=pageSize] char* page, [in, string] const char* filename, int blkno, int pageSize);
 

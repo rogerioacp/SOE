@@ -57,42 +57,54 @@ void hash_pageInit(Page page, int blkno, Size blocksize){
  * _hash_alloc_buckets in soe_hashpage.c.
  * */
 void 
-hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
+hash_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void* appData) {
 	sgx_status_t status;
 
 	char* blocks;
 	char* tmpPage;
 
 	Page destPage;
-	int offset;
 	status = SGX_SUCCESS;
 	
-	blocks = (char*) malloc(blocksize*nblocks);
-	tmpPage = (char*) malloc(blocksize);
+	int tnblocks = nblocks;
+	int offset;
+	int allocBlocks = 0;
+	int boffset = 0;
 
-//	HashPageOpaque oopaque;
+	do{
+		//selog(DEBUG1, "Going for boffset %d on btree init with tnblocks %d", boffset, tnblocks);
 
-	for(offset = 0; offset < nblocks; offset++){
-		destPage  =  blocks + (offset * BLCKSZ);
-		hash_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-		page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
-		//oopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
-		//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
+		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 
-	}
+		blocks = (char*) malloc(blocksize*allocBlocks);
+		tmpPage = (char*) malloc(blocksize);
 
-	status = outFileInit(filename, blocks, nblocks, blocksize, nblocks*BLCKSZ);
-	if (status != SGX_SUCCESS) {
-		selog(ERROR, "Could not initialize relation %s\n", filename);
-	}
+	//	HashPageOpaque oopaque;
 
-	free(blocks);
-	free(tmpPage);
+		for(offset = 0; offset < allocBlocks; offset++){
+			destPage  =  blocks + (offset * BLCKSZ);
+			hash_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+			page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
+			//oopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
+			//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
+
+		}
+
+		status = outFileInit(filename, blocks, allocBlocks, blocksize, allocBlocks*BLCKSZ, boffset);
+		if (status != SGX_SUCCESS) {
+			selog(ERROR, "Could not initialize relation %s\n", filename);
+		}
+
+		free(blocks);
+		free(tmpPage);
+		tnblocks -= BATCH_SIZE;
+		boffset += BATCH_SIZE;
+	}while(tnblocks > 0 );
 }
 
 
 void 
-hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status;
 	HashPageOpaque oopaque;
 	//selog(DEBUG1, "hash_fileRead %d", ob_blkno);
@@ -120,7 +132,7 @@ hash_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 
 
 void 
-hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	char* encPage = (char*) malloc(BLCKSZ);
 
@@ -155,7 +167,7 @@ hash_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 
 
 void 
-hash_fileClose(const char * filename) {
+hash_fileClose(const char * filename, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	status = outFileClose(filename);
 	

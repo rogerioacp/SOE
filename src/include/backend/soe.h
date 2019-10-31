@@ -18,6 +18,7 @@
 #include "soe_c.h"
 #include "access/soe_htup.h"
 #include <oram/ofile.h>
+#include "storage/soe_ost_bufmgr.h"
 
 
 //#include "access/attnum.h"
@@ -54,5 +55,6 @@ extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(
 
 extern void FormIndexDatum_s(HeapTuple tuple, Datum *values, bool *isnull);
 
+ OSTreeState initOSTreeProtocol(const char *name, unsigned int iOid, int* fanouts, int nlevels, AMOFile* (*ofile)());
 
 #endif 	/* SOE_H */

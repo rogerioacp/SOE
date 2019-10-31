@@ -140,7 +140,6 @@ typedef size_t Size;
 typedef char *Pointer;
 
 
-typedef uint32 TransactionId;
 
 /* Define to nothing if C supports flexible array members, and to 1 if it does
    not. That way, with a declaration like `struct s { int n; double
@@ -600,6 +599,9 @@ typedef uintptr_t Datum;
 
 #define DatumGetName_s(X) ((Name) DatumGetPointer_s(X))
 
+#define NameStr_s(name)	((name).data)
+
+
 /*
  * NameGetDatum
  *		Returns datum representation for a name.
@@ -610,6 +612,30 @@ typedef uintptr_t Datum;
 
 #define NameGetDatum_s(X) CStringGetDatum_s(NameStr_s(*(X)))
 
+
+/*
+ * These structs describe the header of a varlena object that may have been
+ * TOASTed.  Generally, don't reference these structs directly, but use the
+ * macros below.
+ *
+ * We use separate structs for the aligned and unaligned cases because the
+ * compiler might otherwise think it could generate code that assumes
+ * alignment while touching fields of a 1-byte-header varlena.
+ */
+typedef union
+{
+	struct						/* Normal varlena (4-byte length) */
+	{
+		uint32		va_header;
+		char		va_data[FLEXIBLE_ARRAY_MEMBER];
+	}			va_4byte;
+	struct						/* Compressed-in-line format */
+	{
+		uint32		va_header;
+		uint32		va_rawsize; /* Original data size (excludes header) */
+		char		va_data[FLEXIBLE_ARRAY_MEMBER]; /* Compressed data */
+	}			va_compressed;
+} varattrib_4b;
 
 
 
@@ -647,6 +673,7 @@ typedef uintptr_t Datum;
  * for such records. Hence you should usually check for IS_EXTERNAL before
  * checking for IS_1B.
  */
+
 
 #ifdef WORDS_BIGENDIAN
 
@@ -846,6 +873,38 @@ typedef uint16 StrategyNumber;
 	(((varattrib_1b *) (PTR))->va_header & 0x7F)
 
 #define VARSIZE_SHORT_s(PTR)					VARSIZE_1B_s(PTR)
+
+
+#define BATCH_SIZE 1000
+
+/* ----------------
+ *		Variable-length datatypes all share the 'struct varlena' header.
+ *
+ * NOTE: for TOASTable types, this is an oversimplification, since the value
+ * may be compressed or moved out-of-line.  However datatype-specific routines
+ * are mostly content to deal with de-TOASTed values only, and of course
+ * client-side routines should never see a TOASTed value.  But even in a
+ * de-TOASTed value, beware of touching vl_len_ directly, as its
+ * representation is no longer convenient.  It's recommended that code always
+ * use macros VARDATA_ANY, VARSIZE_ANY, VARSIZE_ANY_EXHDR, VARDATA, VARSIZE,
+ * and SET_VARSIZE instead of relying on direct mentions of the struct fields.
+ * See postgres.h for details of the TOASTed form.
+ * ----------------
+ */
+struct varlena
+{
+	char		vl_len_[4];		/* Do not touch this field directly! */
+	char		vl_dat[FLEXIBLE_ARRAY_MEMBER];	/* Data content is here */
+};
+
+
+typedef struct varlena BpChar;	/* blank-padded char, ie SQL char(n) */
+
+#define PG_DETOAST_DATUM_PACKED_S(datum) \
+	((struct varlena *) datum)
+
+#define DatumGetBpCharPP_S(X)			((BpChar *) PG_DETOAST_DATUM_PACKED_S(X))
+
 
 #endif /* SOE_C_H */
 

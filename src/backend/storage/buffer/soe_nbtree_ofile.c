@@ -56,38 +56,51 @@ void nbtree_pageInit(Page page, int blkno, Size blocksize){
  * _hash_alloc_buckets in soe_hashpage.c.
  * */
 void 
-nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
+nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void* appData) {
 	sgx_status_t status;
 	char* blocks;
 	char* destPage;
-	int offset;
+	char* tmpPage;
 	status = SGX_SUCCESS;
-	
-	blocks = (char*) malloc(BLCKSZ*nblocks);
-	char* tmpPage = malloc(blocksize);
-	//BTPageOpaque oopaque;
 
-	for(offset = 0; offset < nblocks; offset++){
-		destPage =  blocks + (offset * BLCKSZ);
-		nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-		page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
-		//memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize);
-		//oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
-		//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
+	int tnblocks = nblocks;
+	int offset;
+	int allocBlocks = 0;
+	int boffset = 0;
 
-	}
+	do{
+		//BTPageOpaque oopaque;
+		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 
-	status = outFileInit(filename, blocks, nblocks, blocksize, nblocks*BLCKSZ);
-	if (status != SGX_SUCCESS) {
-		selog(ERROR, "Could not initialize relation %s\n", filename);
-	}
-	free(blocks);
-	free(tmpPage);
+		blocks = (char*) malloc(BLCKSZ*nblocks);
+		tmpPage = malloc(blocksize);
+
+		for(offset = 0; offset < allocBlocks; offset++){
+			destPage =  blocks + (offset * BLCKSZ);
+			nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+			page_encryption((unsigned char*) tmpPage, (unsigned char*) destPage);
+			//memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize);
+			//oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
+			//selog(DEBUG1, "hash_fileinit block %d has real block id %d", offset, oopaque->o_blkno);
+
+		}
+
+		status = outFileInit(filename, blocks, allocBlocks, blocksize, allocBlocks*BLCKSZ, boffset);
+
+		if (status != SGX_SUCCESS) {
+			selog(ERROR, "Could not initialize relation %s\n", filename);
+		}
+		free(blocks);
+		free(tmpPage);
+
+		tnblocks -= BATCH_SIZE;
+		boffset += BATCH_SIZE;
+	}while(tnblocks > 0);
 }
 
 
 void 
-nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status;
 	BTPageOpaque oopaque;
 	//selog(DEBUG1, "nbtree_fileRead %d", ob_blkno);
@@ -113,7 +126,7 @@ nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno)
 
 
 void 
-nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	//BTPageOpaque oopaque = NULL;
 	char* encpage;
@@ -153,7 +166,7 @@ nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob
 
 
 void 
-nbtree_fileClose(const char * filename) {
+nbtree_fileClose(const char * filename, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	status = outFileClose(filename);
 	

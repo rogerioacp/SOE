@@ -35,13 +35,17 @@
 #include <string.h>
 #include <stdlib.h>
 
-
-
 void heap_pageInit(Page page, int blkno, Size blocksize){
-    OblivPageOpaque oopaque;
-	PageInit_s(page,  blocksize, sizeof(OblivPageOpaqueData));
-	oopaque = (OblivPageOpaque) PageGetSpecialPointer_s(page);
-	oopaque->o_blkno = blkno;
+	#ifdef PATHORAM
+		PageHeader phdr;
+	    PageInit_s(page,  blocksize, 0);
+	    phdr = (PageHeader) page;
+		phdr->pd_prune_xid = blkno;
+	#else // Forest ORAM
+		PageHeader phdr;
+		phdr = (PageHeader) page;
+		phdr->pd_prune_xid = blkno;
+	#endif
 }
 
 /**
@@ -52,47 +56,58 @@ void heap_pageInit(Page page, int blkno, Size blocksize){
  * exact number of blocks the relation must have, we can allocate the space once and never worry about this again.
  * */
 void 
-heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize) {
+heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void* appData) {
 	sgx_status_t status;
 	char* blocks;
 	char* tmpPage;
 
 	Page destPage;
-	int offset;
+	int allocBlocks;
+	int tnblocks = nblocks;
 	status = SGX_SUCCESS;
+	int offset = 0;
+	int boffset = 0;
 
-	blocks = (char*) malloc(BLCKSZ*nblocks);
-	tmpPage = (char*) malloc(blocksize);
+	do{
+		//selog(DEBUG1, "Going for boffset %d on heap init with tnblocks %d", boffset, tnblocks);
 
-	//selog(DEBUG1, "going to initialize %u pages of relation  %s\n", nblocks, filename);
+		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 
-	for(offset = 0; offset < nblocks; offset++){
-		destPage =  blocks + (offset * BLCKSZ);
-		heap_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-		page_encryption((unsigned char*) tmpPage, (unsigned char*)destPage);
-	}
+		blocks = (char*) malloc(BLCKSZ*allocBlocks);
+		tmpPage = (char*) malloc(blocksize);
 
+		//selog(DEBUG1, "going to initialize %u pages of relation  %s\n", nblocks, filename);
 
-	status = outFileInit(filename, blocks, nblocks, BLCKSZ, nblocks*BLCKSZ);
-	if (status != SGX_SUCCESS) {
-		selog(ERROR, "Could not initialize relation %s\n", filename);
-	}
+		for(offset = 0; offset < allocBlocks; offset++){
+			destPage =  blocks + (offset * BLCKSZ);
+			heap_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+			page_encryption((unsigned char*) tmpPage, (unsigned char*)destPage);
+		}
 
-	free(blocks);
-	free(tmpPage);
+		status = outFileInit(filename, blocks, allocBlocks, BLCKSZ, allocBlocks*BLCKSZ, boffset);
+		if (status != SGX_SUCCESS) {
+			selog(ERROR, "Could not initialize relation %s\n", filename);
+		}
+
+		free(blocks);
+		free(tmpPage);
+		tnblocks -= BATCH_SIZE;
+		boffset += BATCH_SIZE;
+	}while(tnblocks > 0);
 	
 }
 
 
 
 void 
-heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	
 	//selog(DEBUG1, "heap_fileRead %d", ob_blkno);
 	sgx_status_t status;
-	OblivPageOpaque oopaque = NULL;
+	//OblivPageOpaque oopaque = NULL;
 	char* ciphertexBlock;
 	status = SGX_SUCCESS;
+	PageHeader phdr;
 
  	block->block = (void*) malloc(BLCKSZ);
  	ciphertexBlock = (char*) malloc(BLCKSZ);
@@ -104,9 +119,9 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 	if (status != SGX_SUCCESS) {
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
 	}
-
-	oopaque = (OblivPageOpaque) PageGetSpecialPointer_s((Page) block->block);
-	block->blkno = oopaque->o_blkno;
+	phdr = (PageHeader) block->block;
+	//oopaque = (OblivPageOpaque) PageGetSpecialPointer_s((Page) block->block);
+	block->blkno = phdr->pd_prune_xid;
 	block->size = BLCKSZ;
 	free(ciphertexBlock);
 	//selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno, block->blkno);
@@ -115,10 +130,11 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno) {
 
 
 void 
-heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno) {
+heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	char* encPage = (char*) malloc(BLCKSZ);
 	//OblivPageOpaque oopaque = NULL;
+	//PageHeader phdr;
 
 	if(block->blkno == DUMMY_BLOCK){
 		//selog(DEBUG1, "Requested write of DUMMY_BLOCK");
@@ -133,8 +149,10 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 		heap_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
 	page_encryption((unsigned char*) block->block, (unsigned char*) encPage);
+	//phdr = (PageHeader) block->block;
+
 	//oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block);
-	//selog(DEBUG1, "heap_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, oopaque->o_blkno);
+	//selog(DEBUG1, "heap_fileWrite %d with block %d and special %d ", ob_blkno, block->blkno, phdr->pd_prune_xid);
 	//selog(DEBUG1, "heap_fileWrite for file %s", filename);
 	status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
@@ -146,7 +164,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 
 
 void 
-heap_fileClose(const char * filename) {
+heap_fileClose(const char * filename, void* appData) {
 	sgx_status_t status = SGX_SUCCESS;
 	status = outFileClose(filename);
 	
