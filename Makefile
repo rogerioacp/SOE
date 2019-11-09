@@ -125,7 +125,7 @@ Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
 
-Soe_Include_Path :=  -I/usr/local/include -Isrc/include/ -Isrc/include/backend -Isrc/include/backend/enclave -I/usr/local/opt/openssl/include/
+Soe_Include_Path :=  -I/usr/local/include -Isrc/include/ -Isrc/include/backend -Isrc/include/backend/enclave -I/opt/intel/sgxssl/lib64/ -I/opt/intel/sgxssl/include/ #-I/usr/local/opt/openssl/include/
 
 COLLECTC_LADD :=  -lcollectc
 
@@ -147,7 +147,7 @@ ifeq ($(USE_VALGRIND), 1)
 	Enclave_C_Flags += -DUSE_VALGRIND
 endif
 
-
+\
 ifeq ($(CPAGES), 1)
 	Enclave_C_Flags += -DCPAGES
 endif
