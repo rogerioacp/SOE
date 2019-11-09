@@ -10,17 +10,22 @@
 
 #include "logger/logger.h"
 
-unsigned int getRandomInt(void){
+unsigned int
+getRandomInt(void)
+{
 
-	#ifdef UNSAFE
-		return random();
-	#else
-		unsigned int val;
-		sgx_read_rand((char*)&val, sizeof(unsigned int));
+#ifdef UNSAFE
+	return random();
+#else
+	unsigned int val;
+
+	sgx_read_rand((char *) &val, sizeof(unsigned int));
 	return val;
-	#endif
+#endif
 }
 
-unsigned int getRandomInt_nb(void){
+unsigned int
+getRandomInt_nb(void)
+{
 	return getRandomInt();
 }

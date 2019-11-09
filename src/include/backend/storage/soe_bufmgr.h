@@ -53,35 +53,41 @@
 
 typedef void (*pageinit_function) (Page page, int blockNum, Size blocksize);
 
-typedef struct VRelation{
+typedef struct VRelation
+{
 	BlockNumber currentBlock;
 	BlockNumber lastFreeBlock;
-	unsigned int rd_id; // Original Relation Oid
-	int totalBlocks;
-	int* fsm; // in memory free space map that keeps the number of items in each block
+	unsigned int rd_id;
+	/* Original Relation Oid */
+	int			totalBlocks;
+	int		   *fsm;
+	/* in memory free space map that keeps the number of items in each block */
 
-	ORAMState oram;
-	List *buffer; //Buffer containing relation pages
-	/* available for use by index AM. 
-	 * Similar to a normal relation 
-	*/
-	void *rd_amcache;
+	ORAMState	oram;
+	List	   *buffer;
+	/* Buffer containing relation pages */
+
+	/*
+	 * available for use by index AM. Similar to a normal relation
+	 */
+	void	   *rd_amcache;
 	pageinit_function pageinit;
 
-	//FormData_pg_attribute* indexTupleDesc;
- 	TupleDesc tDesc;
+	/* FormData_pg_attribute* indexTupleDesc; */
+	TupleDesc	tDesc;
 
- 	//Funciton oid to hash values
+	/* Funciton oid to hash values */
 	unsigned int foid;
 	unsigned int indexOid;
- 	int maxDatumSize;
+	int			maxDatumSize;
 
-} *VRelation;
+}		   *VRelation;
 
-typedef struct VBlock{
-    int id;
-    char* page;
-} *VBlock;
+typedef struct VBlock
+{
+	int			id;
+	char	   *page;
+}		   *VBlock;
 
 
 
@@ -98,7 +104,7 @@ typedef struct VBlock{
 #define P_NEW	InvalidBlockNumber	/* grow the file to get a new page */
 
 
-extern VRelation InitVRelation(ORAMState relstate, unsigned int oid,  int total_blocks, pageinit_function pg_f);
+extern VRelation InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, pageinit_function pg_f);
 
 extern Buffer ReadBuffer_s(VRelation relation, BlockNumber blockNum);
 
@@ -120,4 +126,4 @@ extern void BufferFull_s(VRelation rel, Buffer buffer);
 
 extern void closeVRelation(VRelation rel);
 
-#endif /* SOE_BUFMGR_H */
+#endif          /* SOE_BUFMGR_H*/

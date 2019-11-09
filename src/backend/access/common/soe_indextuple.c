@@ -38,8 +38,8 @@
  */
 IndexTuple
 index_form_tuple_s(TupleDesc tupleDescriptor,
-				 Datum *values,
-				 bool *isnull)
+				   Datum * values,
+				   bool *isnull)
 {
 	char	   *tp;				/* tuple pointer */
 	IndexTuple	tuple;			/* return tuple */
@@ -56,12 +56,12 @@ index_form_tuple_s(TupleDesc tupleDescriptor,
 	*
 	* The original function for index_form_tuple had more code to handler
 	* tuples of variable length and tried to compress them by toasting the
-	* values. This code has been removed for now for simplicity.  The 
+	* values. This code has been removed for now for simplicity.  The
 	* prototype is going to assume fixed size data that can not be toasted.
 	*/
 
 	if (numberOfAttributes > INDEX_MAX_KEYS)
-		selog(ERROR, "number of index columns (%d) exceeds limit (%d)",numberOfAttributes, INDEX_MAX_KEYS );
+		selog(ERROR, "number of index columns (%d) exceeds limit (%d)", numberOfAttributes, INDEX_MAX_KEYS);
 
 
 
@@ -79,22 +79,25 @@ index_form_tuple_s(TupleDesc tupleDescriptor,
 
 	hoff = IndexInfoFindDataOffset_s(infomask);
 	data_size = heap_compute_data_size_s(tupleDescriptor,
-									   values, isnull);
+										 values, isnull);
 
-	//selog(DEBUG1, "info mask offset %d <-> heap compute data size is %d", hoff, data_size);
+	/*
+	 * selog(DEBUG1, "info mask offset %d <-> heap compute data size is %d",
+	 * hoff, data_size);
+	 */
 	size = hoff + data_size;
-	size = MAXALIGN_s(size);		/* be conservative */
-	//selog(DEBUG1, "maxalign data size is %d", size);
+	size = MAXALIGN_s(size);	/* be conservative */
+	/* selog(DEBUG1, "maxalign data size is %d", size); */
 	tp = (char *) malloc(size);
 	tuple = (IndexTuple) tp;
 
 	heap_fill_tuple_s(tupleDescriptor,
-					values,
-					isnull,
-					(char *) tp + hoff,
-					data_size,
-					&tupmask,
-					(hasnull ? (bits8 *) tp + sizeof(IndexTupleData) : NULL));
+					  values,
+					  isnull,
+					  (char *) tp + hoff,
+					  data_size,
+					  &tupmask,
+					  (hasnull ? (bits8 *) tp + sizeof(IndexTupleData) : NULL));
 
 
 
@@ -114,7 +117,7 @@ index_form_tuple_s(TupleDesc tupleDescriptor,
 	 */
 	if ((size & INDEX_SIZE_MASK) != size)
 		selog(ERROR, "index row requires %zu bytes, maximum size is %zu",
-						size, (Size) INDEX_SIZE_MASK);
+			  size, (Size) INDEX_SIZE_MASK);
 
 	infomask |= size;
 

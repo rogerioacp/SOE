@@ -63,10 +63,10 @@
 typedef struct ScanKeyData
 {
 	Oid			sk_subtype;		/* strategy subtype */
-	char*		sk_argument;	/* data to compare */
-	int 		datumSize;
-} ScanKeyData;
+	char	   *sk_argument;	/* data to compare */
+	int			datumSize;
+}			ScanKeyData;
 
-typedef ScanKeyData *ScanKey;
+typedef ScanKeyData * ScanKey;
 
-#endif
+#endif          /* SKEY_H  */

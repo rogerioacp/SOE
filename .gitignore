@@ -62,3 +62,4 @@ config.h*
 libtool
 README
 tags
+soe.typedefs

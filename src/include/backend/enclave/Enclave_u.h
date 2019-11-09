@@ -47,3 +47,4 @@ sgx_status_t insertHeap(sgx_enclave_id_t eid, const char* heapTuple, unsigned in
 #endif /* __cplusplus */
 
 #endif
+

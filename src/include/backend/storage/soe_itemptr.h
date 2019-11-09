@@ -46,7 +46,7 @@ pg_attribute_aligned(2)
 #endif
 ItemPointerData;
 
-typedef ItemPointerData *ItemPointer;
+typedef ItemPointerData * ItemPointer;
 
 /* ----------------
  *		special values used in heap tuples (t_ctid)

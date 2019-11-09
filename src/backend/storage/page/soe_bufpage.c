@@ -193,10 +193,10 @@ PageInit_s(Page page, Size pageSize, Size specialSize)
  */
 OffsetNumber
 PageAddItemExtended_s(Page page,
-					Item item,
-					Size size,
-					OffsetNumber offsetNumber,
-					int flags)
+					  Item item,
+					  Size size,
+					  OffsetNumber offsetNumber,
+					  int flags)
 {
 	PageHeader	phdr = (PageHeader) page;
 	Size		alignedSize;
@@ -213,7 +213,7 @@ PageAddItemExtended_s(Page page,
 		phdr->pd_lower > phdr->pd_upper ||
 		phdr->pd_upper > phdr->pd_special ||
 		phdr->pd_special > BLCKSZ)
-		selog(ERROR, "corrupted page pointers: lower = %u, upper = %u, special = %u",phdr->pd_lower, phdr->pd_upper, phdr->pd_special);
+		selog(ERROR, "corrupted page pointers: lower = %u, upper = %u, special = %u", phdr->pd_lower, phdr->pd_upper, phdr->pd_special);
 
 	/*
 	 * Select offsetNumber to place the new item at
@@ -231,7 +231,7 @@ PageAddItemExtended_s(Page page,
 				itemId = PageGetItemId_s(phdr, offsetNumber);
 				if (ItemIdIsUsed_s(itemId) || ItemIdHasStorage_s(itemId))
 				{
-					selog(WARNING,"will not overwrite a used ItemId");
+					selog(WARNING, "will not overwrite a used ItemId");
 					return InvalidOffsetNumber;
 				}
 			}
@@ -275,7 +275,7 @@ PageAddItemExtended_s(Page page,
 	/* Reject placing items beyond the first unused line pointer */
 	if (offsetNumber > limit)
 	{
-		//LOG error
+		/* LOG error */
 		selog(WARNING, "specified item offset is too large");
 		return InvalidOffsetNumber;
 	}
@@ -283,7 +283,7 @@ PageAddItemExtended_s(Page page,
 	/* Reject placing items beyond heap boundary, if heap */
 	if ((flags & PAI_IS_HEAP) != 0 && offsetNumber > MaxHeapTuplesPerPage)
 	{
-		//Log error
+		/* Log error */
 		selog(WARNING, "can't put more than MaxHeapTuplesPerPage items in a heap page");
 		return InvalidOffsetNumber;
 	}
@@ -338,8 +338,8 @@ typedef struct itemIdSortData
 	uint16		offsetindex;	/* linp array index */
 	int16		itemoff;		/* page offset of item data */
 	uint16		alignedlen;		/* MAXALIGN(item data len) */
-} itemIdSortData;
-typedef itemIdSortData *itemIdSort;
+}			itemIdSortData;
+typedef itemIdSortData * itemIdSort;
 
 static int
 itemoffcompare_s(const void *itemidp1, const void *itemidp2)
@@ -359,10 +359,11 @@ compactify_tuples_s(itemIdSort itemidbase, int nitems, Page page)
 	PageHeader	phdr = (PageHeader) page;
 	Offset		upper;
 	int			i;
-	//selog(DEBUG1, "sort items to compact");
+
+	/* selog(DEBUG1, "sort items to compact"); */
 	/* sort itemIdSortData array into decreasing itemoff order */
 	qsort_s((char *) itemidbase, nitems, sizeof(itemIdSortData),
-		  itemoffcompare_s);
+			itemoffcompare_s);
 
 	upper = phdr->pd_special;
 	for (i = 0; i < nitems; i++)
@@ -377,7 +378,11 @@ compactify_tuples_s(itemIdSort itemidbase, int nitems, Page page)
 				itemidptr->alignedlen);
 		lp->lp_off = upper;
 	}
-	//selog(DEBUG1, "Page has %d items and New upper position is %d", nitems, upper);
+
+	/*
+	 * selog(DEBUG1, "Page has %d items and New upper position is %d", nitems,
+	 * upper);
+	 */
 	phdr->pd_upper = upper;
 }
 
@@ -393,7 +398,7 @@ compactify_tuples_s(itemIdSort itemidbase, int nitems, Page page)
  * of item numbers to be deleted in item number order!
  */
 void
-PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
+PageIndexMultiDelete_s(Page page, OffsetNumber * itemnos, int nitems)
 {
 	PageHeader	phdr = (PageHeader) page;
 	Offset		pd_lower = phdr->pd_lower;
@@ -419,10 +424,11 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 		pd_lower > pd_upper ||
 		pd_upper > pd_special ||
 		pd_special > BLCKSZ ||
-		pd_special != MAXALIGN_s(pd_special)){
+		pd_special != MAXALIGN_s(pd_special))
+	{
 		selog(ERROR, "1-corrupted page pointers: lower = %u, upper = %u, special = %u", pd_lower, pd_upper, pd_special);
 	}
-	
+
 
 	/*
 	 * Scan the item pointer array and build a list of just the ones we are
@@ -439,11 +445,12 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 		lp = PageGetItemId_s(page, offnum);
 		size = ItemIdGetLength_s(lp);
 		offset = ItemIdGetOffset_s(lp);
-		
+
 		if (offset < pd_upper ||
 			(offset + size) > pd_special ||
-			offset != MAXALIGN_s(offset)){
-			selog(ERROR, "2-corrupted item pointer: offset = %u, length = %u",offset, (unsigned int) size);
+			offset != MAXALIGN_s(offset))
+		{
+			selog(ERROR, "2-corrupted item pointer: offset = %u, length = %u", offset, (unsigned int) size);
 		}
 
 		if (nextitm < nitems && offnum == itemnos[nextitm])
@@ -469,7 +476,7 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 
 	if (totallen > (Size) (pd_special - pd_lower))
 		selog(ERROR, "corrupted item lengths: total %u, available space %u",
-						(unsigned int) totallen, pd_special - pd_lower);
+			  (unsigned int) totallen, pd_special - pd_lower);
 
 	/*
 	 * Looks good. Overwrite the line pointers with the copy, from which we've
@@ -477,7 +484,7 @@ PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems)
 	 */
 	memcpy(phdr->pd_linp, newitemids, nused * sizeof(ItemIdData));
 	phdr->pd_lower = SizeOfPageHeaderData + nused * sizeof(ItemIdData);
-	//selog(DEBUG1, "Going to compact tuples of old page");
+	/* selog(DEBUG1, "Going to compact tuples of old page"); */
 	/* and compactify the tuple data */
 	compactify_tuples_s(itemidbase, nused, page);
 }

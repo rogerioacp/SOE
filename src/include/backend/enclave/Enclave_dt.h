@@ -8,31 +8,31 @@ typedef unsigned int sgx_status_t;
 
 
 
-void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char* attrDesc, unsigned int attrDescLength);
+void		initSOE(const char *tName, const char *iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char *attrDesc, unsigned int attrDescLength);
 
-void initFSOE(const char* tName, const char* iName, int tNBlocks, int* fanout,
-			int nlevels, unsigned int tOid, unsigned int iOid, char* pg_attr_desc, unsigned int pgDescSize);
+void		initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanout,
+					 int nlevels, unsigned int tOid, unsigned int iOid, char *pg_attr_desc, unsigned int pgDescSize);
 
-void insert(const char* heapTuple, unsigned int tupleSize,  char* datum, unsigned int datumSize);
+void		insert(const char *heapTuple, unsigned int tupleSize, char *datum, unsigned int datumSize);
 
-void addIndexBlock(char* block,
-			unsigned int blockSize, unsigned int offset, unsigned int level);
+void		addIndexBlock(char *block,
+						  unsigned int blockSize, unsigned int offset, unsigned int level);
 
-void addHeapBlock(char* block,
-			unsigned int blockSize, unsigned int blkno);
+void		addHeapBlock(char *block,
+						 unsigned int blockSize, unsigned int blkno);
 
-void insertHeap(const char* heapTuple, unsigned int tupleSize);
+void		insertHeap(const char *heapTuple, unsigned int tupleSize);
 
-int getTuple(unsigned int opmode, unsigned int opoid, const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
+int			getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen);
 
-int getTupleOST(unsigned int opmode, unsigned int opoid, const char* key, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
+int			getTupleOST(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen);
 
-void closeSoe();
+void		closeSoe();
 
-extern void oc_logger(const char* str);
-extern sgx_status_t outFileInit(const char* filename, const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize, int boffset);
-extern sgx_status_t outFileRead(char* page, const char* filename, int blkno, int pageSize);
-extern sgx_status_t outFileWrite(const char* block, const char* filename, int oblkno, int pageSize);
-extern sgx_status_t outFileClose(const char* filename);
+extern void oc_logger(const char *str);
+extern sgx_status_t outFileInit(const char *filename, const char *pages, unsigned int nblocks, unsigned int blocksize, int pagesSize, int boffset);
+extern sgx_status_t outFileRead(char *page, const char *filename, int blkno, int pageSize);
+extern sgx_status_t outFileWrite(const char *block, const char *filename, int oblkno, int pageSize);
+extern sgx_status_t outFileClose(const char *filename);
 
-#endif				/* ENCLAVE_DT_H */
+#endif          /*ENCLAVE_DT_H*/

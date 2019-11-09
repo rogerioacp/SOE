@@ -24,6 +24,6 @@ typedef struct attrMissing
 {
 	bool		am_present;		/* true if non-NULL missing value exists */
 	Datum		am_value;		/* value when attribute is missing */
-} AttrMissing;
+}			AttrMissing;
 
 #endif							/* TUPDESC_DETAILS_H */

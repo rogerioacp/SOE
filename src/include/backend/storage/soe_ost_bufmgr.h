@@ -30,33 +30,41 @@
     (bufnum) != InvalidBuffer  \
 )
 
-typedef struct OSTreeState{
-    int* fanouts;
-    int nlevels;
-    unsigned int iOid;
-    ORAMState *orams;
-    char* iname;
-}*OSTreeState;
+typedef struct OSTreeState
+{
+	int		   *fanouts;
+	int			nlevels;
+	unsigned int iOid;
+	ORAMState  *orams;
+	char	   *iname;
+}		   *OSTreeState;
 
+/* Read only Relation to execute the OST protocol. */
+typedef struct OSTRelation
+{
 
-//Read only Relation to execute the OST protocol.
-typedef struct OSTRelation{
-
-	unsigned int rd_id; // Original Relation Oid
+	/* Original Relation Oid */
+	unsigned int rd_id;
 	OSTreeState osts;
 
-	void *rd_amcache; //used to cache metapages, I don't think it will be used.
+	/* used to cache metapages, I do not think it will be used. */
+	void	   *rd_amcache;
 
-    List **buffers; // Array of list of buffers. One list of buffer per level.
- 	TupleDesc tDesc;
+	/* Array of list of buffers. One list of buffer per level. */
+	List	  **buffers;
+	TupleDesc	tDesc;
 
-    unsigned int level; // Current level being usd on the hierarchical trees
-} *OSTRelation;
+	/* Current level being usd on the hierarchical trees */
+	unsigned int level;
 
-typedef struct OSTVBlock{
-    int id;
-    char* page;
-} *OSTVBlock;
+}		   *OSTRelation;
+
+
+typedef struct OSTVBlock
+{
+	int			id;
+	char	   *page;
+}		   *OSTVBlock;
 
 /*
  * RelationGetRelid
@@ -64,13 +72,13 @@ typedef struct OSTVBlock{
  */
 #define RelationGetRelid_ost(relation) ((relation)->rd_id)
 
-extern OSTRelation InitOSTRelation(OSTreeState relstate, unsigned int oid, char* attrDesc, unsigned int attrDescLength);
+extern OSTRelation InitOSTRelation(OSTreeState relstate, unsigned int oid, char *attrDesc, unsigned int attrDescLength);
 
 extern Buffer ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum);
 
 extern Page BufferGetPage_ost(OSTRelation relation, Buffer buffer);
 
-void MarkBufferDirty_ost(OSTRelation relation, Buffer buffer);
+void		MarkBufferDirty_ost(OSTRelation relation, Buffer buffer);
 
 extern void ReleaseBuffer_ost(OSTRelation relation, Buffer buffer);
 
@@ -78,6 +86,6 @@ extern BlockNumber BufferGetBlockNumber_ost(Buffer buffer);
 
 extern void closeOSTRelation(OSTRelation rel);
 
-//extern void setclevel(unsigned int nlevel);
+/* extern void setclevel(unsigned int nlevel); */
 
-#endif	/* SOE_OST_BUFMGR_H */
+#endif							/* SOE_OST_BUFMGR_H */

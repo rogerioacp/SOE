@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * soe_ost.c
- * Bare bones copy of the Implementation of Lehman and Yao's btree management 
- * algorithm for Postgres. This implementation is developed to be executed 
+ * Bare bones copy of the Implementation of Lehman and Yao's btree management
+ * algorithm for Postgres. This implementation is developed to be executed
  * inside a secure enclave with the ost protocol
  *
  * NOTES
@@ -54,16 +54,17 @@
  *		Descend the tree recursively, find the appropriate location for our
  *		new tuple, and put it there.
  */
-bool insert_ost(OSTRelation rel, char* block, int level, int offset)
+bool
+insert_ost(OSTRelation rel, char *block, int level, int offset)
 {
-	Buffer buffer;
-	Page page;
-	
+	Buffer		buffer;
+	Page		page;
+
 	rel->level = level;
 
 	buffer = ReadBuffer_ost(rel, offset);
 	page = BufferGetPage_ost(rel, buffer);
-	
+
 	memcpy(page, block, BLCKSZ);
 
 	MarkBufferDirty_ost(rel, buffer);
@@ -87,39 +88,41 @@ btgettuple_ost(IndexScanDesc scan)
 	 * scan.  We can't do this in btrescan because we don't know the scan
 	 * direction at that time.
 	 */
-	//if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos))
-	//{
-		/* punt if we have any unsatisfiable array keys */
-	//	if (so->numArrayKeys < 0)
-	//		return false;
-	//
-	//		_bt_start_array_keys(scan, dir);
-	//	}
+	/* if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos)) */
+	/* { */
+	/* punt if we have any unsatisfiable array keys */
+	/* if (so->numArrayKeys < 0) */
+	/* return false; */
+	/* */
+	/* _bt_start_array_keys(scan, dir); */
+	/* } */
 
 	/* This loop handles advancing to the next array elements, if any */
-	//do
-	//{
-		/*
-		 * If we've already initialized this scan, we can just advance it in
-		 * the appropriate direction.  If we haven't done so yet, we call
-		 * _bt_first() to get the first item in the scan.
-		 */
-		if (!BTScanPosIsValid_OST(so->currPos)){
-			res = _bt_first_ost(scan);
-		}
-		else
-		{
-			/*
-			 * Now continue the scan.
-			 */
-			res = _bt_next_ost(scan);
-		}
+	/* do */
+	/* { */
 
-		/* If we have a tuple, return it ... */
-		//if (res)
-		//	break;
-		/* ... otherwise see if we have more array keys to deal with */
-	//} while (so->numArrayKeys && _bt_advance_array_keys(scan, dir));
+	/*
+	 * If we've already initialized this scan, we can just advance it in the
+	 * appropriate direction.  If we haven't done so yet, we call _bt_first()
+	 * to get the first item in the scan.
+	 */
+	if (!BTScanPosIsValid_OST(so->currPos))
+	{
+		res = _bt_first_ost(scan);
+	}
+	else
+	{
+		/*
+		 * Now continue the scan.
+		 */
+		res = _bt_next_ost(scan);
+	}
+
+	/* If we have a tuple, return it ... */
+	/* if (res) */
+	/* break; */
+	/* ... otherwise see if we have more array keys to deal with */
+	/* } while (so->numArrayKeys && _bt_advance_array_keys(scan, dir)); */
 
 	return res;
 }
@@ -128,15 +131,15 @@ btgettuple_ost(IndexScanDesc scan)
  *	btbeginscan() -- start a scan on a btree index
  */
 IndexScanDesc
-btbeginscan_ost(OSTRelation rel, const char* key, int keysize)
+btbeginscan_ost(OSTRelation rel, const char *key, int keysize)
 {
 	IndexScanDesc scan;
 	BTScanOpaqueOST so;
-	ScanKey scanKey;
+	ScanKey		scanKey;
 
 	scanKey = (ScanKey) malloc(sizeof(ScanKeyData));
-	//scanKey->sk_subtype = rel->foid;
-	scanKey->sk_argument = (char*) malloc(keysize);
+	/* scanKey->sk_subtype = rel->foid; */
+	scanKey->sk_argument = (char *) malloc(keysize);
 	memcpy(scanKey->sk_argument, key, keysize);
 	scanKey->datumSize = keysize;
 
@@ -144,9 +147,12 @@ btbeginscan_ost(OSTRelation rel, const char* key, int keysize)
 	so = (BTScanOpaqueOST) malloc(sizeof(BTScanOpaqueDataOST));
 	BTScanPosInvalidate_OST(so->currPos);
 	BTScanPosInvalidate_OST(so->markPos);
-	/*so->keyData = malloc(sizeof(ScanKeyData));
-	so->arrayKeyData = NULL;
-	so->numArrayKeys = 0;*/
+
+	/*
+	 * so->keyData = malloc(sizeof(ScanKeyData)); so->arrayKeyData = NULL;
+	 * so->numArrayKeys = 0;
+	 */
+
 	/*
 	 * We don't know yet whether the scan will be index-only, so we do not
 	 * allocate the tuple workspace arrays until btrescan.  However, we set up
@@ -182,11 +188,10 @@ btendscan_ost(IndexScanDesc scan)
 	/* No need to invalidate positions, the RAM is about to be freed. */
 
 	/* Release storage */
-	//if (so->keyData != NULL)
+	/* if (so->keyData != NULL) */
 	free(scan->keyData->sk_argument);
 	free(scan->keyData);
 	/* so->markTuples should not be pfree'd, see btrescan */
 	free(so);
 	free(scan);
 }
-

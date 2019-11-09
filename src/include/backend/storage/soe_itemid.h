@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * soe_itemid.h
- * Bare bones copy of Standard POSTGRES buffer page item identifier 
+ * Bare bones copy of Standard POSTGRES buffer page item identifier
  * definitions for enclave execution.
  *
  *
@@ -27,9 +27,9 @@ typedef struct ItemIdData
 	unsigned	lp_off:15,		/* offset to tuple (from start of page) */
 				lp_flags:2,		/* state of item pointer, see below */
 				lp_len:15;		/* byte length of tuple */
-} ItemIdData;
+}			ItemIdData;
 
-typedef ItemIdData *ItemId;
+typedef ItemIdData * ItemId;
 
 /*
  * lp_flags has these possible states.  An UNUSED line pointer is available

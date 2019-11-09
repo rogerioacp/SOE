@@ -126,9 +126,9 @@ Datum
 hash_any_s(register const unsigned char *k, register int keylen)
 {
 	register uint32 a,
-				b,
-				c,
-				len;
+		b,
+		c,
+		len;
 
 	/* Set up the internal state */
 	len = keylen;

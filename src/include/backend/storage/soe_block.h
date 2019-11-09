@@ -56,9 +56,9 @@ typedef struct BlockIdData
 {
 	uint16		bi_hi;
 	uint16		bi_lo;
-} BlockIdData;
+}			BlockIdData;
 
-typedef BlockIdData *BlockId;	/* block identifier */
+typedef BlockIdData * BlockId;	/* block identifier */
 
 /* ----------------
  *		support macros

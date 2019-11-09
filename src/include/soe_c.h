@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
  *
- * Copy of essential definitions in postgres c.h 
+ * Copy of essential definitions in postgres c.h
  * c.h
  *	  Fundamental C definitions.  This is included by every .c file in
  *	  PostgreSQL (via either postgres.h or postgres_fe.h, as appropriate).
@@ -62,9 +62,9 @@ typedef unsigned int uint32;	/* == 32 bits */
  * bitsN
  *              Unit of bitwise operation, AT LEAST N BITS IN SIZE.
  */
-typedef uint8 bits8;                    /* >= 8 bits */
-typedef uint16 bits16;                  /* >= 16 bits */
-typedef uint32 bits32;                  /* >= 32 bits */
+typedef uint8 bits8;			/* >= 8 bits */
+typedef uint16 bits16;			/* >= 16 bits */
+typedef uint32 bits32;			/* >= 32 bits */
 
 
 /*
@@ -93,7 +93,7 @@ typedef unsigned long long int uint64;
 #define INT64CONST_s(x)  (x##LL)
 #define UINT64CONST_s(x) (x##ULL)
 /* neither HAVE_LONG_INT_64 nor HAVE_LONG_LONG_INT_64 */
-//#error must have a working 64-bit integer datatype
+/* #error must have a working 64-bit integer datatype */
 #endif
 
 /* snprintf format strings to use for 64-bit integers */
@@ -148,7 +148,7 @@ typedef char *Pointer;
    (struct s)' as it overestimates the size. Use 'offsetof (struct s, d)'
    instead. Don't use 'offsetof (struct s, d[0])', as this doesn't work with
    MSVC and with C++ compilers. */
-#define FLEXIBLE_ARRAY_MEMBER /**/
+#define FLEXIBLE_ARRAY_MEMBER	/**/
 
 typedef uint32 TransactionId;
 
@@ -201,7 +201,7 @@ typedef union PGAlignedBlock
 	char		data[BLCKSZ];
 	double		force_align_d;
 	int64		force_align_i64;
-} PGAlignedBlock;
+}			PGAlignedBlock;
 
 
 
@@ -354,8 +354,8 @@ typedef regproc RegProcedure;
 typedef struct nameData
 {
 	char		data[NAMEDATALEN];
-} NameData;
-typedef NameData *Name;
+}			NameData;
+typedef NameData * Name;
 
 /* msb for char */
 #define HIGHBIT					(0x80)
@@ -366,7 +366,7 @@ typedef struct
 {
 	uint8		va_header;
 	char		va_data[FLEXIBLE_ARRAY_MEMBER]; /* Data begins here */
-} varattrib_1b;
+}			varattrib_1b;
 
 
 /* TOAST pointers are a subset of varattrib_1b with an identifying tag byte */
@@ -375,7 +375,7 @@ typedef struct
 	uint8		va_header;		/* Always 0x80 or 0x01 */
 	uint8		va_tag;			/* Type of datum */
 	char		va_data[FLEXIBLE_ARRAY_MEMBER]; /* Type-specific data */
-} varattrib_1b_e;
+}			varattrib_1b_e;
 
 
 
@@ -635,7 +635,7 @@ typedef union
 		uint32		va_rawsize; /* Original data size (excludes header) */
 		char		va_data[FLEXIBLE_ARRAY_MEMBER]; /* Compressed data */
 	}			va_compressed;
-} varattrib_4b;
+}			varattrib_4b;
 
 
 
@@ -906,5 +906,4 @@ typedef struct varlena BpChar;	/* blank-padded char, ie SQL char(n) */
 #define DatumGetBpCharPP_S(X)			((BpChar *) PG_DETOAST_DATUM_PACKED_S(X))
 
 
-#endif /* SOE_C_H */
-
+#endif							/* SOE_C_H */

@@ -44,6 +44,6 @@
 #define ERROR		20			/* user error - abort transaction; return to
 								 * known state */
 
-void selog(int level, const char* message, ...);
+void		selog(int level, const char *message,...);
 
-#endif /* SOE_LOG_H */
+#endif              /* SOE_LOGGER_H */

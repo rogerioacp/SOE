@@ -29,23 +29,24 @@
  * "primary" hash function that's tracked for us by the generic index code.
  */
 uint32
-_hash_datum2hashkey_s(VRelation rel, const char* datum, unsigned int datumSize)
+_hash_datum2hashkey_s(VRelation rel, const char *datum, unsigned int datumSize)
 {
 
 	Datum		result;
 
-	/* 
-	 * For the prototype we choose the function to hash the datum
-	 * based on the foid defined when the soe is initialized.
-	 * On the final version of the prototype this function will
-	 * be a secure hash function.
+	/*
+	 * For the prototype we choose the function to hash the datum based on the
+	 * foid defined when the soe is initialized. On the final version of the
+	 * prototype this function will be a secure hash function.
 	 */
-	//Use the function hashbpchar which uses the hash_any
-	if(rel->foid == 1080)
+	/* Use the function hashbpchar which uses the hash_any */
+	if (rel->foid == 1080)
 	{
 		result = hash_any_s((unsigned char *) datum, datumSize);
 
-	}else{
+	}
+	else
+	{
 		result = -1;
 		selog(ERROR, "invalid function oid, can't hash tuple");
 	}
@@ -54,18 +55,18 @@ _hash_datum2hashkey_s(VRelation rel, const char* datum, unsigned int datumSize)
 	return DatumGetUInt32_s(result);
 
 
-	//FmgrInfo   *procinfo;
-	//Oid			collation;
+	/* FmgrInfo   *procinfo; */
+	/* Oid			collation; */
 
 	/* XXX assumes index has only one attribute */
-	//procinfo = index_getprocinfo(rel, 1, HASHSTANDARD_PROC);
-	//collation = rel->rd_indcollation[0];
+	/* procinfo = index_getprocinfo(rel, 1, HASHSTANDARD_PROC); */
+	/* collation = rel->rd_indcollation[0]; */
 
-	//return DatumGetUInt32(FunctionCall1Coll(procinfo, collation, key));
+	/* return DatumGetUInt32(FunctionCall1Coll(procinfo, collation, key)); */
 	/**
 	 * TODO: Since this code runs inside the enclave and we don't know which
 	 * function must be used to create an hash key we will have to hard-code
-	 * it in the enclave for now. 
+	 * it in the enclave for now.
 	 */
 	return 0;
 }
@@ -80,23 +81,21 @@ _hash_datum2hashkey_s(VRelation rel, const char* datum, unsigned int datumSize)
 uint32
 _hash_datum2hashkey_type_s(VRelation rel, Datum key, Oid keytype)
 {
-//	RegProcedure hash_proc;
-//	Oid			collation;
-	/*TODO: Function will be hardcoded to accepted data types.*/
+/* 	RegProcedure hash_proc; */
+/* 	Oid			collation; */
+	/* TODO: Function will be hardcoded to accepted data types. */
 	/* XXX assumes index has only one attribute */
-	/*hash_proc = get_opfamily_proc(rel->rd_opfamily[0],
-								  keytype,
-								  keytype,
-								  HASHSTANDARD_PROC);
-	if (!RegProcedureIsValid(hash_proc))
-		elog(ERROR, "missing support function %d(%u,%u) for index \"%s\"",
-			 HASHSTANDARD_PROC, keytype, keytype,
-			 RelationGetRelationName(rel));
-	collation = rel->rd_indcollation[0];
+	/*
+	 * hash_proc = get_opfamily_proc(rel->rd_opfamily[0], keytype, keytype,
+	 * HASHSTANDARD_PROC); if (!RegProcedureIsValid(hash_proc)) elog(ERROR,
+	 * "missing support function %d(%u,%u) for index \"%s\"",
+	 * HASHSTANDARD_PROC, keytype, keytype, RelationGetRelationName(rel));
+	 * collation = rel->rd_indcollation[0];
+	 *
+	 * return DatumGetUInt32(OidFunctionCall1Coll(hash_proc, collation, key));
+	 */
 
-	return DatumGetUInt32(OidFunctionCall1Coll(hash_proc, collation, key));*/
-
-	//TODO: FIX THIS
+	/* TODO: FIX THIS */
 	return 0;
 }
 
@@ -105,7 +104,7 @@ _hash_datum2hashkey_type_s(VRelation rel, Datum key, Oid keytype)
  */
 Bucket
 _hash_hashkey2bucket_s(uint32 hashkey, uint32 maxbucket,
-					 uint32 highmask, uint32 lowmask)
+					   uint32 highmask, uint32 lowmask)
 {
 	Bucket		bucket;
 
@@ -216,27 +215,28 @@ _hash_checkpage_s(VRelation rel, Buffer buf, int flags)
 	 */
 	if (PageIsNew_s(page))
 		selog(ERROR, "index contains unexpected zero page at block %u",
-						BufferGetBlockNumber_s(buf));
-		/*TODO: error messages*/
-		/*ereport(ERROR,
-				(errcode(ERRCODE_INDEX_CORRUPTED),
-				 errmsg("index \"%s\" contains unexpected zero page at block %u",
-						RelationGetRelationName(rel),
-						BufferGetBlockNumber(buf)),
-				 errhint("Please REINDEX it.")));*/
+			  BufferGetBlockNumber_s(buf));
+	/* TODO: error messages */
+
+	/*
+	 * ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\"
+	 * contains unexpected zero page at block %u",
+	 * RelationGetRelationName(rel), BufferGetBlockNumber(buf)),
+	 * errhint("Please REINDEX it.")));
+	 */
 
 	/*
 	 * Additionally check that the special area looks sane.
 	 */
 	if (PageGetSpecialSize_s(page) != MAXALIGN_s(sizeof(HashPageOpaqueData)))
 		selog(ERROR, "1-index contains corrupted page at block");
-		/*TODO: error messages*/
-		/*ereport(ERROR,
-				(errcode(ERRCODE_INDEX_CORRUPTED),
-				 errmsg("index \"%s\" contains corrupted page at block %u",
-						RelationGetRelationName(rel),
-						BufferGetBlockNumber(buf)),
-				 errhint("Please REINDEX it.")));*/
+	/* TODO: error messages */
+
+	/*
+	 * ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index \"%s\"
+	 * contains corrupted page at block %u", RelationGetRelationName(rel),
+	 * BufferGetBlockNumber(buf)), errhint("Please REINDEX it.")));
+	 */
 
 	if (flags)
 	{
@@ -245,13 +245,14 @@ _hash_checkpage_s(VRelation rel, Buffer buf, int flags)
 		if ((opaque->hasho_flag & flags) == 0)
 			selog(ERROR, "2-index contains corrupted page at block");
 
-			/*TODO: error messages*/
-			/*ereport(ERROR,
-					(errcode(ERRCODE_INDEX_CORRUPTED),
-					 errmsg("index \"%s\" contains corrupted page at block %u",
-							RelationGetRelationName(rel),
-							BufferGetBlockNumber(buf)),
-					 errhint("Please REINDEX it.")));*/
+		/* TODO: error messages */
+
+		/*
+		 * ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index
+		 * \"%s\" contains corrupted page at block %u",
+		 * RelationGetRelationName(rel), BufferGetBlockNumber(buf)),
+		 * errhint("Please REINDEX it.")));
+		 */
 	}
 
 	/*
@@ -264,21 +265,23 @@ _hash_checkpage_s(VRelation rel, Buffer buf, int flags)
 		if (metap->hashm_magic != HASH_MAGIC)
 			selog(ERROR, "2-index is not a hash index");
 
-			/*TODO: error messages*/
-			/*ereport(ERROR,
-					(errcode(ERRCODE_INDEX_CORRUPTED),
-					 errmsg("index \"%s\" is not a hash index",
-							RelationGetRelationName(rel))));*/
+		/* TODO: error messages */
+
+		/*
+		 * ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index
+		 * \"%s\" is not a hash index", RelationGetRelationName(rel))));
+		 */
 
 		if (metap->hashm_version != HASH_VERSION)
 			selog(ERROR, "2-index has a wrong hash version");
 
-			/*TODO: error messages*/
-			/*ereport(ERROR,
-					(errcode(ERRCODE_INDEX_CORRUPTED),
-					 errmsg("index \"%s\" has wrong hash version",
-							RelationGetRelationName(rel)),
-					 errhint("Please REINDEX it.")));*/
+		/* TODO: error messages */
+
+		/*
+		 * ereport(ERROR, (errcode(ERRCODE_INDEX_CORRUPTED), errmsg("index
+		 * \"%s\" has wrong hash version", RelationGetRelationName(rel)),
+		 * errhint("Please REINDEX it.")));
+		 */
 	}
 }
 
@@ -296,7 +299,11 @@ _hash_get_indextuple_hashkey_s(IndexTuple itup)
 	 * this can be done crudely but very very cheaply ...
 	 */
 	attp = (char *) itup + IndexInfoFindDataOffset_s(itup->t_info);
-	//Todo: this code has to decrypt the hashkey and only then cast to uint32.
+
+	/*
+	 * Todo: this code has to decrypt the hashkey and only then cast to
+	 * uint32.
+	 */
 	return *((uint32 *) attp);
 }
 
@@ -316,8 +323,8 @@ _hash_get_indextuple_hashkey_s(IndexTuple itup)
  */
 bool
 _hash_convert_tuple_s(VRelation index,
-					const char *datum, unsigned int datumSize,
-					Datum *index_values, bool *index_isnull)
+					  const char *datum, unsigned int datumSize,
+					  Datum * index_values, bool *index_isnull)
 {
 	uint32		hashkey;
 
@@ -363,7 +370,7 @@ _hash_binsearch_s(Page page, uint32 hash_value)
 		uint32		hashkey;
 
 		off = (upper + lower) / 2;
-		//Assert(OffsetNumberIsValid(off));
+		/* Assert(OffsetNumberIsValid(off)); */
 
 		itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, off));
 		hashkey = _hash_get_indextuple_hashkey_s(itup);
@@ -401,7 +408,7 @@ _hash_binsearch_last_s(Page page, uint32 hash_value)
 		uint32		hashkey;
 
 		off = (upper + lower + 1) / 2;
-		//Assert(OffsetNumberIsValid(off));
+		/* Assert(OffsetNumberIsValid(off)); */
 
 		itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, off));
 		hashkey = _hash_get_indextuple_hashkey_s(itup);

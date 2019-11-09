@@ -100,7 +100,7 @@ typedef struct HeapTupleFields
 		CommandId	t_cid;		/* inserting or deleting command ID, or both */
 		TransactionId t_xvac;	/* old-style VACUUM FULL xact ID */
 	}			t_field3;
-} HeapTupleFields;
+}			HeapTupleFields;
 
 typedef struct DatumTupleFields
 {
@@ -119,7 +119,7 @@ typedef struct DatumTupleFields
 	 * Note: field ordering is chosen with thought that Oid might someday
 	 * widen to 64 bits.
 	 */
-} DatumTupleFields;
+}			DatumTupleFields;
 
 
 struct HeapTupleHeaderData
@@ -213,10 +213,11 @@ struct HeapTupleHeaderData
 
 /* prototypes for functions in common/heaptuple.c */
 extern Size heap_compute_data_size_s(TupleDesc tupleDesc,
-					   Datum *values, bool *isnull);
+									 Datum * values, bool *isnull);
 
 extern void heap_fill_tuple_s(TupleDesc tupleDesc,
-				Datum *values, bool *isnull,
-				char *data, Size data_size,
-				uint16 *infomask, bits8 *bit);
-#endif /* SOE_HTUP_DETAILS_H */
+							  Datum * values, bool *isnull,
+							  char *data, Size data_size,
+							  uint16 * infomask, bits8 * bit);
+
+#endif                  /*SOE_HTUP_DETAILS.h*/

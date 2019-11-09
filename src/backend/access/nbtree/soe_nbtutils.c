@@ -27,20 +27,21 @@
  *		The result is intended for use with _bt_compare().
  */
 ScanKey
-_bt_mkscankey_s(VRelation rel, IndexTuple itup, char* datum, int dsize)
+_bt_mkscankey_s(VRelation rel, IndexTuple itup, char *datum, int dsize)
 {
 	ScanKey		skey;
-	//TupleDesc	itupdesc;
-	//int			indnatts;
-	//int			indnkeyatts;
-	//int16	   *indoption;
-	//int			i;
 
-	//currently we only support indexing a single column.
-	//itupdesc = rel->tDesc;
-	//indnatts = 1; //IndexRelationGetNumberOfAttributes(rel);
-	//indnkeyatts = 1; // IndexRelationGetNumberOfKeyAttributes(rel);
-	//indoption = rel->rd_indoption;
+	/* TupleDesc	itupdesc; */
+	/* int			indnatts; */
+	/* int			indnkeyatts; */
+	/* int16	   *indoption; */
+	/* int			i; */
+
+	/* currently we only support indexing a single column. */
+	/* itupdesc = rel->tDesc; */
+	/* indnatts = 1; //IndexRelationGetNumberOfAttributes(rel); */
+	/* indnkeyatts = 1; // IndexRelationGetNumberOfKeyAttributes(rel); */
+	/* indoption = rel->rd_indoption; */
 
 	/*
 	 * We'll execute search using scan key constructed on key columns. Non-key
@@ -102,14 +103,14 @@ _bt_freestack_s(BTStack stack)
  */
 IndexTuple
 _bt_checkkeys_s(IndexScanDesc scan,
-			  Page page, OffsetNumber offnum,
-			  bool *continuescan)
+				Page page, OffsetNumber offnum,
+				bool *continuescan)
 {
 	ItemId		iid = PageGetItemId_s(page, offnum);
 	IndexTuple	tuple;
-	char*		keyValue;
-	char* 		datum;
-	int 		test;
+	char	   *keyValue;
+	char	   *datum;
+	int			test;
 
 
 	*continuescan = false;		/* default assumption */
@@ -126,18 +127,21 @@ _bt_checkkeys_s(IndexScanDesc scan,
 
 	tuple = (IndexTuple) PageGetItem_s(page, iid);
 	datum = index_getattr_s(tuple);
-	//datumSize = strlen(datum)+1;
+	/* datumSize = strlen(datum)+1; */
 	keyValue = scan->keyData->sk_argument;
-	//the prototype assumes string comparisons
+	/* the prototype assumes string comparisons */
 	test = (int32) strcmp(datum, keyValue);
 	/**
 	* Look at soe_nbtsearch.c function _bt_first_s to which operations the
 	* opoids correspond to.
 	*/
-	if((scan->opoid == 1058 && test<0) || (scan->opoid == 1059 && test <=0) || (scan->opoid == 1054 && test == 0) || (scan->opoid == 1061 && test >=0) || (scan->opoid == 1060 && test >0)){
+	if ((scan->opoid == 1058 && test < 0) || (scan->opoid == 1059 && test <= 0) || (scan->opoid == 1054 && test == 0) || (scan->opoid == 1061 && test >= 0) || (scan->opoid == 1060 && test > 0))
+	{
 		*continuescan = true;
 		return tuple;
-	}else{
+	}
+	else
+	{
 		*continuescan = false;
 		return NULL;
 

@@ -6,17 +6,18 @@
 #include <oram/ofile.h>
 
 
-//Data structure of the contents stored on every oblivious page.
+/* Data structure of the contents stored on every oblivious page. */
 typedef struct OblivPageOpaqueData
 {
-    int		o_blkno; //original block number. This should be encrypted.
+	int			o_blkno;
+	/* original block number.This should be encrypted. */
 
-} OblivPageOpaqueData;
+}			OblivPageOpaqueData;
 
-typedef OblivPageOpaqueData *OblivPageOpaque;
+typedef OblivPageOpaqueData * OblivPageOpaque;
 
-void heap_pageInit(Page page, int blkno, Size blocksize);
+void		heap_pageInit(Page page, int blkno, Size blocksize);
 
-extern AMOFile *heap_ofileCreate();
+extern AMOFile * heap_ofileCreate();
 
 #endif							/* SOE_HEAP_OFILE_H */

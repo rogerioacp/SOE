@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * soe_pg_attribute.h
- * Bare bones copy of definition of the "attribute" system catalog 
+ * Bare bones copy of definition of the "attribute" system catalog
  * (pg_attribute) for enclave computation.
  *
  * The initial contents of pg_attribute are generated at compile time by
@@ -161,7 +161,7 @@ typedef struct FormData_pg_attribute
 	/* attribute's collation */
 	Oid			attcollation;
 
-} FormData_pg_attribute;
+}			FormData_pg_attribute;
 
 
 /* ----------------
@@ -169,6 +169,6 @@ typedef struct FormData_pg_attribute
  *		the format of pg_attribute relation.
  * ----------------
  */
-typedef FormData_pg_attribute *Form_pg_attribute;
+typedef FormData_pg_attribute * Form_pg_attribute;
 
 #endif							/* TUPDESC_H */

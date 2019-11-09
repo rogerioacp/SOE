@@ -22,7 +22,7 @@
  * index access method support routines (in genam.c)
  */
 extern IndexScanDesc RelationGetIndexScan(VRelation indexRelation,
-					 int nkeys, int norderbys);
+										  int nkeys, int norderbys);
 
 
 #endif							/* GENAM_H */

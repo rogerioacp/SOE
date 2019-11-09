@@ -14,7 +14,7 @@
 #ifndef SOE_HTUP_H
 #define SOE_HTUP_H
 
-//Oriignal postgres include, does not need to be modified.
+/* Oriignal postgres include, does not need to be modified. */
 #include "storage/soe_itemptr.h"
 #include "access/soe_htup_details.h"
 
@@ -22,7 +22,7 @@
 
 typedef struct HeapTupleHeaderData HeapTupleHeaderData;
 
-typedef HeapTupleHeaderData *HeapTupleHeader;
+typedef HeapTupleHeaderData * HeapTupleHeader;
 
 /*
  * HeapTupleData is an in-memory data structure that points to a tuple.
@@ -63,11 +63,11 @@ typedef struct HeapTupleData
 	Oid			t_tableOid;		/* table the tuple came from */
 #define FIELDNO_HEAPTUPLEDATA_DATA 3
 	HeapTupleHeader t_data;		/* -> tuple header and data */
-} HeapTupleData;
+}			HeapTupleData;
 
 typedef struct HeapTupleHeaderData HeapTupleHeaderData;
 
-typedef HeapTupleData *HeapTuple;
+typedef HeapTupleData * HeapTuple;
 
 
 #endif							/* SOE_HTUP_H */

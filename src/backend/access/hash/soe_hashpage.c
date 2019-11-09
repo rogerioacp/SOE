@@ -34,13 +34,13 @@
 
 
 static bool _hash_alloc_buckets_s(VRelation rel, BlockNumber firstblock,
-					uint32 nblocks);
+								  uint32 nblocks);
 static void _hash_splitbucket_s(VRelation rel, Buffer metabuf,
-				  Bucket obucket, Bucket nbucket,
-				  Buffer obuf,
-				  Buffer nbuf,
-				  uint32 maxbucket,
-				  uint32 highmask, uint32 lowmask);
+								Bucket obucket, Bucket nbucket,
+								Buffer obuf,
+								Buffer nbuf,
+								uint32 maxbucket,
+								uint32 highmask, uint32 lowmask);
 
 
 /*
@@ -68,7 +68,7 @@ static void _hash_splitbucket_s(VRelation rel, Buffer metabuf,
  * multiple buffer locks is ignored.
  */
 uint32
-_hash_init_s(VRelation rel, double num_tuples) 
+_hash_init_s(VRelation rel, double num_tuples)
 {
 	Buffer		metabuf;
 	Buffer		buf;
@@ -92,14 +92,14 @@ _hash_init_s(VRelation rel, double num_tuples)
 	data_width = sizeof(uint32);
 	item_width = MAXALIGN_s(sizeof(IndexTupleData)) + MAXALIGN_s(data_width) +
 		sizeof(ItemIdData);		/* include the line pointer */
-	ffactor =  ((BLCKSZ*HASH_DEFAULT_FILLFACTOR)/100) / item_width;
-	//selog(DEBUG1, "Fill factor is %d", ffactor);
+	ffactor = ((BLCKSZ * HASH_DEFAULT_FILLFACTOR) / 100) / item_width;
+	/* selog(DEBUG1, "Fill factor is %d", ffactor); */
 
 	/* keep to a sane range */
 	if (ffactor < 10)
 		ffactor = 10;
-	//Not used, even in the   original postgres code
-	//procid = index_getprocid(rel, 1, HASHSTANDARD_PROC);
+	/* Not used, even in the   original postgres code */
+	/* procid = index_getprocid(rel, 1, HASHSTANDARD_PROC); */
 
 	/*
 	 * We initialize the metapage, the first N bucket pages, and the first
@@ -130,7 +130,7 @@ _hash_init_s(VRelation rel, double num_tuples)
 		/* Allow interrupts, in case N is huge */
 
 		blkno = BUCKET_TO_BLKNO_s(metap, i);
-		//selog(DEBUG1, "Going to initialize block %d", blkno);
+		/* selog(DEBUG1, "Going to initialize block %d", blkno); */
 		buf = _hash_getnewbuf_s(rel, blkno);
 		_hash_initbuf_s(rel, buf, metap->hashm_maxbucket, i, LH_BUCKET_PAGE, false);
 
@@ -142,7 +142,7 @@ _hash_init_s(VRelation rel, double num_tuples)
 	/*
 	 * Initialize bitmap page
 	 */
-	//selog(DEBUG1, "Going to get bitmap page %d", num_buckets+1);
+	/* selog(DEBUG1, "Going to get bitmap page %d", num_buckets+1); */
 	bitmapbuf = _hash_getnewbuf_s(rel, num_buckets + 1);
 	_hash_initbitmapbuffer_s(rel, bitmapbuf, metap->hashm_bmsize, false);
 	MarkBufferDirty_s(rel, bitmapbuf);
@@ -156,7 +156,7 @@ _hash_init_s(VRelation rel, double num_tuples)
 
 	metap->hashm_nmaps++;
 
-	//selog(DEBUG1, "Going to update metabuffer");
+	/* selog(DEBUG1, "Going to update metabuffer"); */
 	MarkBufferDirty_s(rel, metabuf);
 
 
@@ -173,7 +173,7 @@ _hash_init_s(VRelation rel, double num_tuples)
  */
 void
 _hash_init_metabuffer_s(VRelation rel, Buffer buf, double num_tuples,
-					  uint16 ffactor)
+						uint16 ffactor)
 {
 	HashMetaPage metap;
 	HashPageOpaque pageopaque;
@@ -203,7 +203,7 @@ _hash_init_metabuffer_s(VRelation rel, Buffer buf, double num_tuples,
 
 	page = BufferGetPage_s(rel, buf);
 
-	//_hash_pageinit_s(page, BufferGetPageSize_s(rel, buf));
+	/* _hash_pageinit_s(page, BufferGetPageSize_s(rel, buf)); */
 
 	pageopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 	pageopaque->hasho_prevblkno = InvalidBlockNumber;
@@ -274,8 +274,8 @@ _hash_getbuf_with_condlock_cleanup_s(VRelation rel, BlockNumber blkno, int flags
 
 	if (blkno == P_NEW)
 		selog(ERROR, "hash AM does not use P_NEW");
-		//log error
-		//elog(ERROR, "hash AM does not use P_NEW");
+	/* log error */
+	/* elog(ERROR, "hash AM does not use P_NEW"); */
 
 	buf = ReadBuffer_s(rel, blkno);
 
@@ -312,8 +312,8 @@ _hash_getbuf_s(VRelation rel, BlockNumber blkno, int access, int flags)
 
 	if (blkno == P_NEW)
 		selog(ERROR, "hash AM does not use P_NEW");
-		//log error
-		//elog(ERROR, "hash AM does not use P_NEW");
+	/* log error */
+	/* elog(ERROR, "hash AM does not use P_NEW"); */
 
 	buf = ReadBuffer_s(rel, blkno);
 
@@ -346,10 +346,10 @@ _hash_getinitbuf_s(VRelation rel, BlockNumber blkno)
 
 	if (blkno == P_NEW)
 		selog(ERROR, "hash AM does not use P_NEW");
-		//elog(ERROR, "hash AM does not use P_NEW");
-	buf =  ReadBuffer_s(rel, blkno);
-	//buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_ZERO_AND_LOCK,
-	//						 NULL);
+	/* elog(ERROR, "hash AM does not use P_NEW"); */
+	buf = ReadBuffer_s(rel, blkno);
+	/* buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_ZERO_AND_LOCK, */
+	/* NULL); */
 
 	/* ref count and lock type are correct */
 
@@ -364,7 +364,7 @@ _hash_getinitbuf_s(VRelation rel, BlockNumber blkno)
  */
 void
 _hash_initbuf_s(VRelation rel, Buffer buf, uint32 max_bucket, uint32 num_bucket, uint32 flag,
-			  bool initpage)
+				bool initpage)
 {
 	HashPageOpaque pageopaque;
 	Page		page;
@@ -409,20 +409,27 @@ _hash_getnewbuf_s(VRelation rel, BlockNumber blkno)
 	BlockNumber nblocks = NumberOfBlocks_s(rel);
 	Buffer		buf;
 
-	if (blkno == nblocks){
-		//selog(DEBUG1, "Requesting for a new block %d", blkno);
+	if (blkno == nblocks)
+	{
+		/* selog(DEBUG1, "Requesting for a new block %d", blkno); */
 		buf = ReadBuffer_s(rel, P_NEW);
-	}else{
+	}
+	else
+	{
 
-		//selog(DEBUG1, "Requesting an existing block %d ", blkno);
+		/* selog(DEBUG1, "Requesting an existing block %d ", blkno); */
 		buf = ReadBuffer_s(rel, blkno);
 	}
 
 	/* ref count and lock type are correct */
 
 	/* initialize the page */
-	//Every time a new page is read, the ReadBuffer initializes the page.
-	//_hash_pageinit_s(BufferGetPage_s(rel, buf), BufferGetPageSize_s(rel, buf));
+	/* Every time a new page is read, the ReadBuffer initializes the page. */
+
+	/*
+	 * _hash_pageinit_s(BufferGetPage_s(rel, buf), BufferGetPageSize_s(rel,
+	 * buf));
+	 */
 
 	return buf;
 }
@@ -434,7 +441,7 @@ _hash_getnewbuf_s(VRelation rel, BlockNumber blkno)
  *		strategy to be specified.  We use this for VACUUM operations.
  */
 Buffer
-_hash_getbuf_with_strategy_s(VRelation rel, BlockNumber blkno,  int flags)
+_hash_getbuf_with_strategy_s(VRelation rel, BlockNumber blkno, int flags)
 {
 	Buffer		buf;
 
@@ -442,10 +449,10 @@ _hash_getbuf_with_strategy_s(VRelation rel, BlockNumber blkno,  int flags)
 		selog(ERROR, "hash AM does not use P_NEW");
 
 	buf = ReadBuffer_s(rel, blkno);
-//	buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_NORMAL);
+/* 	buf = ReadBufferExtended(rel, MAIN_FORKNUM, blkno, RBM_NORMAL); */
 
-	//if (access != HASH_NOLOCK)
-	//	LockBuffer(buf, access);
+	/* if (access != HASH_NOLOCK) */
+	/* LockBuffer(buf, access); */
 
 	/* ref count and lock type are correct */
 
@@ -495,7 +502,7 @@ void
 _hash_relbuf_s(VRelation rel, Buffer buf)
 {
 	selog(ERROR, "_hash_relbuf not defined");
-	//ReleaseBuffer(rel, buf);
+	/* ReleaseBuffer(rel, buf); */
 }
 
 /*
@@ -508,7 +515,7 @@ _hash_dropbuf_s(VRelation rel, Buffer buf)
 {
 
 	selog(ERROR, "_hash_dropbuf not defined");
-	//ReleaseBuffer(rel, buf);
+	/* ReleaseBuffer(rel, buf); */
 }
 
 
@@ -600,9 +607,13 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 
 	old_bucket = (new_bucket & metap->hashm_lowmask);
 	start_oblkno = BUCKET_TO_BLKNO_s(metap, old_bucket);
-	//selog(DEBUG1, "expand bucket %d to  bucket %d which has block number %d", old_bucket, new_bucket, start_oblkno);
+
+	/*
+	 * selog(DEBUG1, "expand bucket %d to  bucket %d which has block number
+	 * %d", old_bucket, new_bucket, start_oblkno);
+	 */
 	buf_oblkno = _hash_getbuf_with_condlock_cleanup_s(rel, start_oblkno, LH_BUCKET_PAGE);
-	if (buf_oblkno==-1)
+	if (buf_oblkno == -1)
 		goto fail;
 
 	opage = BufferGetPage_s(rel, buf_oblkno);
@@ -618,6 +629,7 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	 * where we are going to put a new splitpoint's worth of buckets.
 	 */
 	start_nblkno = BUCKET_TO_BLKNO_s(metap, new_bucket);
+
 	/*
 	 * If the split point is increasing we need to allocate a new batch of
 	 * bucket pages.
@@ -636,7 +648,7 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 		buckets_to_add = _hash_get_totalbuckets_s(spare_ndx) - new_bucket;
 		if (!_hash_alloc_buckets_s(rel, start_nblkno, buckets_to_add))
 		{
-			//selog(DEBUG1, "Cant't split due to Block number overflow");
+			/* selog(DEBUG1, "Cant't split due to Block number overflow"); */
 			/* can't split due to BlockNumber overflow */
 			ReleaseBuffer_s(rel, buf_oblkno);
 			goto fail;
@@ -662,7 +674,7 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 		/* Starting a new doubling */
 		metap->hashm_lowmask = metap->hashm_highmask;
 		metap->hashm_highmask = new_bucket | metap->hashm_lowmask;
-		//metap_update_masks = true;
+		/* metap_update_masks = true; */
 	}
 
 	/*
@@ -674,7 +686,7 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 	{
 		metap->hashm_spares[spare_ndx] = metap->hashm_spares[metap->hashm_ovflpoint];
 		metap->hashm_ovflpoint = spare_ndx;
-		//metap_update_splitpoint = true;
+		/* metap_update_splitpoint = true; */
 	}
 	MarkBufferDirty_s(rel, metabuf);
 
@@ -719,9 +731,9 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 
 	/* Relocate records to the new bucket */
 	_hash_splitbucket_s(rel, metabuf,
-					  old_bucket, new_bucket,
-					  buf_oblkno, buf_nblkno,
-					  maxbucket, highmask, lowmask);
+						old_bucket, new_bucket,
+						buf_oblkno, buf_nblkno,
+						maxbucket, highmask, lowmask);
 
 	/* all done, now release the pins on primary buckets. */
 	ReleaseBuffer_s(rel, buf_oblkno);
@@ -733,7 +745,7 @@ _hash_expandtable_s(VRelation rel, Buffer metabuf)
 fail:
 	selog(ERROR, "failed on _hash_expandtable");
 	/* We didn't write the metapage, so just drop lock */
-	//LockBuffer(metabuf, BUFFER_LOCK_UNLOCK);
+	/* LockBuffer(metabuf, BUFFER_LOCK_UNLOCK); */
 }
 
 
@@ -764,61 +776,64 @@ fail:
 static bool
 _hash_alloc_buckets_s(VRelation rel, BlockNumber firstblock, uint32 nblocks)
 {
-	//BlockNumber lastblock;
-	//PGAlignedBlock zerobuf;
-	//Page		page;
-	//HashPageOpaque ovflopaque;
+	/* BlockNumber lastblock; */
+	/* PGAlignedBlock zerobuf; */
+	/* Page		page; */
+	/* HashPageOpaque ovflopaque; */
 
-	//lastblock = firstblock + nblocks - 1;
+	/* lastblock = firstblock + nblocks - 1; */
 
 
 	/**
-	 * This function deviates from the original postgres function logic a it 
+	 * This function deviates from the original postgres function logic a it
 	 * does not initialize the new pages here or uses the postgres storage api
 	 * to expand the index relation buckets.
 	 * Instead it relies on the fact that the underlying oblivious files have
 	 * a fixed set of initialized pages and the soe_bufmgr manages virtual
-	 * pages to enable the index to still grow. As such, it by using the 
+	 * pages to enable the index to still grow. As such, it by using the
 	 * function _hash_getnewbuf_s it requests the soe_bufmgr to allocate
 	 * new virtual pages which can be used by the index.
 	 */
-	int index;
+	int			index;
 
-	for(index=0; index < nblocks; index++){
-		_hash_getnewbuf_s(rel, firstblock+index);
+	for (index = 0; index < nblocks; index++)
+	{
+		_hash_getnewbuf_s(rel, firstblock + index);
 	}
+
 	/*
 	 * Check for overflow in block number calculation; if so, we cannot extend
 	 * the index anymore.
 	 */
-	//if (lastblock < firstblock || lastblock == InvalidBlockNumber)
-	//	return false;
+	/* if (lastblock < firstblock || lastblock == InvalidBlockNumber) */
+	/* return false; */
 
-	//page = (Page) zerobuf.data;
+	/* page = (Page) zerobuf.data; */
 
 	/*
 	 * Initialize the page.  Just zeroing the page won't work; see
 	 * _hash_freeovflpage for similar usage.  We take care to make the special
 	 * space valid for the benefit of tools such as pageinspect.
 	 */
-	/*_hash_pageinit_s(page, BLCKSZ);
 
-	ovflopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
-
-	ovflopaque->hasho_prevblkno = InvalidBlockNumber;
-	ovflopaque->hasho_nextblkno = InvalidBlockNumber;
-	ovflopaque->hasho_bucket = -1;
-	ovflopaque->hasho_flag = LH_UNUSED_PAGE;
-	ovflopaque->hasho_page_id = HASHO_PAGE_ID;
-	ReadBuffer_s(rel, f)*/
 	/*
-		Storage extension is already made by the ocall when initializing the
-		oram files.
+	 * _hash_pageinit_s(page, BLCKSZ);
+	 *
+	 * ovflopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
+	 *
+	 * ovflopaque->hasho_prevblkno = InvalidBlockNumber;
+	 * ovflopaque->hasho_nextblkno = InvalidBlockNumber;
+	 * ovflopaque->hasho_bucket = -1; ovflopaque->hasho_flag = LH_UNUSED_PAGE;
+	 * ovflopaque->hasho_page_id = HASHO_PAGE_ID; ReadBuffer_s(rel, f)
+	 */
 
-	 	RelationOpenSmgr(rel);
-		PageSetChecksumInplace(page, lastblock);
-	  	smgrextend(rel->rd_smgr, MAIN_FORKNUM, lastblock, zerobuf.data, false);
-	*/
+	/*
+	 * Storage extension is already made by the ocall when initializing the
+	 * oram files.
+	 *
+	 * RelationOpenSmgr(rel); PageSetChecksumInplace(page, lastblock);
+	 * smgrextend(rel->rd_smgr, MAIN_FORKNUM, lastblock, zerobuf.data, false);
+	 */
 
 	return true;
 }
@@ -858,14 +873,14 @@ _hash_alloc_buckets_s(VRelation rel, BlockNumber firstblock, uint32 nblocks)
  */
 static void
 _hash_splitbucket_s(VRelation rel,
-				  Buffer metabuf,
-				  Bucket obucket,
-				  Bucket nbucket,
-				  Buffer obuf,
-				  Buffer nbuf,
-				  uint32 maxbucket,
-				  uint32 highmask,
-				  uint32 lowmask)
+					Buffer metabuf,
+					Bucket obucket,
+					Bucket nbucket,
+					Buffer obuf,
+					Buffer nbuf,
+					uint32 maxbucket,
+					uint32 highmask,
+					uint32 lowmask)
 {
 	Buffer		bucket_obuf;
 	Buffer		bucket_nbuf;
@@ -880,20 +895,22 @@ _hash_splitbucket_s(VRelation rel,
 	uint16		nitups = 0;
 
 	bucket_obuf = obuf;
-	//selog(DEBUG1, "Going to split");
-	//selog(DEBUG1, "going to get old page %d", obuf);
+	/* selog(DEBUG1, "Going to split"); */
+	/* selog(DEBUG1, "going to get old page %d", obuf); */
 	opage = BufferGetPage_s(rel, obuf);
 	oopaque = (HashPageOpaque) PageGetSpecialPointer_s(opage);
 
 	bucket_nbuf = nbuf;
-	//selog(DEBUG1, "going to get new page %d", nbuf);
+	/* selog(DEBUG1, "going to get new page %d", nbuf); */
 	npage = BufferGetPage_s(rel, nbuf);
 	nopaque = (HashPageOpaque) PageGetSpecialPointer_s(npage);
 
 	/* Copy the predicate locks from old bucket to new bucket. */
-	/*PredicateLockPageSplit(rel,
-						   BufferGetBlockNumber(bucket_obuf),
-						   BufferGetBlockNumber(bucket_nbuf));*/
+
+	/*
+	 * PredicateLockPageSplit(rel, BufferGetBlockNumber(bucket_obuf),
+	 * BufferGetBlockNumber(bucket_nbuf));
+	 */
 
 	/*
 	 * Partition the tuples in the old bucket between the old bucket and the
@@ -916,27 +933,34 @@ _hash_splitbucket_s(VRelation rel,
 			IndexTuple	itup;
 			Size		itemsz;
 			Bucket		bucket;
-			//bool		found = false;
+
+			/* bool		found = false; */
 
 			/* skip dead tuples */
 			if (ItemIdIsDead_s(PageGetItemId_s(opage, ooffnum)))
 				continue;
-			//selog(DEBUG1, "Accessing item %d in bucket %d", ooffnum, bucket_obuf);
+
+			/*
+			 * selog(DEBUG1, "Accessing item %d in bucket %d", ooffnum,
+			 * bucket_obuf);
+			 */
 			itup = (IndexTuple) PageGetItem_s(opage,
-											PageGetItemId_s(opage, ooffnum));
+											  PageGetItemId_s(opage, ooffnum));
 
 
 			bucket = _hash_hashkey2bucket_s(_hash_get_indextuple_hashkey_s(itup),
-										  maxbucket, highmask, lowmask);
-			//selog(DEBUG1, "Item new bucket is %d", bucket);
+											maxbucket, highmask, lowmask);
+			/* selog(DEBUG1, "Item new bucket is %d", bucket); */
 
 			if (bucket == nbucket)
 			{
-				//selog(DEBUG1, "tuple goes to new page");
+				/* selog(DEBUG1, "tuple goes to new page"); */
 				IndexTuple	new_itup;
+
 				/**
 				 * TODO: CopyIndexTuple has to migrated to inside of the enclave.
 				 */
+
 				/*
 				 * make a copy of index tuple as we have to scribble on it.
 				 */
@@ -955,11 +979,15 @@ _hash_splitbucket_s(VRelation rel,
 				 */
 				itemsz = IndexTupleSize_s(new_itup);
 				itemsz = MAXALIGN_s(itemsz);
-				//selog(DEBUG1, "Checking if no more tuples fit in the new page");
+
+				/*
+				 * selog(DEBUG1, "Checking if no more tuples fit in the new
+				 * page");
+				 */
 
 				if (PageGetFreeSpaceForMultipleTuples_s(npage, nitups + 1) < (all_tups_size + itemsz))
 				{
-					//selog(DEBUG1, "Going to add new tuples to page");
+					/* selog(DEBUG1, "Going to add new tuples to page"); */
 					_hash_pgaddmultitup_s(rel, nbuf, itups, itup_offsets, nitups);
 
 					MarkBufferDirty_s(rel, nbuf);
@@ -971,10 +999,10 @@ _hash_splitbucket_s(VRelation rel,
 						free(itups[i]);
 					nitups = 0;
 					all_tups_size = 0;
-					//selog(DEBUG1, "Going to add new overflow page");
+					/* selog(DEBUG1, "Going to add new overflow page"); */
 					/* chain to a new overflow page */
 					nbuf = _hash_addovflpage_s(rel, metabuf, nbuf, (nbuf == bucket_nbuf) ? true : false);
-					//selog(DEBUG1, "Overflow page is in buffer %d", nbuf);
+					/* selog(DEBUG1, "Overflow page is in buffer %d", nbuf); */
 					npage = BufferGetPage_s(rel, nbuf);
 					nopaque = (HashPageOpaque) PageGetSpecialPointer_s(npage);
 				}
@@ -984,11 +1012,11 @@ _hash_splitbucket_s(VRelation rel,
 			}
 			else
 			{
-				//selog(DEBUG1, "Tuple stays in the same page");
+				/* selog(DEBUG1, "Tuple stays in the same page"); */
 				/*
 				 * the tuple stays on this page, so nothing to do.
 				 */
-				//Assert(bucket == obucket);
+				/* Assert(bucket == obucket); */
 			}
 		}
 
@@ -1005,13 +1033,17 @@ _hash_splitbucket_s(VRelation rel,
 			 * Change the shared buffer state in critical section, otherwise
 			 * any error could make it unrecoverable.
 			 */
-			//selog(DEBUG1, "No more overflow pages. Adding tuples to buffer %d", nbuf);
+			/*
+			 * selog(DEBUG1, "No more overflow pages. Adding tuples to buffer
+			 * %d", nbuf);
+			 */
 			_hash_pgaddmultitup_s(rel, nbuf, itups, itup_offsets, nitups);
 			MarkBufferDirty_s(rel, nbuf);
 
 
-			if (nbuf != bucket_nbuf){
-				//selog(DEBUG1, "1 - Going to release buffer %d", nbuf);
+			if (nbuf != bucket_nbuf)
+			{
+				/* selog(DEBUG1, "1 - Going to release buffer %d", nbuf); */
 				ReleaseBuffer_s(rel, nbuf);
 			}
 
@@ -1021,7 +1053,7 @@ _hash_splitbucket_s(VRelation rel,
 			break;
 		}
 
-		//selog(DEBUG1, "Advance to the next old page %d", oblkno);
+		/* selog(DEBUG1, "Advance to the next old page %d", oblkno); */
 		/* Else, advance to next old page */
 		obuf = _hash_getbuf_s(rel, oblkno, HASH_READ, LH_OVERFLOW_PAGE);
 		opage = BufferGetPage_s(rel, obuf);
@@ -1036,12 +1068,12 @@ _hash_splitbucket_s(VRelation rel,
 	 * To avoid deadlocks due to locking order of buckets, first lock the old
 	 * bucket and then the new bucket.
 	 */
-	//selog(DEBUG1, "Going to update pages flags after split");
-	//LockBuffer(bucket_obuf, BUFFER_LOCK_EXCLUSIVE);
+	/* selog(DEBUG1, "Going to update pages flags after split"); */
+	/* LockBuffer(bucket_obuf, BUFFER_LOCK_EXCLUSIVE); */
 	opage = BufferGetPage_s(rel, bucket_obuf);
 	oopaque = (HashPageOpaque) PageGetSpecialPointer_s(opage);
 
-	//LockBuffer(bucket_nbuf, BUFFER_LOCK_EXCLUSIVE);
+	/* LockBuffer(bucket_nbuf, BUFFER_LOCK_EXCLUSIVE); */
 	npage = BufferGetPage_s(rel, bucket_nbuf);
 	nopaque = (HashPageOpaque) PageGetSpecialPointer_s(npage);
 
@@ -1073,13 +1105,17 @@ _hash_splitbucket_s(VRelation rel,
 	 * pages have been allocated.  Note that there's no need to clean up the
 	 * new bucket.
 	 */
-	//if (IsBufferCleanupOK(bucket_obuf))
-	//{
-	//selog(DEBUG1, "Going to cleanup bucket %d with buffer %d", obucket, bucket_obuf);
+	/* if (IsBufferCleanupOK(bucket_obuf)) */
+	/* { */
+
+	/*
+	 * selog(DEBUG1, "Going to cleanup bucket %d with buffer %d", obucket,
+	 * bucket_obuf);
+	 */
 	hashbucketcleanup_s(rel, obucket, bucket_obuf,
-					  BufferGetBlockNumber_s(bucket_obuf),
-					  maxbucket, highmask, lowmask);
-	//}
+						BufferGetBlockNumber_s(bucket_obuf),
+						maxbucket, highmask, lowmask);
+	/* } */
 }
 
 /*
@@ -1093,22 +1129,22 @@ _hash_splitbucket_s(VRelation rel,
  *	We refresh the cache if it's not initialized yet or force_refresh is true.
  */
 HashMetaPage
-_hash_getcachedmetap_s(VRelation rel, Buffer *metabuf, bool force_refresh)
+_hash_getcachedmetap_s(VRelation rel, Buffer * metabuf, bool force_refresh)
 {
 	Page		page;
 
-	//Assert(metabuf);
+	/* Assert(metabuf); */
 	if (force_refresh || rel->rd_amcache == NULL)
 	{
 
 		*metabuf = _hash_getbuf_s(rel, HASH_METAPAGE, HASH_READ,
-									LH_META_PAGE);
+								  LH_META_PAGE);
 		page = BufferGetPage_s(rel, *metabuf);
 
 		/* Populate the cache. */
 		if (rel->rd_amcache == NULL)
-			//selog(DEBUG1, "Creating cache for hash page meta");
-			rel->rd_amcache = (char*) malloc(sizeof(HashMetaPageData));
+			/* selog(DEBUG1, "Creating cache for hash page meta"); */
+			rel->rd_amcache = (char *) malloc(sizeof(HashMetaPageData));
 
 		memcpy(rel->rd_amcache, HashPageGetMeta_s(page),
 			   sizeof(HashMetaPageData));
@@ -1137,7 +1173,7 @@ _hash_getcachedmetap_s(VRelation rel, Buffer *metabuf, bool force_refresh)
  */
 Buffer
 _hash_getbucketbuf_from_hashkey_s(VRelation rel, uint32 hashkey, int access,
-								HashMetaPage cachedmetap)
+								  HashMetaPage cachedmetap)
 {
 	HashMetaPage metap;
 	Buffer		buf;
@@ -1149,23 +1185,26 @@ _hash_getbucketbuf_from_hashkey_s(VRelation rel, uint32 hashkey, int access,
 
 
 	/* We read from target bucket buffer, hence locking is must. */
-	//Assert(access == HASH_READ || access == HASH_WRITE);
+	/* Assert(access == HASH_READ || access == HASH_WRITE); */
 
-	if(cachedmetap == NULL){
+	if (cachedmetap == NULL)
+	{
 		metabuf = _hash_getbuf_s(rel, HASH_METAPAGE, HASH_READ,
-									LH_META_PAGE);
+								 LH_META_PAGE);
 
-		metap = HashPageGetMeta_s(BufferGetPage_s(rel,metabuf));
-	}else{
+		metap = HashPageGetMeta_s(BufferGetPage_s(rel, metabuf));
+	}
+	else
+	{
 		metap = cachedmetap;
 	}
-	//metap = //_hash_getcachedmetap_s(rel, &metabuf, false);
-	//Assert(metap != NULL);
+	/* metap = //_hash_getcachedmetap_s(rel, &metabuf, false); */
+	/* Assert(metap != NULL); */
 
 	/*
-	 * Loop until we get a lock on the correct target bucket.
-	 * In this implementation the loop dosen't do anything, because 
-	 * there are no concurrent hash splits.
+	 * Loop until we get a lock on the correct target bucket. In this
+	 * implementation the loop dosen't do anything, because there are no
+	 * concurrent hash splits.
 	 */
 	for (;;)
 	{
@@ -1173,42 +1212,51 @@ _hash_getbucketbuf_from_hashkey_s(VRelation rel, uint32 hashkey, int access,
 		 * Compute the target bucket number, and convert to block number.
 		 */
 		bucket = _hash_hashkey2bucket_s(hashkey,
-									  metap->hashm_maxbucket,
-									  metap->hashm_highmask,
-									  metap->hashm_lowmask);
-		//selog(DEBUG1, "Bucket chosen was %d", bucket);
+										metap->hashm_maxbucket,
+										metap->hashm_highmask,
+										metap->hashm_lowmask);
+		/* selog(DEBUG1, "Bucket chosen was %d", bucket); */
 		blkno = BUCKET_TO_BLKNO_s(metap, bucket);
-		//selog(DEBUG1, "Block number chosen was %d", blkno);
+		/* selog(DEBUG1, "Block number chosen was %d", blkno); */
 		/* Fetch the primary bucket page for the bucket */
 		buf = _hash_getbuf_s(rel, blkno, access, LH_BUCKET_PAGE);
-		//selog(DEBUG1, "Going to get page %d", buf);
+		/* selog(DEBUG1, "Going to get page %d", buf); */
 		page = BufferGetPage_s(rel, buf);
 		opaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
-		//Assert(opaque->hasho_bucket == bucket);
-		//Assert(opaque->hasho_prevblkno != InvalidBlockNumber);
-		//selog(DEBUG1, "Page retrieved %d", opaque->o_blkno);
+		/* Assert(opaque->hasho_bucket == bucket); */
+		/* Assert(opaque->hasho_prevblkno != InvalidBlockNumber); */
+		/* selog(DEBUG1, "Page retrieved %d", opaque->o_blkno); */
+
 		/*
 		 * If this bucket hasn't been split, we're done.
 		 */
-		//selog(DEBUG1, "bucket chosen was %d and has prevlkno %d with meta max bucket %d", blkno, opaque->hasho_prevblkno, metap->hashm_maxbucket);
+
+		/*
+		 * selog(DEBUG1, "bucket chosen was %d and has prevlkno %d with meta
+		 * max bucket %d", blkno, opaque->hasho_prevblkno,
+		 * metap->hashm_maxbucket);
+		 */
 		if (opaque->hasho_prevblkno <= metap->hashm_maxbucket)
 			break;
 
 		/* Drop lock on this buffer, update cached metapage, and retry. */
-		/*In the prototype there is no need to reload metapage because there
+
+		/*
+		 * In the prototype there is no need to reload metapage because there
 		 * are no concurrent splits.
 		 */
-		//metap = _hash_getcachedmetap(rel, &metabuf, true);
-		//Assert(metap != NULL);
+		/* metap = _hash_getcachedmetap(rel, &metabuf, true); */
+		/* Assert(metap != NULL); */
 	}
 
-	//No locks to release
-	if (BufferIsValid_s(rel, metabuf)){
+	/* No locks to release */
+	if (BufferIsValid_s(rel, metabuf))
+	{
 		ReleaseBuffer_s(rel, metabuf);
 	}
 
-	//if (cachedmetap)
-	//	*cachedmetap = metap;
+	/* if (cachedmetap) */
+	/* *cachedmetap = metap; */
 
 	return buf;
 }

@@ -16,9 +16,8 @@
 typedef struct IndexScanDescData
 {
 	/* scan parameters */
-	//VRelation	heapRelation;	/* heap relation descriptor, or NULL */
-	VRelation	indexRelation;	/* index relation descriptor */
-	OSTRelation ost;			/* Data to scan with the OST protocol*/
+	VRelation indexRelation;	/* index relation descriptor */
+	OSTRelation ost;			/* Data to scan with the OST protocol */
 	ScanKey		keyData;		/* array of index qualifier descriptors */
 
 
@@ -32,7 +31,8 @@ typedef struct IndexScanDescData
 	/* state data for traversing HOT chains in index_getnext */
 	bool		xs_continue_hot;	/* T if must keep walking HOT chain */
 
-	unsigned int opoid; //oid of where comparison clause.
+	unsigned int opoid;
+	/* oid of where comparison clause. */
 
 
 }			IndexScanDescData;
@@ -41,4 +41,4 @@ typedef struct IndexScanDescData
 /* struct definitions appear in relscan.h */
 typedef struct IndexScanDescData *IndexScanDesc;
 
-#endif							/* SOE_RELSCAN_H */
+#endif              /* SOE_RELSCAN_H*/

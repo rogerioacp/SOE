@@ -40,14 +40,14 @@
  */
 IndexTuple
 _bt_checkkeys_ost(IndexScanDesc scan,
-			  Page page, OffsetNumber offnum,
-			  bool *continuescan)
+				  Page page, OffsetNumber offnum,
+				  bool *continuescan)
 {
 	ItemId		iid = PageGetItemId_s(page, offnum);
 	IndexTuple	tuple;
-	char*		keyValue;
-	char* 		datum;
-	int 		test;
+	char	   *keyValue;
+	char	   *datum;
+	int			test;
 
 
 	*continuescan = false;		/* default assumption */
@@ -64,19 +64,22 @@ _bt_checkkeys_ost(IndexScanDesc scan,
 
 	tuple = (IndexTuple) PageGetItem_s(page, iid);
 	datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(tuple)));
-	//selog(DEBUG1, "Current datum is %s", datum);
-	//datumSize = strlen(datum)+1;
+	/* selog(DEBUG1, "Current datum is %s", datum); */
+	/* datumSize = strlen(datum)+1; */
 	keyValue = scan->keyData->sk_argument;
-	//the prototype assumes string comparisons
+	/* the prototype assumes string comparisons */
 	test = (int32) strcmp(datum, keyValue);
 	/**
 	* Look at soe_nbtsearch.c function _bt_first_s to which operations the
 	* opoids correspond to.
 	*/
-	if((scan->opoid == 1058 && test<0) || (scan->opoid == 1059 && test <=0) || (scan->opoid == 1054 && test == 0) || (scan->opoid == 1061 && test >=0) || (scan->opoid == 1060 && test >0)){
+	if ((scan->opoid == 1058 && test < 0) || (scan->opoid == 1059 && test <= 0) || (scan->opoid == 1054 && test == 0) || (scan->opoid == 1061 && test >= 0) || (scan->opoid == 1060 && test > 0))
+	{
 		*continuescan = true;
 		return tuple;
-	}else{
+	}
+	else
+	{
 		*continuescan = false;
 		return NULL;
 
@@ -89,7 +92,7 @@ _bt_checkkeys_ost(IndexScanDesc scan,
 void
 _bt_freestack_ost(BTStackOST stack)
 {
-	BTStackOST		ostack;
+	BTStackOST	ostack;
 
 	while (stack != NULL)
 	{

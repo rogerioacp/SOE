@@ -98,7 +98,7 @@ typedef struct
 {
 	uint32		xlogid;			/* high bits */
 	uint32		xrecoff;		/* low bits */
-} PageXLogRecPtr;
+}			PageXLogRecPtr;
 
 
 /*
@@ -160,9 +160,9 @@ typedef struct PageHeaderData
 	uint16		pd_pagesize_version;
 	TransactionId pd_prune_xid; /* oldest prunable XID, or zero if none */
 	ItemIdData	pd_linp[FLEXIBLE_ARRAY_MEMBER]; /* line pointer array */
-} PageHeaderData;
+}			PageHeaderData;
 
-typedef PageHeaderData *PageHeader;
+typedef PageHeaderData * PageHeader;
 
 /*
  * line pointer(s) do not count as part of header
@@ -232,7 +232,7 @@ typedef PageHeaderData *PageHeader;
 						((overwrite) ? PAI_OVERWRITE : 0) | \
 						((is_heap) ? PAI_IS_HEAP : 0))
 
-	
+
 
 /*
  * PageGetPageSize
@@ -281,7 +281,7 @@ typedef PageHeaderData *PageHeader;
 	(((PageHeader) (page))->pd_lower <= SizeOfPageHeaderData ? 0 : \
 	 ((((PageHeader) (page))->pd_lower - SizeOfPageHeaderData) \
 	  / sizeof(ItemIdData)))
-	
+
 /*
  * PageGetContents
  *		To be used in case the page does not contain item pointers.
@@ -318,15 +318,15 @@ typedef PageHeaderData *PageHeader;
  */
 
 extern void PageInit_s(Page page, Size pageSize, Size specialSize);
-extern void PageIndexMultiDelete_s(Page page, OffsetNumber *itemnos, int nitems);
+extern void PageIndexMultiDelete_s(Page page, OffsetNumber * itemnos, int nitems);
 extern Size PageGetHeapFreeSpace_s(Page page);
 extern Size PageGetFreeSpace_s(Page page);
 extern OffsetNumber PageAddItemExtended_s(Page page, Item item, Size size,
-					OffsetNumber offsetNumber, int flags);
+										  OffsetNumber offsetNumber, int flags);
 extern Size PageGetFreeSpaceForMultipleTuples_s(Page page, int ntups);
 extern IndexTuple CopyIndexTuple_s(IndexTuple source);
 extern Page PageGetTempPage_s(Page page);
 extern Size PageGetExactFreeSpace_s(Page page);
 extern void PageRestoreTempPage_s(Page tempPage, Page oldPage);
 
-#endif /* SOE_BUFPAGE_H */
+#endif                  /*SOE_BUFPAGE_H*/

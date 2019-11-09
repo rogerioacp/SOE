@@ -1,8 +1,8 @@
 /*-------------------------------------------------------------------------
  *
  * soe_nbtree.c
- * Bare bones copy of the Implementation of Lehman and Yao's btree management 
- * algorithm for Postgres. This implementation iis developed to be executed 
+ * Bare bones copy of the Implementation of Lehman and Yao's btree management
+ * algorithm for Postgres. This implementation iis developed to be executed
  * inside a secure enclave.
  *
  * NOTES
@@ -62,19 +62,19 @@
  *		new tuple, and put it there.
  */
 bool
-btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_ctid,  char* datum, unsigned int datumSize)
+btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_ctid, char *datum, unsigned int datumSize)
 {
 	bool		result;
 	IndexTuple	itup;
 
 	Datum		index_values[1];
 	bool		index_isnull[1];
-	
+
 	index_values[0] = PointerGetDatum_s(datum);
 	index_isnull[0] = false;
 
-	//enable 
-	//bool checkUnique = UNIQUE_CHECK_NO; //enable duplicate?
+	/* enable  */
+	/* bool checkUnique = UNIQUE_CHECK_NO; //enable duplicate? */
 	/* generate an index tuple */
 	itup = index_form_tuple_s(indexRel->tDesc, index_values, index_isnull);
 	itup->t_tid = *ht_ctid;
@@ -101,41 +101,43 @@ btgettuple_s(IndexScanDesc scan)
 	 * scan.  We can't do this in btrescan because we don't know the scan
 	 * direction at that time.
 	 */
-	//if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos))
-	//{
-		/* punt if we have any unsatisfiable array keys */
-	//	if (so->numArrayKeys < 0)
-	//		return false;
-//
-//		_bt_start_array_keys(scan, dir);
-//	}
+	/* if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos)) */
+	/* { */
+	/* punt if we have any unsatisfiable array keys */
+	/* if (so->numArrayKeys < 0) */
+	/* return false; */
+/*  */
+/* 		_bt_start_array_keys(scan, dir); */
+/* 	} */
 
 	/* This loop handles advancing to the next array elements, if any */
-	//do
-	//{
-		/*
-		 * If we've already initialized this scan, we can just advance it in
-		 * the appropriate direction.  If we haven't done so yet, we call
-		 * _bt_first() to get the first item in the scan.
-		 */
-		if (!BTScanPosIsValid_s(so->currPos)){
-			//selog(DEBUG1, "Going to first scan");
-			res = _bt_first_s(scan);
-		}
-		else
-		{
-			//selog(DEBUG1, "Going to continue for next");
-			/*
-			 * Now continue the scan.
-			 */
-			res = _bt_next_s(scan);
-		}
+	/* do */
+	/* { */
 
-		/* If we have a tuple, return it ... */
-		//if (res)
-		//	break;
-		/* ... otherwise see if we have more array keys to deal with */
-	//} while (so->numArrayKeys && _bt_advance_array_keys(scan, dir));
+	/*
+	 * If we've already initialized this scan, we can just advance it in the
+	 * appropriate direction.  If we haven't done so yet, we call _bt_first()
+	 * to get the first item in the scan.
+	 */
+	if (!BTScanPosIsValid_s(so->currPos))
+	{
+		/* selog(DEBUG1, "Going to first scan"); */
+		res = _bt_first_s(scan);
+	}
+	else
+	{
+		/* selog(DEBUG1, "Going to continue for next"); */
+		/*
+		 * Now continue the scan.
+		 */
+		res = _bt_next_s(scan);
+	}
+
+	/* If we have a tuple, return it ... */
+	/* if (res) */
+	/* break; */
+	/* ... otherwise see if we have more array keys to deal with */
+	/* } while (so->numArrayKeys && _bt_advance_array_keys(scan, dir)); */
 
 	return res;
 }
@@ -144,15 +146,15 @@ btgettuple_s(IndexScanDesc scan)
  *	btbeginscan() -- start a scan on a btree index
  */
 IndexScanDesc
-btbeginscan_s(VRelation rel, const char* key, int keysize)
+btbeginscan_s(VRelation rel, const char *key, int keysize)
 {
 	IndexScanDesc scan;
 	BTScanOpaque so;
-	ScanKey scanKey;
+	ScanKey		scanKey;
 
 	scanKey = (ScanKey) malloc(sizeof(ScanKeyData));
 	scanKey->sk_subtype = rel->foid;
-	scanKey->sk_argument = (char*) malloc(keysize);
+	scanKey->sk_argument = (char *) malloc(keysize);
 	memcpy(scanKey->sk_argument, key, keysize);
 	scanKey->datumSize = keysize;
 
@@ -160,9 +162,12 @@ btbeginscan_s(VRelation rel, const char* key, int keysize)
 	so = (BTScanOpaque) malloc(sizeof(BTScanOpaqueData));
 	BTScanPosInvalidate_s(so->currPos);
 	BTScanPosInvalidate_s(so->markPos);
-	/*so->keyData = malloc(sizeof(ScanKeyData));
-	so->arrayKeyData = NULL;
-	so->numArrayKeys = 0;*/
+
+	/*
+	 * so->keyData = malloc(sizeof(ScanKeyData)); so->arrayKeyData = NULL;
+	 * so->numArrayKeys = 0;
+	 */
+
 	/*
 	 * We don't know yet whether the scan will be index-only, so we do not
 	 * allocate the tuple workspace arrays until btrescan.  However, we set up
@@ -198,11 +203,10 @@ btendscan_s(IndexScanDesc scan)
 	/* No need to invalidate positions, the RAM is about to be freed. */
 
 	/* Release storage */
-	//if (so->keyData != NULL)
+	/* if (so->keyData != NULL) */
 	free(scan->keyData->sk_argument);
 	free(scan->keyData);
 	/* so->markTuples should not be pfree'd, see btrescan */
 	free(so);
 	free(scan);
 }
-

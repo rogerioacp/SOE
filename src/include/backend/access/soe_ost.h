@@ -1,7 +1,7 @@
 /*-------------------------------------------------------------------------
  *
  * soe_ost.h
- * Bare bones copy of header file for postgres btree access method to 
+ * Bare bones copy of header file for postgres btree access method to
  * implement OSTree protocol.
  *
  *
@@ -57,14 +57,15 @@ typedef struct BTPageOpaqueDataOST
 	union
 	{
 		uint32		level;		/* tree level --- zero for leaf pages */
-		TransactionId xact; /* next transaction ID, if deleted */
-		uint32       o_blkno; //used to store original block number inside soe
+		TransactionId xact;		/* next transaction ID, if deleted */
+		uint32		o_blkno;
+		/* used to store original block number inside soe */
 	}			btpo;
 	uint16		btpo_flags;		/* flag bits, see below */
-	BTCycleId_OST	btpo_cycleid;	/* vacuum cycle ID of latest split */
-} BTPageOpaqueDataOST;
+	BTCycleId_OST btpo_cycleid; /* vacuum cycle ID of latest split */
+}			BTPageOpaqueDataOST;
 
-typedef BTPageOpaqueDataOST *BTPageOpaqueOST;
+typedef BTPageOpaqueDataOST * BTPageOpaqueOST;
 
 /* Bits defined in btpo_flags */
 #define BTP_LEAF_OST		(1 << 0)	/* leaf page, i.e. not internal page */
@@ -74,7 +75,8 @@ typedef BTPageOpaqueDataOST *BTPageOpaqueOST;
 #define BTP_HALF_DEAD_OST	(1 << 4)	/* empty, but still in tree */
 #define BTP_SPLIT_END_OST	(1 << 5)	/* rightmost page of split group */
 #define BTP_HAS_GARBAGE_OST (1 << 6)	/* page has LP_DEAD tuples */
-#define BTP_INCOMPLETE_SPLI_OST (1 << 7)	/* right sibling's downlink is missing */
+#define BTP_INCOMPLETE_SPLI_OST (1 << 7)	/* right sibling's downlink is
+											 * missing */
 
 
 
@@ -98,12 +100,12 @@ typedef struct BTMetaPageDataOST
 										 * pages */
 	float8		btm_last_cleanup_num_heap_tuples;	/* number of heap tuples
 													 * during last cleanup */
-} BTMetaPageDataOST;
+}			BTMetaPageDataOST;
 
 
-#define BTREE_METAPAGE_OST	0		/* first page is meta */
+#define BTREE_METAPAGE_OST	0	/* first page is meta */
 #define BTREE_MAGIC_OST		0x053162	/* magic number of btree pages */
-#define BTREE_VERSION_OST	3		/* current version number */
+#define BTREE_VERSION_OST	3	/* current version number */
 #define BTREE_MIN_VERSION_OST	2	/* minimal supported version number */
 
 /*
@@ -237,9 +239,9 @@ typedef struct BTStackDataOST
 	OffsetNumber bts_offset;
 	BlockNumber bts_btentry;
 	struct BTStackDataOST *bts_parent;
-} BTStackDataOST;
+}			BTStackDataOST;
 
-typedef BTStackDataOST *BTStackOST;
+typedef BTStackDataOST * BTStackOST;
 
 /*
  * BTScanOpaqueData is the btree-private state needed for an indexscan.
@@ -267,12 +269,12 @@ typedef BTStackDataOST *BTStackOST;
  * offset within that array.
  */
 
-typedef struct BTScanPosItemOST	/* what we remember about each match */
+typedef struct BTScanPosItemOST /* what we remember about each match */
 {
 	ItemPointerData heapTid;	/* TID of referenced heap item */
 	OffsetNumber indexOffset;	/* index item's location within page */
 	LocationIndex tupleOffset;	/* IndexTuple's offset in workspace, if any */
-} BTScanPosItemOST;
+}			BTScanPosItemOST;
 
 typedef struct BTScanPosDataOST
 {
@@ -307,10 +309,10 @@ typedef struct BTScanPosDataOST
 	int			lastItem;		/* last valid index in items[] */
 	int			itemIndex;		/* current index in items[] */
 
-	BTScanPosItemOST items[MaxIndexTuplesPerPage]; /* MUST BE LAST */
-} BTScanPosDataOST;
+	BTScanPosItemOST items[MaxIndexTuplesPerPage];	/* MUST BE LAST */
+}			BTScanPosDataOST;
 
-typedef BTScanPosDataOST *BTScanPosOST;
+typedef BTScanPosDataOST * BTScanPosOST;
 
 
 #define BTScanPosIsValid_OST(scanpos) \
@@ -365,17 +367,17 @@ typedef struct BTScanOpaqueDataOST
 	int			markItemIndex;	/* itemIndex, or -1 if not valid */
 
 	/* keep these last in struct for efficiency */
-	BTScanPosDataOST currPos;		/* current position data */
-	BTScanPosDataOST markPos;		/* marked position, if any */
-} BTScanOpaqueDataOST;
+	BTScanPosDataOST currPos;	/* current position data */
+	BTScanPosDataOST markPos;	/* marked position, if any */
+}			BTScanOpaqueDataOST;
 
-typedef BTScanOpaqueDataOST *BTScanOpaqueOST;
+typedef BTScanOpaqueDataOST * BTScanOpaqueOST;
 
 /*
  * external entry points for btree, in nbtree.c
  */
-extern bool insert_ost(OSTRelation relstate, char* block, int level, int offset);
-extern IndexScanDesc btbeginscan_ost(OSTRelation rel, const char* key, int keysize);
+extern bool insert_ost(OSTRelation relstate, char *block, int level, int offset);
+extern IndexScanDesc btbeginscan_ost(OSTRelation rel, const char *key, int keysize);
 extern bool btgettuple_ost(IndexScanDesc scan);
 extern void btendscan_ost(IndexScanDesc scan);
 
@@ -396,12 +398,12 @@ extern void _bt_pageinit_ost(Page page, Size size);
  * prototypes for functions in nbtsearch.c
  */
 extern BTStackOST _bt_search_ost(OSTRelation rel,
-		   int keysz, ScanKey scankey, bool nextkey,
-		   Buffer *bufP, int access);
+								 int keysz, ScanKey scankey, bool nextkey,
+								 Buffer * bufP, int access);
 extern OffsetNumber _bt_binsrch_ost(OSTRelation rel, Buffer buf, int keysz,
-			ScanKey scankey, bool nextkey);
+									ScanKey scankey, bool nextkey);
 extern int32 _bt_compare_ost(OSTRelation rel, int keysz, ScanKey scankey,
-			Page page, OffsetNumber offnum);
+							 Page page, OffsetNumber offnum);
 extern bool _bt_first_ost(IndexScanDesc scan);
 extern bool _bt_next_ost(IndexScanDesc scan);
 
@@ -409,12 +411,12 @@ extern bool _bt_next_ost(IndexScanDesc scan);
 /*
  * prototypes for functions in nbtutils.c
  */
-extern ScanKey _bt_mkscankey_ost(OSTRelation rel, IndexTuple itup, char* datum, int dsize);
+extern ScanKey _bt_mkscankey_ost(OSTRelation rel, IndexTuple itup, char *datum, int dsize);
 extern void _bt_freeskey_ost(ScanKey skey);
 extern void _bt_freestack_ost(BTStackOST stack);
 extern IndexTuple _bt_checkkeys_ost(IndexScanDesc scan,
-			  Page page, OffsetNumber offnum, bool *continuescan);
-extern int bpchartruelen_ost(char *s, int len);
+									Page page, OffsetNumber offnum, bool *continuescan);
+extern int	bpchartruelen_ost(char *s, int len);
 
 extern unsigned int getRandomInt_nb_ost(void);
 

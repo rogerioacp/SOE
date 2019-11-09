@@ -78,10 +78,12 @@ _hash_ovflblkno_to_bitno_s(HashMetaPage metap, BlockNumber ovflblkno)
 			bitnum <= metap->hashm_spares[i])
 			return bitnum - 1;	/* -1 to convert 1-based to 0-based */
 	}
-	//Log error
-	/*ereport(ERROR,
-			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errmsg("invalid overflow block number %u", ovflblkno)));*/
+	/* Log error */
+
+	/*
+	 * ereport(ERROR, (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+	 * errmsg("invalid overflow block number %u", ovflblkno)));
+	 */
 	return 0;					/* keep compiler quiet */
 }
 
@@ -153,7 +155,7 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 	{
 		BlockNumber nextblkno;
 
-		page = BufferGetPage_s(rel,buf);
+		page = BufferGetPage_s(rel, buf);
 		pageopaque = (HashPageOpaque) PageGetSpecialPointer_s(page);
 		nextblkno = pageopaque->hasho_nextblkno;
 
@@ -162,7 +164,7 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 
 		buf = _hash_getbuf_s(rel, nextblkno, HASH_WRITE, LH_OVERFLOW_PAGE);
 	}
-	//selog(DEBUG1, "tail page is %d", buf);
+	/* selog(DEBUG1, "tail page is %d", buf); */
 	/* Get exclusive lock on the meta page */
 
 	_hash_checkpage_s(rel, metabuf, LH_META_PAGE);
@@ -170,7 +172,7 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 
 	/* start search at hashm_firstfree */
 	orig_firstfree = metap->hashm_firstfree;
-	//selog(DEBUG1, "origin_firsttree %d", orig_firstfree);
+	/* selog(DEBUG1, "origin_firsttree %d", orig_firstfree); */
 	first_page = orig_firstfree >> BMPG_SHIFT_s(metap);
 	bit = orig_firstfree & BMPG_MASK_s(metap);
 	i = first_page;
@@ -193,7 +195,7 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 		if (i > last_page)
 			break;
 
-		//Assert(i < metap->hashm_nmaps);
+		/* Assert(i < metap->hashm_nmaps); */
 		mapblkno = metap->hashm_mapp[i];
 
 		if (i == last_page)
@@ -202,14 +204,14 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 			last_inpage = BMPGSZ_BIT_s(metap) - 1;
 
 		mapbuf = _hash_getbuf_s(rel, mapblkno, HASH_WRITE, LH_BITMAP_PAGE);
-		//selog(DEBUG1, "bitmap inner loop ggetting bucket %d", mapbuf);
+		/* selog(DEBUG1, "bitmap inner loop ggetting bucket %d", mapbuf); */
 
 		mappage = BufferGetPage_s(rel, mapbuf);
 		freep = HashPageGetBitmap_s(mappage);
 
 		for (; bit <= last_inpage; j++, bit += BITS_PER_MAP)
 		{
-			//selog(DEBUG1, "Going through ?");
+			/* selog(DEBUG1, "Going through ?"); */
 			if (freep[j] != ALL_SET)
 			{
 				page_found = true;
@@ -222,7 +224,11 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 				bit += (i << BMPG_SHIFT_s(metap));
 				/* Calculate address of the recycled overflow page */
 				blkno = bitno_to_blkno_s(metap, bit);
-				//selog(DEBUG1, "Fetching and initializing reclining page %d", blkno);
+
+				/*
+				 * selog(DEBUG1, "Fetching and initializing reclining page
+				 * %d", blkno);
+				 */
 				/* Fetch and init the recycled page */
 				ovflbuf = _hash_getinitbuf_s(rel, blkno);
 
@@ -232,17 +238,18 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 
 		/* No free space here, try to advance to next map page */
 		ReleaseBuffer_s(rel, mapbuf);
-		//_hash_relbuf(rel, mapbuf);
+		/* _hash_relbuf(rel, mapbuf); */
 		mapbuf = InvalidBuffer;
 		i++;
 		j = 0;					/* scan from start of next map page */
 		bit = 0;
 
 		/* Reacquire exclusive lock on the meta page */
-		//LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
+		/* LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE); */
 	}
 
-	//selog(DEBUG1, "No Free pages, going to extend relation");
+	/* selog(DEBUG1, "No Free pages, going to extend relation"); */
+
 	/*
 	 * No free pages --- have to extend the relation to add an overflow page.
 	 * First, check to see if we have to add a new bitmap page too.
@@ -260,20 +267,21 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 		bit = metap->hashm_spares[splitnum];
 
 		/* metapage already has a write lock */
-		if (metap->hashm_nmaps >= HASH_MAX_BITMAPS){
-			//selog(ERROR, "out of overflow pages in hash index");
+		if (metap->hashm_nmaps >= HASH_MAX_BITMAPS)
+		{
+			/* selog(ERROR, "out of overflow pages in hash index"); */
 		}
-			//Log error
-			//ereport(ERROR,
-			//		(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-			//		 errmsg("out of overflow pages in hash index \"%s\"",
-			//				RelationGetRelationName(rel))));
+		/* Log error */
+		/* ereport(ERROR, */
+		/* (errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED), */
+		/* errmsg("out of overflow pages in hash index \"%s\"", */
+		/* RelationGetRelationName(rel)))); */
 
 		newmapbuf = _hash_getnewbuf_s(rel, bitno_to_blkno_s(metap, bit));
 	}
 	else
 	{
-		//selog(DEBUG1, "A new page can not be added");
+		/* selog(DEBUG1, "A new page can not be added"); */
 		/*
 		 * Nothing to do here; since the page will be past the last used page,
 		 * we know its bitmap bit was preinitialized to "in use".
@@ -284,7 +292,8 @@ _hash_addovflpage_s(VRelation rel, Buffer metabuf, Buffer buf, bool retain_pin)
 	bit = BufferIsValid_s(rel, newmapbuf) ?
 		metap->hashm_spares[splitnum] + 1 : metap->hashm_spares[splitnum];
 	blkno = bitno_to_blkno_s(metap, bit);
-	//selog(DEBUG1, "overflow bucket number is %d", blkno);
+	/* selog(DEBUG1, "overflow bucket number is %d", blkno); */
+
 	/*
 	 * Fetch the page with _hash_getnewbuf to ensure smgr's idea of the
 	 * relation length stays in sync with ours.  XXX It's annoying to do this
@@ -307,21 +316,24 @@ found:
 
 	if (page_found)
 	{
-		//Assert(BufferIsValid(rel, mapbuf));
-		//selog(DEBUG1, "Going to set bit");
+		/* Assert(BufferIsValid(rel, mapbuf)); */
+		/* selog(DEBUG1, "Going to set bit"); */
 		/* mark page "in use" in the bitmap */
 		SETBIT_s(freep, bitmap_page_bit);
 		MarkBufferDirty_s(rel, mapbuf);
 	}
 	else
 	{
-		//selog(DEBUG1, "Update metapages spars count");
+		/* selog(DEBUG1, "Update metapages spars count"); */
 		/* update the count to indicate new overflow page is added */
 		metap->hashm_spares[splitnum]++;
 
 		if (BufferIsValid_s(rel, newmapbuf))
 		{
-			//selog(DEBUG1, "Going to initalize a new bitmap page %d", newmapbuf);
+			/*
+			 * selog(DEBUG1, "Going to initalize a new bitmap page %d",
+			 * newmapbuf);
+			 */
 			_hash_initbitmapbuffer_s(rel, newmapbuf, metap->hashm_bmsize, false);
 			MarkBufferDirty_s(rel, newmapbuf);
 
@@ -345,12 +357,12 @@ found:
 	 */
 	if (metap->hashm_firstfree == orig_firstfree)
 	{
-		//selog(DEBUG1, "Adjusting metabufer first tree");
+		/* selog(DEBUG1, "Adjusting metabufer first tree"); */
 		metap->hashm_firstfree = bit + 1;
 		MarkBufferDirty_s(rel, metabuf);
 	}
 
-	//selog(DEBUG1, "Initalizing new overflow page %d", ovflbuf);
+	/* selog(DEBUG1, "Initalizing new overflow page %d", ovflbuf); */
 	/* initialize new overflow page */
 	ovflpage = BufferGetPage_s(rel, ovflbuf);
 	ovflopaque = (HashPageOpaque) PageGetSpecialPointer_s(ovflpage);
@@ -367,7 +379,7 @@ found:
 	pageopaque->hasho_nextblkno = BufferGetBlockNumber_s(ovflbuf);
 
 	MarkBufferDirty_s(rel, buf);
-	//selog(DEBUG1, "Going to release buffers");
+	/* selog(DEBUG1, "Going to release buffers"); */
 	if (!retain_pin)
 		ReleaseBuffer_s(rel, buf);
 
@@ -399,7 +411,7 @@ _hash_firstfreebit_s(uint32 map)
 		mask <<= 1;
 	}
 
-	//selog(ERROR, "firstfreebit found no free bit");
+	/* selog(ERROR, "firstfreebit found no free bit"); */
 
 	return 0;					/* keep compiler quiet */
 }
@@ -429,8 +441,8 @@ _hash_firstfreebit_s(uint32 map)
  */
 BlockNumber
 _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
-				   Buffer wbuf, IndexTuple *itups, OffsetNumber *itup_offsets,
-				   Size *tups_size, uint16 nitups)
+					 Buffer wbuf, IndexTuple * itups, OffsetNumber * itup_offsets,
+					 Size * tups_size, uint16 nitups)
 {
 	HashMetaPage metap;
 	Buffer		metabuf;
@@ -449,10 +461,11 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 				bitmapbit;
 	Buffer		prevbuf = InvalidBuffer;
 	Buffer		nextbuf = InvalidBuffer;
-	//bool		update_metap = false;
+
+	/* bool		update_metap = false; */
 
 	/* Get information from the doomed page */
-	//selog(DEBUG1, "Page to be freed is %d", ovflbuf);
+	/* selog(DEBUG1, "Page to be freed is %d", ovflbuf); */
 	_hash_checkpage_s(rel, ovflbuf, LH_OVERFLOW_PAGE);
 	ovflblkno = BufferGetBlockNumber_s(ovflbuf);
 	ovflpage = BufferGetPage_s(rel, ovflbuf);
@@ -460,7 +473,12 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	nextblkno = ovflopaque->hasho_nextblkno;
 	prevblkno = ovflopaque->hasho_prevblkno;
 	writeblkno = BufferGetBlockNumber_s(wbuf);
-	//selog(DEBUG1, "Domed page %d has prev %d and next %d", ovflblkno, prevblkno, nextblkno);
+
+	/*
+	 * selog(DEBUG1, "Domed page %d has prev %d and next %d", ovflblkno,
+	 * prevblkno, nextblkno);
+	 */
+
 	/*
 	 * Fix up the bucket chain.  this is a doubly-linked list, so we must fix
 	 * up the bucket chain members behind and ahead of the overflow page being
@@ -469,23 +487,33 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	 */
 	if (BlockNumberIsValid_s(prevblkno))
 	{
-		if (prevblkno == writeblkno){
-			//selog(DEBUG1, "Prevblkno is equal to writeblkno %d %d %d %d", prevblkno, writeblkno, prevbuf, wbuf);
+		if (prevblkno == writeblkno)
+		{
+			/*
+			 * selog(DEBUG1, "Prevblkno is equal to writeblkno %d %d %d %d",
+			 * prevblkno, writeblkno, prevbuf, wbuf);
+			 */
 			prevbuf = wbuf;
 		}
-		else{
+		else
+		{
 			prevbuf = _hash_getbuf_with_strategy_s(rel,
-												 prevblkno,
-												 LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
-			//selog(DEBUG1, " 2- Fixing chain. Prev poins to %d and was asked to %d", prevbuf, prevblkno);
+												   prevblkno,
+												   LH_BUCKET_PAGE | LH_OVERFLOW_PAGE);
+
+			/*
+			 * selog(DEBUG1, " 2- Fixing chain. Prev poins to %d and was asked
+			 * to %d", prevbuf, prevblkno);
+			 */
 
 		}
 	}
-	if (BlockNumberIsValid_s(nextblkno)){
-		//selog(DEBUG1, "Next block number is valid?");
+	if (BlockNumberIsValid_s(nextblkno))
+	{
+		/* selog(DEBUG1, "Next block number is valid?"); */
 		nextbuf = _hash_getbuf_with_strategy_s(rel,
-											 nextblkno,
-											 LH_OVERFLOW_PAGE);
+											   nextblkno,
+											   LH_OVERFLOW_PAGE);
 	}
 
 	/* Note: bstrategy is intentionally not used for metapage and bitmap */
@@ -500,23 +528,24 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	bitmappage = ovflbitno >> BMPG_SHIFT_s(metap);
 	bitmapbit = ovflbitno & BMPG_MASK_s(metap);
 
-	if (bitmappage >= metap->hashm_nmaps){
+	if (bitmappage >= metap->hashm_nmaps)
+	{
 		selog(ERROR, "invalid overflow bit number %u", ovflbitno);
 	}
 
 	blkno = metap->hashm_mapp[bitmappage];
 
 	/* Release metapage lock while we access the bitmap page */
-	//LockBuffer(metabuf, BUFFER_LOCK_UNLOCK);
+	/* LockBuffer(metabuf, BUFFER_LOCK_UNLOCK); */
 
 	/* read the bitmap page to clear the bitmap bit */
 	mapbuf = _hash_getbuf_s(rel, blkno, HASH_WRITE, LH_BITMAP_PAGE);
 	mappage = BufferGetPage_s(rel, mapbuf);
 	freep = HashPageGetBitmap_s(mappage);
-	//Assert(ISSET(freep, bitmapbit));
+	/* Assert(ISSET(freep, bitmapbit)); */
 
 	/* Get write-lock on metapage to update firstfree */
-	//LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
+	/* LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE); */
 
 
 
@@ -527,7 +556,10 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	 */
 	if (nitups > 0)
 	{
-		//selog(DEBUG1, "Going to insert tuples on the insert page %d", wbuf);
+		/*
+		 * selog(DEBUG1, "Going to insert tuples on the insert page %d",
+		 * wbuf);
+		 */
 		_hash_pgaddmultitup_s(rel, wbuf, itups, itup_offsets, nitups);
 		MarkBufferDirty_s(rel, wbuf);
 	}
@@ -539,7 +571,7 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	 * careful to make the special space valid here so that tools like
 	 * pageinspect won't get confused.
 	 */
-	//selog(DEBUG1, "Going to zero overflow page %d", ovflbuf);
+	/* selog(DEBUG1, "Going to zero overflow page %d", ovflbuf); */
 	_hash_pageinit_s(ovflpage, BufferGetPageSize_s(rel, ovflbuf));
 
 	ovflopaque = (HashPageOpaque) PageGetSpecialPointer_s(ovflpage);
@@ -555,18 +587,21 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 
 	if (BufferIsValid_s(rel, prevbuf))
 	{
-		//selog(DEBUG1, "Prev page is valid %d", prevbuf);
+		/* selog(DEBUG1, "Prev page is valid %d", prevbuf); */
 
 		Page		prevpage = BufferGetPage_s(rel, prevbuf);
 		HashPageOpaque prevopaque = (HashPageOpaque) PageGetSpecialPointer_s(prevpage);
 
 		prevopaque->hasho_nextblkno = nextblkno;
-		//selog(DEBUG1, "Setting prev next to %d", nextblkno);
+		/* selog(DEBUG1, "Setting prev next to %d", nextblkno); */
 		MarkBufferDirty_s(rel, prevbuf);
 	}
 	if (BufferIsValid_s(rel, nextbuf))
 	{
-		//selog(DEBUG1, "Next page is valid %d and setting prev to %d", nextbuf, prevblkno);
+		/*
+		 * selog(DEBUG1, "Next page is valid %d and setting prev to %d",
+		 * nextbuf, prevblkno);
+		 */
 		Page		nextpage = BufferGetPage_s(rel, nextbuf);
 		HashPageOpaque nextopaque = (HashPageOpaque) PageGetSpecialPointer_s(nextpage);
 
@@ -581,13 +616,13 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 	/* if this is now the first free page, update hashm_firstfree */
 	if (ovflbitno < metap->hashm_firstfree)
 	{
-		//selog(DEBUG1, "Updating first free page in metadata");
+		/* selog(DEBUG1, "Updating first free page in metadata"); */
 		metap->hashm_firstfree = ovflbitno;
-		//update_metap = true;
+		/* update_metap = true; */
 		MarkBufferDirty_s(rel, metabuf);
 	}
 
-	
+
 	/* release previous bucket if it is not same as write bucket */
 	if (BufferIsValid_s(rel, prevbuf) && prevblkno != writeblkno)
 		ReleaseBuffer_s(rel, prevbuf);
@@ -599,7 +634,8 @@ _hash_freeovflpage_s(VRelation rel, Buffer bucketbuf, Buffer ovflbuf,
 		ReleaseBuffer_s(rel, nextbuf);
 
 	ReleaseBuffer_s(rel, mapbuf);
-	if(mapbuf != metabuf){
+	if (mapbuf != metabuf)
+	{
 		ReleaseBuffer_s(rel, metabuf);
 	}
 
@@ -680,9 +716,9 @@ _hash_initbitmapbuffer_s(VRelation rel, Buffer buf, uint16 bmsize, bool initpage
  */
 void
 _hash_squeezebucket_s(VRelation rel,
-					Bucket bucket,
-					BlockNumber bucket_blkno,
-					Buffer bucket_buf)
+					  Bucket bucket,
+					  BlockNumber bucket_blkno,
+					  Buffer bucket_buf)
 {
 	BlockNumber wblkno;
 	BlockNumber rblkno;
@@ -700,14 +736,19 @@ _hash_squeezebucket_s(VRelation rel,
 	wbuf = bucket_buf;
 	wpage = BufferGetPage_s(rel, wbuf);
 	wopaque = (HashPageOpaque) PageGetSpecialPointer_s(wpage);
-	//selog(DEBUG1, "first bucket to squeze is %d and has prev %d and next %d", wbuf, wopaque->hasho_prevblkno, wopaque->hasho_nextblkno);
+
+	/*
+	 * selog(DEBUG1, "first bucket to squeze is %d and has prev %d and next
+	 * %d", wbuf, wopaque->hasho_prevblkno, wopaque->hasho_nextblkno);
+	 */
+
 	/*
 	 * if there aren't any overflow pages, there's nothing to squeeze. caller
 	 * is responsible for releasing the pin on primary bucket page.
 	 */
 	if (!BlockNumberIsValid_s(wopaque->hasho_nextblkno))
 	{
-		//selog(DEBUG1, "There are no pages to squeeze");
+		/* selog(DEBUG1, "There are no pages to squeeze"); */
 		return;
 	}
 
@@ -723,18 +764,23 @@ _hash_squeezebucket_s(VRelation rel,
 	do
 	{
 		rblkno = ropaque->hasho_nextblkno;
-		//selog(DEBUG1, "Next page on bucket is %d", rblkno);
+		/* selog(DEBUG1, "Next page on bucket is %d", rblkno); */
 
-		if (rbuf != InvalidBuffer){
+		if (rbuf != InvalidBuffer)
+		{
 			ReleaseBuffer_s(rel, rbuf);
 		}
 		rbuf = _hash_getbuf_with_strategy_s(rel,
-										  rblkno,
-										  LH_OVERFLOW_PAGE);
+											rblkno,
+											LH_OVERFLOW_PAGE);
 		rpage = BufferGetPage_s(rel, rbuf);
 		ropaque = (HashPageOpaque) PageGetSpecialPointer_s(rpage);
-		//selog(DEBUG1, "Buffer %d has next %d and prev %d", rblkno, ropaque->hasho_nextblkno, ropaque->hasho_prevblkno);
-		//Assert(ropaque->hasho_bucket == bucket);
+
+		/*
+		 * selog(DEBUG1, "Buffer %d has next %d and prev %d", rblkno,
+		 * ropaque->hasho_nextblkno, ropaque->hasho_prevblkno);
+		 */
+		/* Assert(ropaque->hasho_bucket == bucket); */
 	} while (BlockNumberIsValid_s(ropaque->hasho_nextblkno));
 
 	/*
@@ -769,10 +815,11 @@ readpage:
 				continue;
 
 			itup = (IndexTuple) PageGetItem_s(rpage,
-											PageGetItemId_s(rpage, roffnum));
+											  PageGetItemId_s(rpage, roffnum));
 			itemsz = IndexTupleSize_s(itup);
 			itemsz = MAXALIGN_s(itemsz);
-			//selog(DEBUG1, "current item to squeeze is %d", roffnum);
+			/* selog(DEBUG1, "current item to squeeze is %d", roffnum); */
+
 			/*
 			 * Walk up the bucket chain, looking for a page big enough for
 			 * this item and all other accumulated items.  Exit if we reach
@@ -783,27 +830,32 @@ readpage:
 				Buffer		next_wbuf = InvalidBuffer;
 				bool		tups_moved = false;
 
-				//Assert(!PageIsEmpty(wpage));
+				/* Assert(!PageIsEmpty(wpage)); */
 
 				if (wblkno == bucket_blkno)
 					retain_pin = true;
 
 				wblkno = wopaque->hasho_nextblkno;
-				//selog(DEBUG1, "Going to find free space in page %d", wblkno);
-				//Assert(BlockNumberIsValid(wblkno));
+
+				/*
+				 * selog(DEBUG1, "Going to find free space in page %d",
+				 * wblkno);
+				 */
+				/* Assert(BlockNumberIsValid(wblkno)); */
 
 				/* don't need to move to next page if we reached the read page */
-				if (wblkno != rblkno){
+				if (wblkno != rblkno)
+				{
 					next_wbuf = _hash_getbuf_with_strategy_s(rel,
-														   wblkno,
-														   LH_OVERFLOW_PAGE);
+															 wblkno,
+															 LH_OVERFLOW_PAGE);
 				}
 
 				if (nitups > 0)
 				{
-					//Assert(nitups == ndeletable);
+					/* Assert(nitups == ndeletable); */
 
-					
+
 
 
 					/*
@@ -812,10 +864,17 @@ readpage:
 					 * many tuples into the same "write" page it would be
 					 * worth qsort'ing them).
 					 */
-					//selog(DEBUG1, "Going to insert tuples on page %d", wbuf);
+					/*
+					 * selog(DEBUG1, "Going to insert tuples on page %d",
+					 * wbuf);
+					 */
 					_hash_pgaddmultitup_s(rel, wbuf, itups, itup_offsets, nitups);
 					MarkBufferDirty_s(rel, wbuf);
-					//selog(DEBUG1, "Going to delete tuples from old page %d", rbuf);
+
+					/*
+					 * selog(DEBUG1, "Going to delete tuples from old page
+					 * %d", rbuf);
+					 */
 					/* Delete tuples we already moved off read page */
 					PageIndexMultiDelete_s(rpage, deletable, ndeletable);
 					MarkBufferDirty_s(rel, rbuf);
@@ -828,13 +887,15 @@ readpage:
 				 * release the lock on previous page after acquiring the lock
 				 * on next page
 				 */
-				if (!retain_pin){
+				if (!retain_pin)
+				{
 					ReleaseBuffer_s(rel, wbuf);
 				}
 
 				/* nothing more to do if we reached the read page */
 				if (rblkno == wblkno)
-				{	//selog(DEBUG1, "No more pages to search");
+				{
+					/* selog(DEBUG1, "No more pages to search"); */
 					ReleaseBuffer_s(rel, rbuf);
 					return;
 				}
@@ -843,9 +904,9 @@ readpage:
 				wbuf = next_wbuf;
 				wpage = BufferGetPage_s(rel, wbuf);
 				wopaque = (HashPageOpaque) PageGetSpecialPointer_s(wpage);
-				//Assert(wopaque->hasho_bucket == bucket);
+				/* Assert(wopaque->hasho_bucket == bucket); */
 				retain_pin = false;
-				//selog(DEBUG1, "Moving on to next page %d", wbuf);
+				/* selog(DEBUG1, "Moving on to next page %d", wbuf); */
 				/* be tidy */
 				for (i = 0; i < nitups; i++)
 					free(itups[i]);
@@ -885,13 +946,17 @@ readpage:
 		 * _hash_freeovflpage's attempt to update the sibling links of the
 		 * removed page.  In that case, we don't need to lock it again.
 		 */
-		//selog(DEBUG1, "rblkno number is %d", rblkno);
+		/* selog(DEBUG1, "rblkno number is %d", rblkno); */
 		rblkno = ropaque->hasho_prevblkno;
-//		Assert(BlockNumberIsValid(rblkno));
-		//selog(DEBUG1, "Going to free overflowpage %d with first bucket %d and rblkno %d", rbuf, wbuf, rblkno);
+/* 		Assert(BlockNumberIsValid(rblkno)); */
+
+		/*
+		 * selog(DEBUG1, "Going to free overflowpage %d with first bucket %d
+		 * and rblkno %d", rbuf, wbuf, rblkno);
+		 */
 		/* free this overflow page (releases rbuf) */
 		_hash_freeovflpage_s(rel, bucket_buf, rbuf, wbuf, itups, itup_offsets,
-						   tups_size, nitups);
+							 tups_size, nitups);
 
 		/* be tidy */
 		for (i = 0; i < nitups; i++)
@@ -901,18 +966,19 @@ readpage:
 		if (rblkno == wblkno)
 		{
 			/* retain the pin on primary bucket page till end of bucket scan */
-			if (wblkno != bucket_blkno){
+			if (wblkno != bucket_blkno)
+			{
 				ReleaseBuffer_s(rel, wbuf);
 			}
 			return;
 		}
-		//selog(DEBUG1, "GOING to getbuf with strategy blkno  %d", rblkno);
+		/* selog(DEBUG1, "GOING to getbuf with strategy blkno  %d", rblkno); */
 		rbuf = _hash_getbuf_with_strategy_s(rel,
-										  rblkno,
-										  LH_OVERFLOW_PAGE);
+											rblkno,
+											LH_OVERFLOW_PAGE);
 		rpage = BufferGetPage_s(rel, rbuf);
 		ropaque = (HashPageOpaque) PageGetSpecialPointer_s(rpage);
-		//Assert(ropaque->hasho_bucket == bucket);
+		/* Assert(ropaque->hasho_bucket == bucket); */
 	}
 
 	/* NOTREACHED */

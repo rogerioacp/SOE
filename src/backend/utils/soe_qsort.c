@@ -1,7 +1,7 @@
 /*
  * qsort.c: standard quicksort algorithm
  * Copy from postgres src/port/qsort.c file.
- *  
+ *
  */
 
 /*
@@ -54,7 +54,7 @@
 
 
 static char *med3_s(char *a, char *b, char *c,
-	 int (*cmp) (const void *, const void *));
+					int (*cmp) (const void *, const void *));
 static void swapfunc_s(char *, char *, size_t, int);
 
 
@@ -240,4 +240,3 @@ loop:SWAPINIT_s(a, es);
 		}
 	}
 }
-

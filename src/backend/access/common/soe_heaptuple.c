@@ -10,8 +10,8 @@
  */
 Size
 heap_compute_data_size_s(TupleDesc tupleDesc,
-					   Datum *values,
-					   bool *isnull)
+						 Datum * values,
+						 bool *isnull)
 {
 	Size		data_length = 0;
 	int			i;
@@ -26,36 +26,43 @@ heap_compute_data_size_s(TupleDesc tupleDesc,
 			continue;
 
 		val = values[i];
-		atti = tupleDesc->attrs;//TupleDescAttr_s(tupleDesc, i);
+		atti = tupleDesc->attrs;
+		/* TupleDescAttr_s(tupleDesc, i); */
 
 		/**
 		* The original postgres function had more code to handle data types
 		* with variable length and to try to compress and pack the values.
 		* However, since the current prototype uses this function
-		* for hash indexes the function was simplified because the hash keys 
-		* are fixed size and can not be compressed. 
+		* for hash indexes the function was simplified because the hash keys
+		* are fixed size and can not be compressed.
 		*
 		*/
 		data_length = att_align_datum_s(data_length, atti->attalign,
-									  atti->attlen, val);
+										atti->attlen, val);
 		/**
-		* The original hash function to calculate the data size handles 
+		* The original hash function to calculate the data size handles
 		* variable length datums and requires integrating more code
 		* to deal with those cases. To simplify for the prototype.
 		* we assume this is only used for hash indexes which the datums
 		* is a single hash key with a fixed size.
 		* Its actually an int
 		*/
-		/*data_length = att_addlength_datum_s(data_length, atti->attlen,
-										  val);*/
-		//data_length = data_length + (strlen((char*) val)+1);
 
-		//README atti->attlen has an invalid value
-		if(tupleDesc->isnbtree){
-			data_length = data_length + (strlen((char*) val)+1);
-		}else{
+		/*
+		 * data_length = att_addlength_datum_s(data_length, atti->attlen,
+		 * val);
+		 */
+		/* data_length = data_length + (strlen((char*) val)+1); */
+
+		/* README atti->attlen has an invalid value */
+		if (tupleDesc->isnbtree)
+		{
+			data_length = data_length + (strlen((char *) val) + 1);
+		}
+		else
+		{
 			data_length = data_length + atti->attlen;
-		}		
+		}
 	}
 
 	return data_length;
@@ -70,13 +77,13 @@ heap_compute_data_size_s(TupleDesc tupleDesc,
  */
 static inline void
 fill_val_s(Form_pg_attribute att,
-		 bits8 **bit,
-		 int *bitmask,
-		 char **dataP,
-		 uint16 *infomask,
-		 Datum datum,
-		 bool isnull,
-		 Size data_size)
+		   bits8 * *bit,
+		   int *bitmask,
+		   char **dataP,
+		   uint16 * infomask,
+		   Datum datum,
+		   bool isnull,
+		   Size data_size)
 {
 	Size		data_length;
 	char	   *data = *dataP;
@@ -116,7 +123,8 @@ fill_val_s(Form_pg_attribute att,
 		store_att_byval_s(data, datum, att->attlen);
 		data_length = att->attlen;
 	}
-	else if (att->attlen == -1){
+	else if (att->attlen == -1)
+	{
 
 		/***
 		 *
@@ -125,9 +133,10 @@ fill_val_s(Form_pg_attribute att,
 		 *
 		 */
 		Pointer		val = DatumGetPointer_s(datum);
+
 		data_length = data_size;
-	 	//selog(DEBUG1, "Insert char datum with size %d", data_length);
-		
+		/* selog(DEBUG1, "Insert char datum with size %d", data_length); */
+
 		memcpy(data, val, data_length);
 	}
 	else
@@ -159,9 +168,9 @@ fill_val_s(Form_pg_attribute att,
  */
 void
 heap_fill_tuple_s(TupleDesc tupleDesc,
-				Datum *values, bool *isnull,
-				char *data, Size data_size,
-				uint16 *infomask, bits8 *bit)
+				  Datum * values, bool *isnull,
+				  char *data, Size data_size,
+				  uint16 * infomask, bits8 * bit)
 {
 	bits8	   *bitP;
 	int			bitmask;
@@ -187,15 +196,14 @@ heap_fill_tuple_s(TupleDesc tupleDesc,
 		Form_pg_attribute attr = TupleDescAttr_s(tupleDesc, i);
 
 		fill_val_s(attr,
-				 bitP ? &bitP : NULL,
-				 &bitmask,
-				 &data,
-				 infomask,
-				 values ? values[i] : PointerGetDatum_s(NULL),
-				 isnull ? isnull[i] : true, data_size);
+				   bitP ? &bitP : NULL,
+				   &bitmask,
+				   &data,
+				   infomask,
+				   values ? values[i] : PointerGetDatum_s(NULL),
+				   isnull ? isnull[i] : true, data_size);
 	}
-	//if((data-start) != data_size){
-		//selog(DEBUG1, "datum was not copied correctly")
-	//}
+	/* if((data-start) != data_size){ */
+	/* selog(DEBUG1, "datum was not copied correctly") */
+	/* } */
 }
-

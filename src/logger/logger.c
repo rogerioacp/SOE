@@ -14,40 +14,48 @@
 #include <oram/logger.h>
 
 
-void logger(int level, const char* message, ...){
-    //char* buf = (char*) malloc(sizeof(char)*BUFSIZE);
-    char buf[BUFSIZE];
-    memset(buf, 0, BUFSIZE);
-    //int written = 0;
-    //int result;
-    va_list ap;
-    va_start(ap, message);
-    /*written = vsnprintf(buf, BUFSIZE, message, ap);
-    if(written < BUFSIZE){
-        buf = realloc(buf, sizeof(char)*written);
-        memset(buf, 0, written);
-    }*/
+void
+logger(int level, const char *message,...)
+{
+	/* char* buf = (char*) malloc(sizeof(char)*BUFSIZE); */
+	char		buf[BUFSIZE];
 
-    vsnprintf(buf, BUFSIZE, message, ap);
-    va_end(ap);
-    oc_logger(buf);
-}
+	memset(buf, 0, BUFSIZE);
+	/* int written = 0; */
+	/* int result; */
+	va_list		ap;
 
-void selog(int level, const char* message, ...){
-    //char* buf = (char*) malloc(sizeof(char)*BUFSIZE);
-    char buf[BUFSIZE];
-    memset(buf, 0, BUFSIZE);
-    //int written = 0;
-    //int result;
-    va_list ap;
-    va_start(ap, message);
-    /*written = vsnprintf(buf, BUFSIZE, message, ap);
-    if(written < BUFSIZE){
-    	buf = realloc(buf, sizeof(char)*written);
-    	memset(buf, 0, written);
-    }*/
+	va_start(ap, message);
+
+	/*
+	 * written = vsnprintf(buf, BUFSIZE, message, ap); if(written < BUFSIZE){
+	 * buf = realloc(buf, sizeof(char)*written); memset(buf, 0, written); }
+	 */
 
 	vsnprintf(buf, BUFSIZE, message, ap);
-    va_end(ap);
-    oc_logger(buf);
+	va_end(ap);
+	oc_logger(buf);
+}
+
+void
+selog(int level, const char *message,...)
+{
+	/* char* buf = (char*) malloc(sizeof(char)*BUFSIZE); */
+	char		buf[BUFSIZE];
+
+	memset(buf, 0, BUFSIZE);
+	/* int written = 0; */
+	/* int result; */
+	va_list		ap;
+
+	va_start(ap, message);
+
+	/*
+	 * written = vsnprintf(buf, BUFSIZE, message, ap); if(written < BUFSIZE){
+	 * buf = realloc(buf, sizeof(char)*written); memset(buf, 0, written); }
+	 */
+
+	vsnprintf(buf, BUFSIZE, message, ap);
+	va_end(ap);
+	oc_logger(buf);
 }

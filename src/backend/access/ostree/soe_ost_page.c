@@ -59,13 +59,16 @@ _bt_getroot_ost(OSTRelation rel, int access)
 {
 
 	Buffer		rootbuf;
-//	Page		rootpage;
-	
 
-	/*The OST protocol assumes the root is always the first block of the index
-	file.*/
+/* 	Page		rootpage; */
+
+
+	/*
+	 * The OST protocol assumes the root is always the first block of the
+	 * index file.
+	 */
 	rootbuf = ReadBuffer_ost(rel, 0);
-//	rootpage = BufferGetPage_ost(rel, rootbuf);
+/* 	rootpage = BufferGetPage_ost(rel, rootbuf); */
 
 	return rootbuf;
 }
@@ -94,7 +97,7 @@ _bt_checkpage_ost(OSTRelation rel, Buffer buf)
 	 */
 	if (PageGetSpecialSize_s(page) != MAXALIGN_s(sizeof(BTPageOpaqueDataOST)))
 		selog(DEBUG1, "index contains corrupted page at block %d", buf);
-	
+
 }
 
 
@@ -122,12 +125,12 @@ _bt_getbuf_ost(OSTRelation rel, BlockNumber blkno, int access)
 	}
 	else
 	{
-//		bool		needLock;
-//		Page		page;
+/* 		bool		needLock; */
+/* 		Page		page; */
 		buf = ReadBuffer_ost(rel, P_NEW);
-		//Initalization is done by the ReadBuffer
+		/* Initalization is done by the ReadBuffer */
 		/* Initialize the new page before returning it */
-		//page = BufferGetPage(buf);
+		/* page = BufferGetPage(buf); */
 	}
 
 	/* ref count and lock type are correct */

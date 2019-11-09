@@ -38,6 +38,33 @@ typedef struct ms_initSOE_t {
 	unsigned int ms_pgDescSize;
 } ms_initSOE_t;
 
+typedef struct ms_initFSOE_t {
+	const char* ms_tName;
+	size_t ms_tName_len;
+	const char* ms_iName;
+	size_t ms_iName_len;
+	int ms_tNBlocks;
+	int* ms_fanout;
+	int ms_nlevels;
+	unsigned int ms_tOid;
+	unsigned int ms_iOid;
+	char* ms_pg_attr_desc;
+	unsigned int ms_pgDescSize;
+} ms_initFSOE_t;
+
+typedef struct ms_addIndexBlock_t {
+	char* ms_block;
+	unsigned int ms_blockSize;
+	unsigned int ms_offset;
+	unsigned int ms_level;
+} ms_addIndexBlock_t;
+
+typedef struct ms_addHeapBlock_t {
+	char* ms_block;
+	unsigned int ms_blockSize;
+	unsigned int ms_blkno;
+} ms_addHeapBlock_t;
+
 typedef struct ms_insert_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
@@ -57,6 +84,18 @@ typedef struct ms_getTuple_t {
 	unsigned int ms_tupleDataLen;
 } ms_getTuple_t;
 
+typedef struct ms_getTupleOST_t {
+	int ms_retval;
+	unsigned int ms_opmode;
+	unsigned int ms_opoid;
+	const char* ms_scanKey;
+	int ms_scanKeySize;
+	char* ms_tuple;
+	unsigned int ms_tupleLen;
+	char* ms_tupleData;
+	unsigned int ms_tupleDataLen;
+} ms_getTupleOST_t;
+
 typedef struct ms_insertHeap_t {
 	const char* ms_heapTuple;
 	unsigned int ms_tupleSize;
@@ -72,6 +111,7 @@ typedef struct ms_outFileInit_t {
 	unsigned int ms_nblocks;
 	unsigned int ms_blocksize;
 	int ms_pagesSize;
+	int ms_initOffset;
 } ms_outFileInit_t;
 
 typedef struct ms_outFileRead_t {
@@ -178,6 +218,199 @@ err:
 	if (_in_tName) free(_in_tName);
 	if (_in_iName) free(_in_iName);
 	if (_in_pg_attr_desc) free(_in_pg_attr_desc);
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_initFSOE(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_initFSOE_t));
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+	ms_initFSOE_t* ms = SGX_CAST(ms_initFSOE_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	const char* _tmp_tName = ms->ms_tName;
+	size_t _len_tName = ms->ms_tName_len ;
+	char* _in_tName = NULL;
+	const char* _tmp_iName = ms->ms_iName;
+	size_t _len_iName = ms->ms_iName_len ;
+	char* _in_iName = NULL;
+	int* _tmp_fanout = ms->ms_fanout;
+	int _tmp_nlevels = ms->ms_nlevels;
+	size_t _len_fanout = _tmp_nlevels;
+	int* _in_fanout = NULL;
+	char* _tmp_pg_attr_desc = ms->ms_pg_attr_desc;
+	unsigned int _tmp_pgDescSize = ms->ms_pgDescSize;
+	size_t _len_pg_attr_desc = _tmp_pgDescSize;
+	char* _in_pg_attr_desc = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_tName, _len_tName);
+	CHECK_UNIQUE_POINTER(_tmp_iName, _len_iName);
+	CHECK_UNIQUE_POINTER(_tmp_fanout, _len_fanout);
+	CHECK_UNIQUE_POINTER(_tmp_pg_attr_desc, _len_pg_attr_desc);
+
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+
+	if (_tmp_tName != NULL && _len_tName != 0) {
+		_in_tName = (char*)malloc(_len_tName);
+		if (_in_tName == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_tName, _len_tName, _tmp_tName, _len_tName)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+		_in_tName[_len_tName - 1] = '\0';
+		if (_len_tName != strlen(_in_tName) + 1)
+		{
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+	}
+	if (_tmp_iName != NULL && _len_iName != 0) {
+		_in_iName = (char*)malloc(_len_iName);
+		if (_in_iName == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_iName, _len_iName, _tmp_iName, _len_iName)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+		_in_iName[_len_iName - 1] = '\0';
+		if (_len_iName != strlen(_in_iName) + 1)
+		{
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+	}
+	if (_tmp_fanout != NULL && _len_fanout != 0) {
+		_in_fanout = (int*)malloc(_len_fanout);
+		if (_in_fanout == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_fanout, _len_fanout, _tmp_fanout, _len_fanout)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+	if (_tmp_pg_attr_desc != NULL && _len_pg_attr_desc != 0) {
+		_in_pg_attr_desc = (char*)malloc(_len_pg_attr_desc);
+		if (_in_pg_attr_desc == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_pg_attr_desc, _len_pg_attr_desc, _tmp_pg_attr_desc, _len_pg_attr_desc)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+
+	initFSOE((const char*)_in_tName, (const char*)_in_iName, ms->ms_tNBlocks, _in_fanout, _tmp_nlevels, ms->ms_tOid, ms->ms_iOid, _in_pg_attr_desc, _tmp_pgDescSize);
+err:
+	if (_in_tName) free(_in_tName);
+	if (_in_iName) free(_in_iName);
+	if (_in_fanout) free(_in_fanout);
+	if (_in_pg_attr_desc) free(_in_pg_attr_desc);
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_addIndexBlock(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_addIndexBlock_t));
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+	ms_addIndexBlock_t* ms = SGX_CAST(ms_addIndexBlock_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	char* _tmp_block = ms->ms_block;
+	unsigned int _tmp_blockSize = ms->ms_blockSize;
+	size_t _len_block = _tmp_blockSize;
+	char* _in_block = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_block, _len_block);
+
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+
+	if (_tmp_block != NULL && _len_block != 0) {
+		_in_block = (char*)malloc(_len_block);
+		if (_in_block == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_block, _len_block, _tmp_block, _len_block)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+
+	addIndexBlock(_in_block, _tmp_blockSize, ms->ms_offset, ms->ms_level);
+err:
+	if (_in_block) free(_in_block);
+
+	return status;
+}
+
+static sgx_status_t SGX_CDECL sgx_addHeapBlock(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_addHeapBlock_t));
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+	ms_addHeapBlock_t* ms = SGX_CAST(ms_addHeapBlock_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	char* _tmp_block = ms->ms_block;
+	unsigned int _tmp_blockSize = ms->ms_blockSize;
+	size_t _len_block = _tmp_blockSize;
+	char* _in_block = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_block, _len_block);
+
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+
+	if (_tmp_block != NULL && _len_block != 0) {
+		_in_block = (char*)malloc(_len_block);
+		if (_in_block == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_block, _len_block, _tmp_block, _len_block)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+
+	addHeapBlock(_in_block, _tmp_blockSize, ms->ms_blkno);
+err:
+	if (_in_block) free(_in_block);
 
 	return status;
 }
@@ -323,6 +556,86 @@ err:
 	return status;
 }
 
+static sgx_status_t SGX_CDECL sgx_getTupleOST(void* pms)
+{
+	CHECK_REF_POINTER(pms, sizeof(ms_getTupleOST_t));
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+	ms_getTupleOST_t* ms = SGX_CAST(ms_getTupleOST_t*, pms);
+	sgx_status_t status = SGX_SUCCESS;
+	const char* _tmp_scanKey = ms->ms_scanKey;
+	int _tmp_scanKeySize = ms->ms_scanKeySize;
+	size_t _len_scanKey = _tmp_scanKeySize;
+	char* _in_scanKey = NULL;
+	char* _tmp_tuple = ms->ms_tuple;
+	unsigned int _tmp_tupleLen = ms->ms_tupleLen;
+	size_t _len_tuple = _tmp_tupleLen;
+	char* _in_tuple = NULL;
+	char* _tmp_tupleData = ms->ms_tupleData;
+	unsigned int _tmp_tupleDataLen = ms->ms_tupleDataLen;
+	size_t _len_tupleData = _tmp_tupleDataLen;
+	char* _in_tupleData = NULL;
+
+	CHECK_UNIQUE_POINTER(_tmp_scanKey, _len_scanKey);
+	CHECK_UNIQUE_POINTER(_tmp_tuple, _len_tuple);
+	CHECK_UNIQUE_POINTER(_tmp_tupleData, _len_tupleData);
+
+	//
+	// fence after pointer checks
+	//
+	sgx_lfence();
+
+	if (_tmp_scanKey != NULL && _len_scanKey != 0) {
+		_in_scanKey = (char*)malloc(_len_scanKey);
+		if (_in_scanKey == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		if (memcpy_s(_in_scanKey, _len_scanKey, _tmp_scanKey, _len_scanKey)) {
+			status = SGX_ERROR_UNEXPECTED;
+			goto err;
+		}
+
+	}
+	if (_tmp_tuple != NULL && _len_tuple != 0) {
+		if ((_in_tuple = (char*)malloc(_len_tuple)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_tuple, 0, _len_tuple);
+	}
+	if (_tmp_tupleData != NULL && _len_tupleData != 0) {
+		if ((_in_tupleData = (char*)malloc(_len_tupleData)) == NULL) {
+			status = SGX_ERROR_OUT_OF_MEMORY;
+			goto err;
+		}
+
+		memset((void*)_in_tupleData, 0, _len_tupleData);
+	}
+
+	ms->ms_retval = getTupleOST(ms->ms_opmode, ms->ms_opoid, (const char*)_in_scanKey, _tmp_scanKeySize, _in_tuple, _tmp_tupleLen, _in_tupleData, _tmp_tupleDataLen);
+err:
+	if (_in_scanKey) free(_in_scanKey);
+	if (_in_tuple) {
+		if (memcpy_s(_tmp_tuple, _len_tuple, _in_tuple, _len_tuple)) {
+			status = SGX_ERROR_UNEXPECTED;
+		}
+		free(_in_tuple);
+	}
+	if (_in_tupleData) {
+		if (memcpy_s(_tmp_tupleData, _len_tupleData, _in_tupleData, _len_tupleData)) {
+			status = SGX_ERROR_UNEXPECTED;
+		}
+		free(_in_tupleData);
+	}
+
+	return status;
+}
+
 static sgx_status_t SGX_CDECL sgx_insertHeap(void* pms)
 {
 	CHECK_REF_POINTER(pms, sizeof(ms_insertHeap_t));
@@ -367,28 +680,32 @@ err:
 
 SGX_EXTERNC const struct {
 	size_t nr_ecall;
-	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[4];
+	struct {void* ecall_addr; uint8_t is_priv;} ecall_table[8];
 } g_ecall_table = {
-	4,
+	8,
 	{
 		{(void*)(uintptr_t)sgx_initSOE, 0},
+		{(void*)(uintptr_t)sgx_initFSOE, 0},
+		{(void*)(uintptr_t)sgx_addIndexBlock, 0},
+		{(void*)(uintptr_t)sgx_addHeapBlock, 0},
 		{(void*)(uintptr_t)sgx_insert, 0},
 		{(void*)(uintptr_t)sgx_getTuple, 0},
+		{(void*)(uintptr_t)sgx_getTupleOST, 0},
 		{(void*)(uintptr_t)sgx_insertHeap, 0},
 	}
 };
 
 SGX_EXTERNC const struct {
 	size_t nr_ocall;
-	uint8_t entry_table[5][4];
+	uint8_t entry_table[5][8];
 } g_dyn_entry_table = {
 	5,
 	{
-		{0, 0, 0, 0, },
-		{0, 0, 0, 0, },
-		{0, 0, 0, 0, },
-		{0, 0, 0, 0, },
-		{0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, },
+		{0, 0, 0, 0, 0, 0, 0, 0, },
 	}
 };
 
@@ -436,7 +753,7 @@ sgx_status_t SGX_CDECL oc_logger(const char* str)
 	return status;
 }
 
-sgx_status_t SGX_CDECL outFileInit(const char* filename, const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize)
+sgx_status_t SGX_CDECL outFileInit(const char* filename, const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize, int initOffset)
 {
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_filename = filename ? strlen(filename) + 1 : 0;
@@ -489,6 +806,7 @@ sgx_status_t SGX_CDECL outFileInit(const char* filename, const char* pages, unsi
 	ms->ms_nblocks = nblocks;
 	ms->ms_blocksize = blocksize;
 	ms->ms_pagesSize = pagesSize;
+	ms->ms_initOffset = initOffset;
 	status = sgx_ocall(1, ms);
 
 	if (status == SGX_SUCCESS) {

@@ -18,7 +18,7 @@
 
 #include "soe_c.h"
 
-//Oriignal postgres include, does not need to be modified.
+/* Oriignal postgres include, does not need to be modified. */
 #include "storage/soe_itemptr.h"
 
 #include "access/soe_tupdesc.h"
@@ -70,9 +70,9 @@ typedef struct IndexTupleData
 
 	unsigned short t_info;		/* various info about tuple */
 
-} IndexTupleData;				/* MORE DATA FOLLOWS AT END OF STRUCT */
+}			IndexTupleData;		/* MORE DATA FOLLOWS AT END OF STRUCT */
 
-typedef IndexTupleData *IndexTuple;
+typedef IndexTupleData * IndexTuple;
 
 
 /*
@@ -129,6 +129,6 @@ typedef IndexTupleData *IndexTuple;
 
 /* routines in indextuple.c */
 extern IndexTuple index_form_tuple_s(TupleDesc tupleDescriptor,
-				 Datum *values, bool *isnull);
+									 Datum * values, bool *isnull);
 
 #endif

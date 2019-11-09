@@ -59,11 +59,14 @@ typedef struct BTPageOpaqueData
 		uint32		level;		/* tree level --- zero for leaf pages */
 	}			btpo;
 	uint16		btpo_flags;		/* flag bits, see below */
-	//BTCycleId	btpo_cycleid;	/* vacuum cycle ID of latest split */
-	int o_blkno; //block number
-} BTPageOpaqueData;
+	/* vacuum cycle ID of latest split */
+	/* BTCycleId	btpo_cycleid;*/		
+ 
+    /* block number */
+    int o_blkno;
+}			BTPageOpaqueData;
 
-typedef BTPageOpaqueData *BTPageOpaque;
+typedef BTPageOpaqueData * BTPageOpaque;
 
 /* Bits defined in btpo_flags */
 #define BTP_LEAF		(1 << 0)	/* leaf page, i.e. not internal page */
@@ -103,7 +106,7 @@ typedef struct BTMetaPageData
 	/* following fields are available since page version 3 */
 	float8		btm_last_cleanup_num_heap_tuples;	/* number of heap tuples
 													 * during last cleanup */
-} BTMetaPageData;
+}			BTMetaPageData;
 
 #define BTPageGetMeta_s(p) \
 	((BTMetaPageData *) PageGetContents_s(p))
@@ -244,9 +247,9 @@ typedef struct BTStackData
 	OffsetNumber bts_offset;
 	BlockNumber bts_btentry;
 	struct BTStackData *bts_parent;
-} BTStackData;
+}			BTStackData;
 
-typedef BTStackData *BTStack;
+typedef BTStackData * BTStack;
 
 /*
  * BTScanOpaqueData is the btree-private state needed for an indexscan.
@@ -279,7 +282,7 @@ typedef struct BTScanPosItem	/* what we remember about each match */
 	ItemPointerData heapTid;	/* TID of referenced heap item */
 	OffsetNumber indexOffset;	/* index item's location within page */
 	LocationIndex tupleOffset;	/* IndexTuple's offset in workspace, if any */
-} BTScanPosItem;
+}			BTScanPosItem;
 
 typedef struct BTScanPosData
 {
@@ -315,9 +318,9 @@ typedef struct BTScanPosData
 	int			itemIndex;		/* current index in items[] */
 
 	BTScanPosItem items[MaxIndexTuplesPerPage]; /* MUST BE LAST */
-} BTScanPosData;
+}			BTScanPosData;
 
-typedef BTScanPosData *BTScanPos;
+typedef BTScanPosData * BTScanPos;
 
 
 #define BTScanPosIsValid_s(scanpos) \
@@ -374,15 +377,15 @@ typedef struct BTScanOpaqueData
 	/* keep these last in struct for efficiency */
 	BTScanPosData currPos;		/* current position data */
 	BTScanPosData markPos;		/* marked position, if any */
-} BTScanOpaqueData;
+}			BTScanOpaqueData;
 
-typedef BTScanOpaqueData *BTScanOpaque;
+typedef BTScanOpaqueData * BTScanOpaque;
 
 /*
  * external entry points for btree, in nbtree.c
  */
-extern bool btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_ctid, char* datum, unsigned int datumSize);
-extern IndexScanDesc btbeginscan_s(VRelation rel, const char* key, int keysize);
+extern bool btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_ctid, char *datum, unsigned int datumSize);
+extern IndexScanDesc btbeginscan_s(VRelation rel, const char *key, int keysize);
 extern bool btgettuple_s(IndexScanDesc scan);
 extern void btendscan_s(IndexScanDesc scan);
 
@@ -392,7 +395,7 @@ extern void btendscan_s(IndexScanDesc scan);
 /*
  * prototypes for functions in nbtinsert.c
  */
-extern bool _bt_doinsert_s(VRelation rel, IndexTuple itup, char* datum, int size, VRelation heapRel);
+extern bool _bt_doinsert_s(VRelation rel, IndexTuple itup, char *datum, int size, VRelation heapRel);
 extern Buffer _bt_getstackbuf_s(VRelation rel, BTStack stack, int access);
 
 /*
@@ -410,12 +413,12 @@ extern void _bt_pageinit_s(Page page, Size size);
  * prototypes for functions in nbtsearch.c
  */
 extern BTStack _bt_search_s(VRelation rel,
-		   int keysz, ScanKey scankey, bool nextkey,
-		   Buffer *bufP, int access);
+							int keysz, ScanKey scankey, bool nextkey,
+							Buffer * bufP, int access);
 extern OffsetNumber _bt_binsrch_s(VRelation rel, Buffer buf, int keysz,
-			ScanKey scankey, bool nextkey);
+								  ScanKey scankey, bool nextkey);
 extern int32 _bt_compare_s(VRelation rel, int keysz, ScanKey scankey,
-			Page page, OffsetNumber offnum);
+						   Page page, OffsetNumber offnum);
 extern bool _bt_first_s(IndexScanDesc scan);
 extern bool _bt_next_s(IndexScanDesc scan);
 
@@ -423,12 +426,12 @@ extern bool _bt_next_s(IndexScanDesc scan);
 /*
  * prototypes for functions in nbtutils.c
  */
-extern ScanKey _bt_mkscankey_s(VRelation rel, IndexTuple itup, char* datum, int dsize);
+extern ScanKey _bt_mkscankey_s(VRelation rel, IndexTuple itup, char *datum, int dsize);
 extern void _bt_freeskey_s(ScanKey skey);
 extern void _bt_freestack_s(BTStack stack);
 extern IndexTuple _bt_checkkeys_s(IndexScanDesc scan,
-			  Page page, OffsetNumber offnum, bool *continuescan);
-extern int bpchartruelen_s(char *s, int len);
+								  Page page, OffsetNumber offnum, bool *continuescan);
+extern int	bpchartruelen_s(char *s, int len);
 
 extern unsigned int getRandomInt_nb(void);
 

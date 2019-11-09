@@ -18,9 +18,9 @@
 #include "logger/logger.h"
 
 static bool _bt_readpage_ost(IndexScanDesc scan,
-			 OffsetNumber offnum);
+							 OffsetNumber offnum);
 static void _bt_saveitem_ost(BTScanOpaqueOST so, int itemIndex,
-			 OffsetNumber offnum, IndexTuple itup);
+							 OffsetNumber offnum, IndexTuple itup);
 static bool _bt_steppage_ost(IndexScanDesc scan);
 static bool _bt_readnextpage_ost(IndexScanDesc scan, BlockNumber blkno);
 static inline void _bt_initialize_more_data_ost(BTScanOpaqueOST so);
@@ -55,9 +55,9 @@ static inline void _bt_initialize_more_data_ost(BTScanOpaqueOST so);
  */
 BTStackOST
 _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
-		   Buffer *bufP, int access)
+			   Buffer * bufP, int access)
 {
-	BTStackOST		stack_in = NULL;
+	BTStackOST	stack_in = NULL;
 	unsigned int height = 0;
 
 	rel->level = height;
@@ -76,7 +76,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		IndexTuple	itup;
 		BlockNumber blkno;
 		BlockNumber par_blkno;
-		BTStackOST  new_stack;
+		BTStackOST	new_stack;
 
 		/*
 		 * Race -- the page we just grabbed may have split since we read its
@@ -90,7 +90,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * if the leaf page is split and we insert to the parent page).  But
 		 * this is a good opportunity to finish splits of internal pages too.
 		 */
-		//Concurrent splits are not supported on the prototype.
+		/* Concurrent splits are not supported on the prototype. */
 		/**bufP = _bt_moveright(rel, *bufP, keysz, scankey, nextkey,
 							  (access == BT_WRITE), stack_in,
 							  BT_READ, snapshot);*/
@@ -99,7 +99,8 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		/* if this is a leaf page, we're done */
 		page = BufferGetPage_ost(rel, *bufP);
 		opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
-		if (P_ISLEAF_OST(opaque)){
+		if (P_ISLEAF_OST(opaque))
+		{
 			break;
 		}
 
@@ -132,7 +133,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		new_stack->bts_parent = stack_in;
 
 		ReleaseBuffer_ost(rel, *bufP);
-		height +=1;
+		height += 1;
 		rel->level = height;
 
 		*bufP = ReadBuffer_ost(rel, blkno);
@@ -173,10 +174,10 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
  */
 OffsetNumber
 _bt_binsrch_ost(OSTRelation rel,
-			Buffer buf,
-			int keysz,
-			ScanKey scankey,
-			bool nextkey)
+				Buffer buf,
+				int keysz,
+				ScanKey scankey,
+				bool nextkey)
 {
 	Page		page;
 	BTPageOpaqueOST opaque;
@@ -198,8 +199,9 @@ _bt_binsrch_ost(OSTRelation rel,
 	 * This can never happen on an internal page, however, since they are
 	 * never empty (an internal page must have children).
 	 */
-	if (high < low){
-		//selog(DEBUG1, "No keys on page, returing first slot");
+	if (high < low)
+	{
+		/* selog(DEBUG1, "No keys on page, returing first slot"); */
 		return low;
 	}
 
@@ -280,15 +282,15 @@ _bt_binsrch_ost(OSTRelation rel,
  */
 int32
 _bt_compare_ost(OSTRelation rel,
-			int keysz,
-			ScanKey scankey,
-			Page page,
-			OffsetNumber offnum)
+				int keysz,
+				ScanKey scankey,
+				Page page,
+				OffsetNumber offnum)
 {
-	char*	datum;
+	char	   *datum;
 	IndexTuple	itup;
-	int32	result;
-	
+	int32		result;
+
 	result = 0;
 
 
@@ -303,14 +305,14 @@ _bt_compare_ost(OSTRelation rel,
 
 	itup = (IndexTuple) PageGetItem_s(page, PageGetItemId_s(page, offnum));
 
-	
 
-	//datum = NameStr_s(*DatumGetName_s(index_getattr_s(itup)));
+
+	/* datum = NameStr_s(*DatumGetName_s(index_getattr_s(itup))); */
 	datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
-	//We assume we are comparing strings(varchars)
-	//if(rel->foid == 1078){
+	/* We assume we are comparing strings(varchars) */
+	/* if(rel->foid == 1078){ */
 	result = (int32) strcmp(scankey->sk_argument, datum);
-	//}
+	/* } */
 
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
@@ -343,26 +345,31 @@ _bt_compare_ost(OSTRelation rel,
 bool
 _bt_first_ost(IndexScanDesc scan)
 {
-	OSTRelation	rel = scan->ost;
+	OSTRelation rel = scan->ost;
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	Buffer		buf;
-	BTStackOST		stack;
+	BTStackOST	stack;
 	OffsetNumber offnum;
-	//StrategyNumber strat;
+
+	/* StrategyNumber strat; */
 	bool		nextkey;
 	bool		goback;
-//	ScanKey		startKeys[INDEX_MAX_KEYS];
-//	ScanKeyData scankeys[INDEX_MAX_KEYS];
-//	ScanKeyData notnullkeys[INDEX_MAX_KEYS];
+
+/* 	ScanKey		startKeys[INDEX_MAX_KEYS]; */
+/* 	ScanKeyData scankeys[INDEX_MAX_KEYS]; */
+/* 	ScanKeyData notnullkeys[INDEX_MAX_KEYS]; */
 	int			keysCount = 0;
-//	int			i;
-//	bool		status = true;
-	//StrategyNumber strat_total;
+
+/* 	int			i; */
+/* 	bool		status = true; */
+	/* StrategyNumber strat_total; */
 	BTScanPosItemOST *currItem;
-//	BlockNumber blkno;
+
+/* 	BlockNumber blkno; */
 
 
 	ScanKey		cur = scan->keyData;
+
 	/**
 	 * By debugging postgres, a search on a btree with a single leaf and no
 	 * nodes had always the strat_total = BTEqualStrategyNumber despite the
@@ -370,7 +377,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 *
 	 */
 
-	//strat_total = BTEqualStrategyNumber;
+	/* strat_total = BTEqualStrategyNumber; */
 
 	/*----------
 	 * Examine the selected initial-positioning strategy to determine exactly
@@ -385,11 +392,12 @@ _bt_first_ost(IndexScanDesc scan)
 	 * goback = false, we will start the scan on the located item.
 	 *----------
 	 */
-	//selog(DEBUG1, "bt_first scan opoid is %d", scan->opoid);
-	//The protoype currently does not support backward scans.
+	/* selog(DEBUG1, "bt_first scan opoid is %d", scan->opoid); */
+	/* The protoype currently does not support backward scans. */
 	switch (scan->opoid)
 	{
-		case 1058://BTLessStrategyNumber:
+		case 1058:
+			/* BTLessStrategyNumber: */
 
 			/*
 			 * Find first item >= scankey, then back up one to arrive at last
@@ -402,7 +410,8 @@ _bt_first_ost(IndexScanDesc scan)
 			selog(ERROR, "Less or equal strategy requires backward scan no supported");
 			break;
 
-		case 1059://BTLessEqualStrategyNumber:
+		case 1059:
+			/* BTLessEqualStrategyNumber: */
 
 			/*
 			 * Find first item > scankey, then back up one to arrive at last
@@ -415,19 +424,21 @@ _bt_first_ost(IndexScanDesc scan)
 			selog(ERROR, "Less than strategy requires backward scan no supported");
 			break;
 
-		case 1054://BTEqualStrategyNumber:
+		case 1054:
+			/* BTEqualStrategyNumber: */
 
 
-		
-				/*
-				 * This is the same as the <= strategy.  We will check at the
-				 * end whether the found item is actually =.
-				 */
-				nextkey = false;
-				goback = false;
-				break;
 
-		case 1061://BTGreaterEqualStrategyNumber:
+			/*
+			 * This is the same as the <= strategy.  We will check at the end
+			 * whether the found item is actually =.
+			 */
+			nextkey = false;
+			goback = false;
+			break;
+
+		case 1061:
+			/* BTGreaterEqualStrategyNumber: */
 
 			/*
 			 * Find first item >= scankey.  (This is only used for forward
@@ -437,7 +448,8 @@ _bt_first_ost(IndexScanDesc scan)
 			goback = false;
 			break;
 
-		case 1060://BTGreaterStrategyNumber:
+		case 1060:
+			/* BTGreaterStrategyNumber: */
 
 			/*
 			 * Find first item > scankey.  (This is only used for forward
@@ -460,11 +472,12 @@ _bt_first_ost(IndexScanDesc scan)
 	stack = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST);
 	/* don't need to keep the stack around... */
 	_bt_freestack_ost(stack);
-	//selog(DEBUG1, "GOING to initialize more data");
+	/* selog(DEBUG1, "GOING to initialize more data"); */
 
 	_bt_initialize_more_data_ost(so);
 	/* position to the precise item on the page */
 	offnum = _bt_binsrch_ost(rel, buf, keysCount, cur, nextkey);
+
 	/*
 	 * If nextkey = false, we are positioned at the first item >= scan key, or
 	 * possibly at the end of a page on which all the existing items are less
@@ -483,14 +496,15 @@ _bt_first_ost(IndexScanDesc scan)
 	 * _bt_readpage will report no items found, and then we'll step to the
 	 * next page as needed.)
 	 */
-	if (goback){
+	if (goback)
+	{
 		offnum = OffsetNumberPrev_s(offnum);
-		//selog(DEBUG1, "Found match on offset prev %d", offnum);
+		/* selog(DEBUG1, "Found match on offset prev %d", offnum); */
 	}
-	
+
 
 	/* remember which buffer we have pinned, if any */
-	//Assert(!BTScanPosIsValid(so->currPos));
+	/* Assert(!BTScanPosIsValid(so->currPos)); */
 	so->currPos.buf = buf;
 
 	/*
@@ -498,24 +512,24 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		//selog(DEBUG1, "Page has no match, move to next page!");
+		/* selog(DEBUG1, "Page has no match, move to next page!"); */
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
 		 */
-		//LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK);
+		/* LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK); */
 		if (!_bt_steppage_ost(scan))
 			return false;
 	}
-	//else
-	//{
-	//	selog(DEBUG1, "Match found! Maybe something needs to happen");
-		//selog(DEBUG1, "current pos is %d", so->currPos.itemIndex);
-		/* Drop the lock, and maybe the pin, on the current page */
-		///_bt_drop_lock_and_maybe_pin(scan, &so->currPos);
-	//}
+	/* else */
+	/* { */
+	/* selog(DEBUG1, "Match found! Maybe something needs to happen"); */
+	/* selog(DEBUG1, "current pos is %d", so->currPos.itemIndex); */
+	/* Drop the lock, and maybe the pin, on the current page */
+	/* /_bt_drop_lock_and_maybe_pin(scan, &so->currPos); */
+	/* } */
 
-	//readcomplete:
+	/* readcomplete: */
 	/* OK, itemIndex says what to return */
 	currItem = &so->currPos.items[so->currPos.itemIndex];
 	scan->xs_ctup.t_self = currItem->heapTid;
@@ -547,7 +561,7 @@ _bt_next_ost(IndexScanDesc scan)
 	 * Advance to next tuple on current page; or if there's no more, try to
 	 * step to the next page with data.
 	 */
-	//selog(DEBUG1, "lastItem is %d", so->currPos.lastItem);
+	/* selog(DEBUG1, "lastItem is %d", so->currPos.lastItem); */
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
 	{
 		if (!_bt_steppage_ost(scan))
@@ -558,8 +572,8 @@ _bt_next_ost(IndexScanDesc scan)
 	/* OK, itemIndex says what to return */
 	currItem = &so->currPos.items[so->currPos.itemIndex];
 	scan->xs_ctup.t_self = currItem->heapTid;
-//	if (scan->xs_want_itup)
-//		scan->xs_itup = (IndexTuple) (so->currTuples + currItem->tupleOffset);
+/* 	if (scan->xs_want_itup) */
+/* 		scan->xs_itup = (IndexTuple) (so->currTuples + currItem->tupleOffset); */
 
 	return true;
 }
@@ -599,7 +613,7 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 	 * We must have the buffer pinned and locked, but the usual macro can't be
 	 * used here; this function is what makes it good for currPos.
 	 */
-	//Assert(BufferIsValid(so->currPos.buf));
+	/* Assert(BufferIsValid(so->currPos.buf)); */
 
 	page = BufferGetPage_ost(scan->ost, so->currPos.buf);
 	opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
@@ -607,7 +621,7 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 
 	minoff = P_FIRSTDATAKEY_OST(opaque);
 	maxoff = PageGetMaxOffsetNumber_s(page);
-	
+
 	/*
 	 * We note the buffer's block number so that we can release the pin later.
 	 * This allows us to re-read the buffer if it is needed again for hinting.
@@ -629,15 +643,15 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 	 * Now that the current page has been made consistent, the macro should be
 	 * good.
 	 */
-	//Assert(BTScanPosIsPinned(so->currPos));
+	/* Assert(BTScanPosIsPinned(so->currPos)); */
 
-	//if (ScanDirectionIsForward(dir))
-	//{
-		/* load items[] in ascending order */
+	/* if (ScanDirectionIsForward(dir)) */
+	/* { */
+	/* load items[] in ascending order */
 	itemIndex = 0;
 
 	offnum = Max_s(offnum, minoff);
-	//Only forward scans are supported on the prototype.
+	/* Only forward scans are supported on the prototype. */
 	while (offnum <= maxoff)
 	{
 		itup = _bt_checkkeys_ost(scan, page, offnum, &continuescan);
@@ -657,11 +671,11 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 		offnum = OffsetNumberNext_s(offnum);
 	}
 
-	//Assert(itemIndex <= MaxIndexTuplesPerPage);
+	/* Assert(itemIndex <= MaxIndexTuplesPerPage); */
 	so->currPos.firstItem = 0;
 	so->currPos.lastItem = itemIndex - 1;
 	so->currPos.itemIndex = 0;
-	//}
+	/* } */
 
 	return (so->currPos.firstItem <= so->currPos.lastItem);
 }
@@ -669,7 +683,7 @@ _bt_readpage_ost(IndexScanDesc scan, OffsetNumber offnum)
 /* Save an index item into so->currPos.items[itemIndex] */
 static void
 _bt_saveitem_ost(BTScanOpaqueOST so, int itemIndex,
-			 OffsetNumber offnum, IndexTuple itup)
+				 OffsetNumber offnum, IndexTuple itup)
 {
 	BTScanPosItemOST *currItem = &so->currPos.items[itemIndex];
 
@@ -701,37 +715,38 @@ _bt_steppage_ost(IndexScanDesc scan)
 {
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	BlockNumber blkno = InvalidBlockNumber;
-//	bool		status = true;
 
-	//Assert(BTScanPosIsValid(so->currPos));
+/* 	bool		status = true; */
+
+	/* Assert(BTScanPosIsValid(so->currPos)); */
 
 	/*
 	 * Before we modify currPos, make a copy of the page data if there was a
 	 * mark position that needs it.
 	 */
-	//if (so->markItemIndex >= 0)
+	/* if (so->markItemIndex >= 0) */
 
-			/* Not parallel, so use the previously-saved nextPage link. */
-	
+	/* Not parallel, so use the previously-saved nextPage link. */
+
 	blkno = so->currPos.nextPage;
 
 	/* Remember we left a page with data */
 	so->currPos.moreLeft = true;
 
-		/* release the previous buffer, if pinned */
-		//BTScanPosUnpinIfPinned(so->currPos);
-		//Relase buffer?
-		//ReleaseBuffer_s((scanpos).buf);
-		//(scanpos).buf = InvalidBuffer; 
+	/* release the previous buffer, if pinned */
+	/* BTScanPosUnpinIfPinned(so->currPos); */
+	/* Relase buffer? */
+	/* ReleaseBuffer_s((scanpos).buf); */
+	/* (scanpos).buf = InvalidBuffer;  */
 
 	if (!_bt_readnextpage_ost(scan, blkno))
 		return false;
 
 	/* Drop the lock, and maybe the pin, on the current page */
-	//Release buffer?
-	//_bt_drop_lock_and_maybe_pin(scan, &so->currPos);
-	//ReleaseBuffer(scan->buf);
-	//scan->buf = InvalidBuffer;
+	/* Release buffer? */
+	/* _bt_drop_lock_and_maybe_pin(scan, &so->currPos); */
+	/* ReleaseBuffer(scan->buf); */
+	/* scan->buf = InvalidBuffer; */
 
 	return true;
 }
@@ -750,46 +765,47 @@ static bool
 _bt_readnextpage_ost(IndexScanDesc scan, BlockNumber blkno)
 {
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
-	OSTRelation	rel;
+	OSTRelation rel;
 	Page		page;
 	BTPageOpaqueOST opaque;
-//	bool		status = true;
+
+/* 	bool		status = true; */
 
 	rel = scan->ost;
 
-		for (;;)
+	for (;;)
+	{
+		/*
+		 * if we're at end of scan, give up and mark parallel scan as done, so
+		 * that all the workers can finish their scan
+		 */
+		if (blkno == P_NONE_OST || !so->currPos.moreRight)
 		{
-			/*
-			 * if we're at end of scan, give up and mark parallel scan as
-			 * done, so that all the workers can finish their scan
-			 */
-			if (blkno == P_NONE_OST || !so->currPos.moreRight)
-			{
-				//_bt_parallel_done(scan);
-				BTScanPosInvalidate_OST(so->currPos);
-				return false;
-			}
-			/* check for interrupts while we're not holding any buffer lock */
-			//CHECK_FOR_INTERRUPTS();
-			/* step right one page */
-			so->currPos.buf = _bt_getbuf_ost(rel, blkno, BT_READ_OST);
-			page = BufferGetPage_ost(rel, so->currPos.buf);
-			//TestForOldSnapshot(scan->xs_snapshot, rel, page);
-			opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
-			/* check for deleted page */
-			if (!P_IGNORE_OST(opaque))
-			{
-				//PredicateLockPage(rel, blkno, scan->xs_snapshot);
-				/* see if there are any matches on this page */
-				/* note that this will clear moreRight if we can stop */
-				if (_bt_readpage_ost(scan, P_FIRSTDATAKEY_OST(opaque)))
-					break;
-			}
-
-			blkno = opaque->btpo_next;
-			_bt_relbuf_ost(rel, so->currPos.buf);
-			
+			/* _bt_parallel_done(scan); */
+			BTScanPosInvalidate_OST(so->currPos);
+			return false;
 		}
+		/* check for interrupts while we're not holding any buffer lock */
+		/* CHECK_FOR_INTERRUPTS(); */
+		/* step right one page */
+		so->currPos.buf = _bt_getbuf_ost(rel, blkno, BT_READ_OST);
+		page = BufferGetPage_ost(rel, so->currPos.buf);
+		/* TestForOldSnapshot(scan->xs_snapshot, rel, page); */
+		opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
+		/* check for deleted page */
+		if (!P_IGNORE_OST(opaque))
+		{
+			/* PredicateLockPage(rel, blkno, scan->xs_snapshot); */
+			/* see if there are any matches on this page */
+			/* note that this will clear moreRight if we can stop */
+			if (_bt_readpage_ost(scan, P_FIRSTDATAKEY_OST(opaque)))
+				break;
+		}
+
+		blkno = opaque->btpo_next;
+		_bt_relbuf_ost(rel, so->currPos.buf);
+
+	}
 
 
 	return true;

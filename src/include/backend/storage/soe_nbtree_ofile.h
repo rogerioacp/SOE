@@ -6,7 +6,7 @@
 #include "storage/soe_bufpage.h"
 #include <oram/ofile.h>
 
-void nbtree_pageInit(Page page, int blkno, Size blocksize);
-extern AMOFile *nbtree_ofileCreate();
+void		nbtree_pageInit(Page page, int blkno, Size blocksize);
+extern AMOFile * nbtree_ofileCreate();
 
 #endif							/* SOE_NBTREE_OFILE_H */
