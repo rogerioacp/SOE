@@ -69,6 +69,7 @@ heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple)
 	tuple->t_len = len;
 	tuple->t_tableOid = RelationGetRelid_s(rel);
 
+    //selog(DEBUG1, "Setting item pointer set to %d %d", BufferGetBlockNumber_s(buffer), offnum);
 	/* Update tuple->t_self to the actual position where it was stored */
 	ItemPointerSet_s(&(tuple->t_self), BufferGetBlockNumber_s(buffer), offnum);
 
@@ -160,7 +161,7 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	ItemId		lp;
 
 	blkno = ItemPointerGetBlockNumber_s(tid);
-	/* selog(DEBUG1, "Going to get block %d from heap", blkno); */
+	//selog(DEBUG1, "Going to get block %d from heap", blkno);
 	buffer = ReadBuffer_s(rel, blkno);
 
 	if (ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer))
@@ -171,11 +172,11 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	page = BufferGetPage_s(rel, buffer);
 
 	offnum = ItemPointerGetOffsetNumber_s(tid);
-	/* selog(DEBUG1, "Item offset is %d", offnum); */
+	//selog(DEBUG1, "Item offset is %d", offnum); 
 	tuple->t_self = *tid;
 
 	lp = PageGetItemId_s(page, offnum);
-	/* selog(DEBUG1, "Item id has offset %zu ", ItemIdGetOffset(lp)); */
+	 //selog(DEBUG1, "Item id has offset %zu ", ItemIdGetOffset_s(lp));
 	if (!ItemIdIsNormal_s(lp))
 	{
 		selog(ERROR, "Item ID is not normal");

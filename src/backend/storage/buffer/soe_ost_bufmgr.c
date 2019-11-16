@@ -40,6 +40,37 @@ InitOSTRelation(OSTreeState relstate, unsigned int oid, char *attrDesc, unsigned
 	return rel;
 }
 
+Buffer ReadDummyBuffer_ost(OSTRelation relation, int treeLevel,  BlockNumber blkno){
+    int result = 0;
+
+    #ifdef DUMMYS 
+    PLBlock plblock = NULL;
+    char *page = NULL;
+
+    int clevel = treeLevel;
+
+    if(clevel == 0){
+        plblock = createEmptyBlock();
+
+		/*
+		 * The OST fileRead always allocates and writes the content of the
+		 * file page, even if the content is a dummy page.
+		 */
+		ost_fileRead(plblock, relation->osts->iname, blkno, &clevel);
+	    free(plblock);
+        result = plblock->size;
+    }else{
+        result = read_oram(&page, blkno, relation->osts->orams[clevel - 1], &clevel);
+        free(page); 
+    }
+    #endif
+
+    return result;
+    
+
+}
+
+
 Buffer
 ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 {

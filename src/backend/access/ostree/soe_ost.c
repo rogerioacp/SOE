@@ -82,49 +82,29 @@ btgettuple_ost(IndexScanDesc scan)
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	bool		res;
 
-
-	/*
-	 * If we have any array keys, initialize them during first call for a
-	 * scan.  We can't do this in btrescan because we don't know the scan
-	 * direction at that time.
-	 */
-	/* if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos)) */
-	/* { */
-	/* punt if we have any unsatisfiable array keys */
-	/* if (so->numArrayKeys < 0) */
-	/* return false; */
-	/* */
-	/* _bt_start_array_keys(scan, dir); */
-	/* } */
-
-	/* This loop handles advancing to the next array elements, if any */
-	/* do */
-	/* { */
-
-	/*
-	 * If we've already initialized this scan, we can just advance it in the
-	 * appropriate direction.  If we haven't done so yet, we call _bt_first()
-	 * to get the first item in the scan.
-	 */
 	if (!BTScanPosIsValid_OST(so->currPos))
 	{
-		res = _bt_first_ost(scan);
+       	res = _bt_first_ost(scan);
 	}
 	else
 	{
-		/*
+       	/*
 		 * Now continue the scan.
 		 */
 		res = _bt_next_ost(scan);
 	}
+#ifdef DUMMYS 
+    if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
+    {
+        selog(DEBUG1, "No results from now, but next page might have");
+        return false;
+    }
 
-	/* If we have a tuple, return it ... */
-	/* if (res) */
-	/* break; */
-	/* ... otherwise see if we have more array keys to deal with */
-	/* } while (so->numArrayKeys && _bt_advance_array_keys(scan, dir)); */
+    return true;
+#else
+    return res;
+#endif
 
-	return res;
 }
 
 /*

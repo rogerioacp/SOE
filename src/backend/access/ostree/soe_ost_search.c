@@ -27,6 +27,17 @@ static inline void _bt_initialize_more_data_ost(BTScanOpaqueOST so);
 
 
 
+void bt_dummy_search_ost(OSTRelation rel, int maxHeight){
+    #ifdef DUMMYS
+    int height = 0;
+    
+    while(height < maxHeight){
+        ReadDummyBuffer_ost(rel, height,  0);
+        height+=1;
+    }
+    #endif
+}
+
 
 /*
  *	_bt_search() -- Search the tree for a particular scankey,
@@ -55,10 +66,11 @@ static inline void _bt_initialize_more_data_ost(BTScanOpaqueOST so);
  */
 BTStackOST
 _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
-			   Buffer * bufP, int access)
+			   Buffer * bufP, int access, bool doDummy)
 {
 	BTStackOST	stack_in = NULL;
 	unsigned int height = 0;
+    Buffer dummy;
 
 	rel->level = height;
 
@@ -101,6 +113,13 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
 		if (P_ISLEAF_OST(opaque))
 		{
+            #ifdef DUMMYS
+            while(doDummy && height < rel->osts->nlevels){
+                dummy = ReadDummyBuffer_ost(rel, height, 0);
+                height += 1;
+                rel->level += height;
+            } 
+            #endif
 			break;
 		}
 
@@ -469,7 +488,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 * Use the manufactured insertion scan key to descend the tree and
 	 * position ourselves on the target leaf page.
 	 */
-	stack = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST);
+	stack = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST, true);
 	/* don't need to keep the stack around... */
 	_bt_freestack_ost(stack);
 	/* selog(DEBUG1, "GOING to initialize more data"); */
@@ -518,9 +537,14 @@ _bt_first_ost(IndexScanDesc scan)
 		 * the next page.  Return false if there's no matching data at all.
 		 */
 		/* LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK); */
-		if (!_bt_steppage_ost(scan))
+#ifdef DUMMYS
+        return false;
+#else
+        if (!_bt_steppage_ost(scan))
 			return false;
-	}
+#endif	
+    }
+
 	/* else */
 	/* { */
 	/* selog(DEBUG1, "Match found! Maybe something needs to happen"); */
@@ -563,10 +587,22 @@ _bt_next_ost(IndexScanDesc scan)
 	 */
 	/* selog(DEBUG1, "lastItem is %d", so->currPos.lastItem); */
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
-	{
-		if (!_bt_steppage_ost(scan))
+	{   
+        bt_dummy_search_ost(scan->ost, scan->ost->osts->nlevels-1);
+		if (!_bt_steppage_ost(scan)){
+
+            /*
+             * This case only happens when a scan has iterated over every
+             * page that could statisfy a request and there are no more pages.
+             * Thus the scan was at the last page and an oblivious request must 
+             * be made to simullate an access to the leaf level of the tree.
+             **/
+            ReadDummyBuffer_ost(scan->ost, scan->ost->osts->nlevels,  0);
 			return false;
-	}
+        }
+	}else{
+      bt_dummy_search_ost(scan->ost, scan->ost->osts->nlevels);
+    }
 
 
 	/* OK, itemIndex says what to return */

@@ -129,7 +129,7 @@ _bt_doinsert_s(VRelation rel, IndexTuple itup, char *datum, int size, VRelation 
 	offset = InvalidOffsetNumber;
 
 	/* find the first page containing this key */
-	stack = _bt_search_s(rel, indnkeyatts, itup_scankey, false, &buf, BT_WRITE);
+	stack = _bt_search_s(rel, indnkeyatts, itup_scankey, false, &buf, BT_WRITE, false);
 
 	/*
 	 * If the page was split between the time that we surrendered our read
@@ -1174,11 +1174,19 @@ _bt_insert_parent_s(VRelation rel,
 
 		/* create a new root node and update the metapage */
 		rootbuf = _bt_newroot_s(rel, buf, rbuf);
-		selog(DEBUG1, "Root split. New root is %d", rootbuf);
+
+		//selog(DEBUG1, "Root split. New root is %d", rootbuf);
 		/* release the split buffers */
 		ReleaseBuffer_s(rel, rootbuf);
 		ReleaseBuffer_s(rel, rbuf);
 		ReleaseBuffer_s(rel, buf);
+
+        //Everty time the tree root is plit, the gree gets heigher
+        //
+        rel->tHeight++;
+
+        selog(DEBUG1, "Current Tree height is %d", rel->tHeight);
+
 	}
 	else
 	{

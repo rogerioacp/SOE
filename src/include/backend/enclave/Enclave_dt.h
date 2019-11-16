@@ -25,7 +25,7 @@ void		insertHeap(const char *heapTuple, unsigned int tupleSize);
 
 int			getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen);
 
-int			getTupleOST(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen);
+/*int			getTupleOST(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen);*/
 
 void		closeSoe();
 

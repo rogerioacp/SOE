@@ -147,9 +147,12 @@ ifeq ($(USE_VALGRIND), 1)
 	Enclave_C_Flags += -DUSE_VALGRIND
 endif
 
-\
 ifeq ($(CPAGES), 1)
 	Enclave_C_Flags += -DCPAGES
+endif
+
+ifeq ($(DUMMYS),1)
+	Enclave_C_Flags += -DDUMMYS
 endif
 
 ifeq ($(ORAM_LIB), PATHORAM)

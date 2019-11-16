@@ -74,11 +74,13 @@ typedef struct OSTVBlock
 
 extern OSTRelation InitOSTRelation(OSTreeState relstate, unsigned int oid, char *attrDesc, unsigned int attrDescLength);
 
+extern Buffer ReadDummyBuffer_ost(OSTRelation relation, int treeLevel, BlockNumber blkno);
+
 extern Buffer ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum);
 
 extern Page BufferGetPage_ost(OSTRelation relation, Buffer buffer);
 
-void		MarkBufferDirty_ost(OSTRelation relation, Buffer buffer);
+extern void MarkBufferDirty_ost(OSTRelation relation, Buffer buffer);
 
 extern void ReleaseBuffer_ost(OSTRelation relation, Buffer buffer);
 

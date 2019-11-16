@@ -25,7 +25,17 @@ static bool _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno);
 static inline void _bt_initialize_more_data_s(BTScanOpaque so);
 
 
+void
+bt_dummy_search_s(VRelation rel, int maxHeight){
+    #ifdef DUMMYS
+    int height = 0;
+    while(height < maxHeight){
+        ReadDummyBuffer(rel, 0);
+        height++;
+    }
+    #endif
 
+}
 
 /*
  *	_bt_search() -- Search the tree for a particular scankey,
@@ -54,12 +64,15 @@ static inline void _bt_initialize_more_data_s(BTScanOpaque so);
  */
 BTStack
 _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
-			 Buffer * bufP, int access)
+			 Buffer * bufP, int access,  bool doDummy)
 {
-	BTStack		stack_in = NULL;
+    BTStack		stack_in = NULL;
+    int         tHeight = 0;
+
 
 	/* Get the root page to start with */
-	*bufP = _bt_getroot_s(rel, access);
+    *bufP = _bt_getroot_s(rel, access);
+
 	/* If index is empty and access = BT_READ, no root page is created. */
 	if (!BufferIsValid_s(rel, *bufP))
 		return (BTStack) NULL;
@@ -67,15 +80,15 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 	/* Loop iterates once per level descended in the tree */
 	for (;;)
 	{
-		Page		page;
-		BTPageOpaque opaque;
-		OffsetNumber offnum;
-		ItemId		itemid;
-		IndexTuple	itup;
-		BlockNumber blkno;
-		BlockNumber par_blkno;
-		BTStack		new_stack;
-
+      Page          page;
+      BTPageOpaque  opaque;
+      OffsetNumber  offnum;
+      ItemId        itemid;
+      IndexTuple    itup;
+      BlockNumber   blkno;
+      BlockNumber   par_blkno;
+      BTStack       new_stack;
+      
 		/*
 		 * Race -- the page we just grabbed may have split since we read its
 		 * pointer in the parent (or metapage).  If it has, we may need to
@@ -86,8 +99,8 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * incomplete split on the leaf page we're about to insert to, not on
 		 * any of the upper levels (they are taken care of in _bt_getstackbuf,
 		 * if the leaf page is split and we insert to the parent page).  But
-		 * this is a good opportunity to finish splits of internal pages too.
-		 */
+		 * this is a good opportunity to finishnish splits of internal pages too.
+		 */ 
 		/* Concurrent splits are not supported on the prototype. */
 		/**bufP = _bt_moveright(rel, *bufP, keysz, scankey, nextkey,
 							  (access == BT_WRITE), stack_in,
@@ -98,9 +111,15 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		page = BufferGetPage_s(rel, *bufP);
 		opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
 		if (P_ISLEAF_s(opaque))
-		{
-			break;
-		}
+		{ 
+            #ifdef DUMMYS
+                while(doDummy && tHeight < rel->tHeight){
+                    ReadDummyBuffer(rel, 0);
+                    tHeight +=1;
+                }
+            #endif
+           break;
+        }
 
 		/*
 		 * Find the appropriate item on the internal page, and get the child
@@ -135,11 +154,15 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		/* *bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ); */
 
 		/* okay, all set to move down a level */
+        
 		stack_in = new_stack;
+        tHeight++;
 	}
 
 	return stack_in;
 }
+
+
 
 /*
  *	_bt_binsrch() -- Do a binary search for a key on a particular page.
@@ -467,7 +490,7 @@ _bt_first_s(IndexScanDesc scan)
 	 * position ourselves on the target leaf page.
 	 */
 	/* selog(DEBUG1, "Going to search for page"); */
-	stack = _bt_search_s(rel, 1, cur, nextkey, &buf, BT_READ);
+	stack = _bt_search_s(rel, 1, cur, nextkey, &buf, BT_READ, true);
 	/* selog(DEBUG1, "Going to free search stack"); */
 	/* don't need to keep the stack around... */
 	_bt_freestack_s(stack);
@@ -519,9 +542,18 @@ _bt_first_s(IndexScanDesc scan)
 		 * the next page.  Return false if there's no matching data at all.
 		 */
 		/* LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK); */
-		if (!_bt_steppage_s(scan))
-			return false;
-	}
+		/*The following two lines are commented to do a single access to the
+         * oblivious tree. If there are more tuples that match the search key on
+         * the blocks next to the current one, they will be searched on the
+         * following iteration. A false result is returned so that a dummy heap
+         * access is made.*/
+    #ifdef DUMMYS
+        return false;
+    #else
+        if (!_bt_steppage_s(scan))
+            return false;
+    #endif
+       	}
 	/* else */
 	/* { */
 	/* selog(DEBUG1, "Match found! Maybe something needs to happen"); */
@@ -565,9 +597,20 @@ _bt_next_s(IndexScanDesc scan)
 	/* selog(DEBUG1, "lastItem is %d", so->currPos.lastItem); */
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
 	{
-		if (!_bt_steppage_s(scan))
+        bt_dummy_search_s(scan->indexRelation, scan->indexRelation->tHeight-1);
+		if (!_bt_steppage_s(scan)){
+            /*
+             * This case only happens when a scan has iterated over every
+             * page that could statisfy a request and there are no more pages.
+             * Thus the scan was at the last page and an oblivious request must 
+             * be made to simullate an access to the leaf level of the tree.
+             * */
+            bt_dummy_search_s(scan->indexRelation, 1);
 			return false;
-	}
+        }
+	}else{
+        bt_dummy_search_s(scan->indexRelation, scan->indexRelation->tHeight);
+    }
 
 
 	/* OK, itemIndex says what to return */
@@ -716,7 +759,7 @@ _bt_saveitem_s(BTScanOpaque so, int itemIndex,
  * not locked on entry.
  *
  * For success on a scan using a non-MVCC snapshot we hold a pin, but not a
- * read lock, on that page.  If we do not hold the pin, we set so->currPos.buf
+ * read lock, on that page. If we do not hold the pin, we set so->currPos.buf
  * to InvalidBuffer.  We return true to indicate success.
  */
 static bool
@@ -798,18 +841,26 @@ _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno)
 		/* CHECK_FOR_INTERRUPTS(); */
 		/* step right one page */
 		so->currPos.buf = _bt_getbuf_s(rel, blkno, BT_READ);
+        
+       
 		page = BufferGetPage_s(rel, so->currPos.buf);
 		/* TestForOldSnapshot(scan->xs_snapshot, rel, page); */
 		opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
 		/* check for deleted page */
 		if (!P_IGNORE_s(opaque))
 		{
+
 			/* PredicateLockPage(rel, blkno, scan->xs_snapshot); */
 			/* see if there are any matches on this page */
 			/* note that this will clear moreRight if we can stop */
 			if (_bt_readpage_s(scan, P_FIRSTDATAKEY_s(opaque)))
 				break;
-		}
+		}else{
+            //In this prototype pages should be no deleted pages to be ignored.
+            //If a page was ignored, then an extra access was made which
+            //might compromise security.
+            selog(ERROR, "Page was ignored!");
+        }
 
 		blkno = opaque->btpo_next;
 		_bt_relbuf_s(rel, so->currPos.buf);

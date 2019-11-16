@@ -414,13 +414,14 @@ extern void _bt_pageinit_s(Page page, Size size);
  */
 extern BTStack _bt_search_s(VRelation rel,
 							int keysz, ScanKey scankey, bool nextkey,
-							Buffer * bufP, int access);
+							Buffer * bufP, int access, bool isDummy);
 extern OffsetNumber _bt_binsrch_s(VRelation rel, Buffer buf, int keysz,
 								  ScanKey scankey, bool nextkey);
 extern int32 _bt_compare_s(VRelation rel, int keysz, ScanKey scankey,
 						   Page page, OffsetNumber offnum);
 extern bool _bt_first_s(IndexScanDesc scan);
 extern bool _bt_next_s(IndexScanDesc scan);
+extern void bt_dummy_search_s(VRelation rel, int maxHeight);
 
 
 /*

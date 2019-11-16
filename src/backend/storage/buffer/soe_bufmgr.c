@@ -36,8 +36,25 @@ InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, pageinit_f
 	list_new(&(vrel->buffer));
 	vrel->tDesc = (TupleDesc) malloc(sizeof(struct tupleDesc));
 	vrel->tDesc->attrs = NULL;
+
+    vrel->tHeight = 0;
 	return vrel;
 }
+
+
+Buffer 
+ReadDummyBuffer(VRelation relation, BlockNumber blkno){
+    int     result = 0;
+    #ifdef DUMMYS
+    char    *page = NULL;
+
+    result = read_oram(&page, blkno, relation->oram, NULL);
+
+    free(page);
+    #endif
+    return result;
+}
+
 
 /**
 *

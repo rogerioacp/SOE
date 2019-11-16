@@ -45,9 +45,14 @@ OSTRelation ostIndex;
 Amgr	   *tamgr;
 Amgr	   *iamgr;
 
-BlockNumber blkno;
-OffsetNumber off;
+
+//Index scan global status
 IndexScanDesc scan;
+
+
+
+//Operation mode
+Mode        mode;
 
 void
 initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
@@ -76,9 +81,6 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 		selog(ERROR, "unsupported index");
 	}
 
-	blkno = 0;
-	off = 1;
-
 	oIndex->foid = functionOid;
 	oIndex->indexOid = indexOid;
 	oIndex->tDesc->natts = 1;
@@ -102,6 +104,7 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 		selog(ERROR, "unsupported index");
 	}
 	scan = NULL;
+    mode = DYNAMIC;
 }
 
 void
@@ -122,6 +125,7 @@ initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, int n
 	ostIndex = InitOSTRelation(ostTable, iOid, attrDesc, attrDescLength);
 
 	scan = NULL;
+    mode = OST;
 }
 
 ORAMState
@@ -147,9 +151,7 @@ initORAMState(const char *name, int nBlocks, AMOFile * (*ofile) (), bool isHeap)
 		iamgr = amgr;
 	}
 
-	selog(DEBUG1, "Initiating table oram");
 	state = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr, NULL);
-	selog(DEBUG1, "Initialized oram");
 	return state;
 }
 
@@ -260,213 +262,70 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySi
 
 	HeapTuple	heapTuple;
 	ItemPointerData tid;
+    ItemPointer dtid;
 	int			hasNext;
-	bool		hasMore = false;
-	char	   *trimedKey = (char *) malloc(scanKeySize + 1);
+	char	   *trimedKey;
+    bool        matchFound  = false;
 
-	heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+    heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
 	hasNext = 0;
-	memcpy(trimedKey, key, scanKeySize);
+
+    trimedKey = (char *) malloc(scanKeySize + 1);
+    memcpy(trimedKey, key, scanKeySize);
 	trimedKey[scanKeySize] = '\0';
+    
 
-	/*
-	 * selog(DEBUG1, "Going to search for key %s with size %d", trimedKey,
-	 * scanKeySize);
-	 */
+    //Stop everything. Resources have to be freed correctly.
+    if(strcmp(key, "HALT")==0){
+        selog(DEBUG1, "Received Halt signal from client");
+        free(trimedKey);
+        return 1;
+    }
 
-	if (opmode == TEST_MODE)
-	{
+    if(scan == NULL){
+        /*Old request is completed. Start new input requiest*/
+        if(mode == DYNAMIC){
+            scan = btbeginscan_s(oIndex, trimedKey, scanKeySize + 1);
+        }else{
+		    scan = btbeginscan_ost(ostIndex, trimedKey, scanKeySize + 1);
+        }
+        scan->opoid = opoid;
+    }
 
-		/**
-        * If there are no more blocks or the current block has no more tuples.
-        * The prototype assumes a sequential insertion.
-        */
-		if (blkno == oTable->totalBlocks || off - 1 >= oTable->fsm[blkno])
-		{
-			free(heapTuple);
-			free(trimedKey);
-			return 1;
-		}
+    matchFound = mode == DYNAMIC? btgettuple_s(scan): btgettuple_ost(scan);
 
-		ItemPointerSet_s(&tid, blkno, off);
-		heap_gettuple_s(oTable, &tid, heapTuple);
+    if(matchFound){
+        tid = scan->xs_ctup.t_self;
+        heap_gettuple_s(oTable, &tid, heapTuple);
+    }else{
+        mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
+        scan = NULL;
 
-
-		/* If the current block still has tuples */
-		if (off + 1 <= oTable->fsm[blkno])
-		{
-			/* continue to search on current block    */
-			off += 1;
-		}
-		else
-		{
-			/* Move to the next block */
-			blkno += 1;
-			off = 1;
-		}
-
-	}
-	else
-	{
-
-		if (scan == NULL && oIndex->indexOid == F_HASHHANDLER)
-		{
-			scan = hashbeginscan_s(oIndex, trimedKey, scanKeySize + 1);
-		}
-		else if (scan == NULL && oIndex->indexOid == F_BTHANDLER)
-		{
-			scan = btbeginscan_s(oIndex, trimedKey, scanKeySize + 1);
-		}
-		else if (oIndex->indexOid != F_BTHANDLER && oIndex->indexOid != F_HASHHANDLER)
-		{
-			selog(ERROR, "1 - Index is not supported");
-		}
-
-		if (oIndex->indexOid == F_HASHHANDLER)
-		{
-			hasMore = hashgettuple_s(scan);
-		}
-		else if (oIndex->indexOid == F_BTHANDLER)
-		{
-			/*
-			 * selog(DEBUG1, "Going to get tuple from nbtree and set opoid to
-			 * %d", opoid);
-			 */
-			scan->opoid = opoid;
-			hasMore = btgettuple_s(scan);
-		}
-		else
-		{
-			selog(ERROR, "2 - Index is not supported");
-		}
-
-		if (!hasMore)
-		{
-			hasNext = 0;
-			/* selog(DEBUG1, "Going to free scan resources"); */
-			if (oIndex->indexOid == F_HASHHANDLER)
-			{
-				hashendscan_s(scan);
-			}
-			else if (oIndex->indexOid == F_BTHANDLER)
-			{
-				btendscan_s(scan);
-			}
-			else
-			{
-				selog(ERROR, "3 - Index is not supported");
-			}
-			scan = NULL;
-			free(heapTuple);
-			free(trimedKey);
-			return 1;
-		}
-		else
-		{
-			/* selog(DEBUG1, "Going to access the heap"); */
-			tid = scan->xs_ctup.t_self;
-			heap_gettuple_s(oTable, &tid, heapTuple);
-		}
+        #ifdef DUMMYS
+            dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
+            ItemPointerSet_s(dtid, 0, 1);
+            heap_gettuple_s(oTable, dtid, heapTuple);
+            free(dtid);
+        #else
+            free(heapTuple);
+            free(trimedKey);
+            return 1;
+        #endif
+    }
 
 
-	}
-
-	if (heapTuple->t_len > MAX_TUPLE_SIZE)
-	{
-		selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
-	}
-	else
-	{
-		/* selog(DEBUG1, "Going to copy tuple of size %d", heapTuple->t_len); */
+    if (heapTuple->t_len > MAX_TUPLE_SIZE){
+		    selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);
+	}else{
 		memcpy(tuple, (char *) heapTuple, sizeof(HeapTupleData));
 		memcpy(tupleData, (char *) (heapTuple->t_data), (heapTuple->t_len));
 	}
-
-	free(trimedKey);
-	/* TODO: check if heapTuple->t_data should be freed */
-	free(heapTuple->t_data);
-	free(heapTuple);
-
-
-	return hasNext;
+    
+    free(trimedKey);
+    free(heapTuple->t_data);
+    free(heapTuple);
+    return 0;
 }
-
-int
-getTupleOST(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen)
-{
-
-	HeapTuple	heapTuple;
-	int			hasNext;
-	bool		hasMore = false;
-	char	   *trimedKey = (char *) malloc(scanKeySize + 1);
-
-	heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
-	hasNext = 0;
-	memcpy(trimedKey, key, scanKeySize);
-	trimedKey[scanKeySize] = '\0';
-	ItemPointerData tid;
-
-	/*
-	 * selog(DEBUG1, "Going to search for key %s with size %d", trimedKey,
-	 * scanKeySize);
-	 */
-
-
-
-	/* selog(DEBUG1, "Beginning scan for ost"); */
-	if (scan == NULL)
-	{
-		scan = btbeginscan_ost(ostIndex, trimedKey, scanKeySize + 1);
-	}
-	scan->opoid = opoid;
-
-	/* selog(DEBUG1, "going to get tuple ost"); */
-
-	hasMore = btgettuple_ost(scan);
-
-	/* selog(DEBUG1, "going to end scan"); */
-	if (!hasMore)
-	{
-		hasNext = 0;
-		/* selog(DEBUG1, "Going to free scan resources"); */
-
-		btendscan_ost(scan);
-		scan = NULL;
-		free(heapTuple);
-		free(trimedKey);
-		return 1;
-	}
-	else
-	{
-		/*
-		 * selog(DEBUG1, "Going to access the heap at block %d and offset
-		 * %d",ItemPointerGetBlockNumber_s(&tid),
-		 * ItemPointerGetOffsetNumber_s(&tid));
-		 */
-		tid = scan->xs_ctup.t_self;
-		heap_gettuple_s(oTable, &tid, heapTuple);
-	}
-
-
-
-
-	/*
-	 * if(heapTuple->t_len > MAX_TUPLE_SIZE){ selog(ERROR, "Tuple len does not
-	 * match %d != %d", tupleDataLen, heapTuple->t_len); }else{
-	 */
-	memcpy(tuple, (char *) heapTuple, sizeof(HeapTupleData));
-	memcpy(tupleData, (char *) (heapTuple->t_data), (heapTuple->t_len));
-	/* } */
-
-	free(trimedKey);
-	/* TODO: check if heapTuple->t_data should be freed */
-	free(heapTuple->t_data);
-	free(heapTuple);
-
-
-	return hasNext;
-}
-
 
 
 void
@@ -480,7 +339,6 @@ insertHeap(const char *heapTuple, unsigned int tupleSize)
 
 	if (tupleSize <= MAX_TUPLE_SIZE)
 	{
-		/* selog(DEBUG1, "Going to insert tuple of size %d", tupleSize); */
 		heap_insert_s(oTable, tuple, (uint32) tupleSize, hTuple);
 
 	}

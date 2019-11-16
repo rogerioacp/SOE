@@ -24,6 +24,7 @@
 /* There's room for a 16-bit vacuum cycle ID in BTPageOpaqueData */
 typedef uint16 BTCycleId_OST;
 
+#define P_NONE			0
 /*
  *	BTPageOpaqueData -- At the end of every page, we store a pointer
  *	to both siblings in the tree.  This is used to do forward/backward
@@ -399,14 +400,15 @@ extern void _bt_pageinit_ost(Page page, Size size);
  */
 extern BTStackOST _bt_search_ost(OSTRelation rel,
 								 int keysz, ScanKey scankey, bool nextkey,
-								 Buffer * bufP, int access);
+								 Buffer * bufP, int access, bool doDummy);
 extern OffsetNumber _bt_binsrch_ost(OSTRelation rel, Buffer buf, int keysz,
 									ScanKey scankey, bool nextkey);
 extern int32 _bt_compare_ost(OSTRelation rel, int keysz, ScanKey scankey,
 							 Page page, OffsetNumber offnum);
 extern bool _bt_first_ost(IndexScanDesc scan);
 extern bool _bt_next_ost(IndexScanDesc scan);
-
+extern void bt_dummy_search_ost(OSTRelation rel, int maxHeight);
+ 
 
 /*
  * prototypes for functions in nbtutils.c

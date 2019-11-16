@@ -119,27 +119,35 @@ btgettuple_s(IndexScanDesc scan)
 	 * appropriate direction.  If we haven't done so yet, we call _bt_first()
 	 * to get the first item in the scan.
 	 */
-	if (!BTScanPosIsValid_s(so->currPos))
-	{
-		/* selog(DEBUG1, "Going to first scan"); */
-		res = _bt_first_s(scan);
-	}
-	else
-	{
-		/* selog(DEBUG1, "Going to continue for next"); */
+
+
+    if (!BTScanPosIsValid_s(so->currPos))
+    {
+        res = _bt_first_s(scan);
+    }
+    else
+    {
 		/*
 		 * Now continue the scan.
 		 */
 		res = _bt_next_s(scan);
-	}
+    }
+    
+    // the result returned in res signals if any match was found
+    
+#ifdef DUMMYS 
+    /*I'm almost sure that when one condition is true so is the other. Validate
+     * this assumption. No more results*/
+    if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
+    {
+        return false;
+    }
 
-	/* If we have a tuple, return it ... */
-	/* if (res) */
-	/* break; */
-	/* ... otherwise see if we have more array keys to deal with */
-	/* } while (so->numArrayKeys && _bt_advance_array_keys(scan, dir)); */
+    return true;
+#else
+    return res;
+#endif
 
-	return res;
 }
 
 /*
@@ -173,7 +181,9 @@ btbeginscan_s(VRelation rel, const char *key, int keysize)
 	 * allocate the tuple workspace arrays until btrescan.  However, we set up
 	 * scan->xs_itupdesc whether we'll need it or not, since that's so cheap.
 	 */
-	so->currTuples = so->markTuples = NULL;
+    so->currTuples = so->markTuples = NULL;
+    so->currPos.firstItem = 0;
+    so->currPos.lastItem = 0;
 
 	/* get the scan */
 	scan = (IndexScanDesc) malloc(sizeof(IndexScanDescData));

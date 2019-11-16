@@ -81,6 +81,10 @@ typedef struct VRelation
 	unsigned int indexOid;
 	int			maxDatumSize;
 
+    //Tree relation status
+    
+    unsigned int tHeight;
+
 }		   *VRelation;
 
 typedef struct VBlock
@@ -88,7 +92,6 @@ typedef struct VBlock
 	int			id;
 	char	   *page;
 }		   *VBlock;
-
 
 
 
@@ -106,6 +109,8 @@ typedef struct VBlock
 
 extern VRelation InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, pageinit_function pg_f);
 
+extern Buffer ReadDummyBuffer(VRelation relation, BlockNumber blockNum);
+                              
 extern Buffer ReadBuffer_s(VRelation relation, BlockNumber blockNum);
 
 extern Page BufferGetPage_s(VRelation relation, Buffer buffer);
@@ -125,5 +130,4 @@ extern void UpdateFSM(VRelation rel);
 extern void BufferFull_s(VRelation rel, Buffer buffer);
 
 extern void closeVRelation(VRelation rel);
-
 #endif          /* SOE_BUFMGR_H*/
