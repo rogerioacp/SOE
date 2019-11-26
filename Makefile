@@ -155,6 +155,11 @@ ifeq ($(DUMMYS),1)
 	Enclave_C_Flags += -DDUMMYS
 endif
 
+
+ifeq ($(SINGLE_ORAM), 1)
+	Enclave_C_Flags += -DSINGLE_ORAM
+endif
+
 ifeq ($(ORAM_LIB), PATHORAM)
 		Enclave_C_Flags += -DPATHORAM
 		ORAM_LADD := -lpathoram

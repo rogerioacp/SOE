@@ -60,6 +60,24 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 {
 	/* VALGRIND_DO_LEAK_CHECK; */
 
+
+#ifdef SINGLE_ORAM
+    /**
+     *
+     *  Simulates a single ORAM for both the Heap and Index. If there was just
+     *  one oram for both files, then the size would be sum of both, and the
+     *  oram requests would depend on the tree height for the size.
+     *
+     *  If both ORAMS have the sum of both sizes then the three height of both
+     *  orams will be the same and the requests read/write the same number of
+     *  blocks. Thus, it has the same bandwidth overhead. Furthermore, this
+     *  approach does not require changing any other part of the code and is
+     *  suffient for the paper tests.
+     *
+     */
+    tNBlocks += iNBlocks;
+    iNBlocks += tNBlocks;
+#endif
 	selog(DEBUG1, "Initializing SOE for relation %s and index  %s", tName, iName);
 	stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
 	oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
