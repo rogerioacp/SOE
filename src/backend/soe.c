@@ -31,7 +31,7 @@
 #define BKCAP 1
 
 /* Predefined max tuple size for sgx to copy the real tuple to*/
-#define MAX_TUPLE_SIZE 300
+#define MAX_TUPLE_SIZE 1400
 
 ORAMState	stateTable = NULL;
 ORAMState	stateIndex = NULL;
@@ -301,7 +301,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySi
     }
 
     if(scan == NULL){
-        /*Old request is completed. Start new input requiest*/
+        /*Old request is complete. Start new input request*/
         if(mode == DYNAMIC){
             scan = btbeginscan_s(oIndex, trimedKey, scanKeySize + 1);
         }else{
