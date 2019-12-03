@@ -16,6 +16,7 @@
 
 #include "storage/soe_block.h"
 #include "storage/soe_off.h"
+#include "soe_c.h"
 
 /*
  * ItemPointer:

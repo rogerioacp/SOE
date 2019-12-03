@@ -68,8 +68,9 @@ _bt_checkkeys_ost(IndexScanDesc scan,
 	/* datumSize = strlen(datum)+1; */
 	keyValue = scan->keyData->sk_argument;
 	/* the prototype assumes string comparisons */
-	test = (int32) strcmp(datum, keyValue);
-	/**
+	test = (int32) strncmp(datum, keyValue, strlen(datum)-1);
+
+    /**
 	* Look at soe_nbtsearch.c function _bt_first_s to which operations the
 	* opoids correspond to.
 	*/

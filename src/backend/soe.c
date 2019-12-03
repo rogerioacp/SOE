@@ -18,6 +18,7 @@
 #include "storage/soe_heap_ofile.h"
 #include "storage/soe_nbtree_ofile.h"
 #include "storage/soe_ost_ofile.h"
+#include "storage/soe_itemptr.h"
 #include "logger/logger.h"
 
 #include <oram/oram.h>
@@ -228,24 +229,17 @@ insert(const char *heapTuple, unsigned int tupleSize, char *datum, unsigned int 
 	memcpy(trimedDatum, datum, datumSize);
 	trimedDatum[datumSize] = '\0';
 
-	/*
-	 * selog(DEBUG1, "Going to insert key %s with size %d and original %d",
-	 * trimedDatum, datumSize+1, datumSize);
-	 */
 	Item		tuple = (Item) heapTuple;
 
 	if (tupleSize <= MAX_TUPLE_SIZE)
 	{
-		/* selog(DEBUG1, "Going to insert tuple of size %d", tupleSize); */
 		heap_insert_s(oTable, tuple, (uint32) tupleSize, hTuple);
 		if (oIndex->indexOid == F_HASHHANDLER)
 		{
-			/* selog(DEBUG1, "Going to insert tuple in hash index"); */
-			hashinsert_s(oIndex, &(hTuple->t_self), trimedDatum, datumSize + 1);
+					hashinsert_s(oIndex, &(hTuple->t_self), trimedDatum, datumSize + 1);
 		}
 		else if (oIndex->indexOid == F_BTHANDLER)
 		{
-			/* selog(DEBUG1, "Going to insert tuple in btree index"); */
 			btinsert_s(oIndex, oTable, &(hTuple->t_self), trimedDatum, datumSize + 1);
 		}
 
@@ -287,6 +281,9 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySi
 
     heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
 	hasNext = 0;
+    
+     /* FOREST_ORAM MODE: Table strings in the index do not have
+      * the \0 terminator*/
 
     trimedKey = (char *) malloc(scanKeySize + 1);
     memcpy(trimedKey, key, scanKeySize);
@@ -313,8 +310,23 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySi
     matchFound = mode == DYNAMIC? btgettuple_s(scan): btgettuple_ost(scan);
 
     if(matchFound){
-        tid = scan->xs_ctup.t_self;
-        heap_gettuple_s(oTable, &tid, heapTuple);
+        //Normal case
+        if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
+             tid = scan->xs_ctup.t_self;
+             heap_gettuple_s(oTable, &tid, heapTuple);
+        }
+         
+     #ifdef DUMMYS
+        //When dummys are being used and current index does not have a result,
+        //but there are still right leafs to iterate.
+        if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
+            dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
+            ItemPointerSet_s(dtid, 0, 1);
+            heap_gettuple_s(oTable, dtid, heapTuple);
+            free(dtid);
+        }
+     #endif
+
     }else{
         mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
         scan = NULL;

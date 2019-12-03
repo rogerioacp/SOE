@@ -906,4 +906,6 @@ typedef struct varlena BpChar;	/* blank-padded char, ie SQL char(n) */
 #define DatumGetBpCharPP_S(X)			((BpChar *) PG_DETOAST_DATUM_PACKED_S(X))
 
 
+#define PointerIsValid_s(pointer) ((const void*)(pointer) != NULL)
+
 #endif							/* SOE_C_H */

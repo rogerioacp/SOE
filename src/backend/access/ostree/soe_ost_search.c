@@ -328,10 +328,9 @@ _bt_compare_ost(OSTRelation rel,
 
 	/* datum = NameStr_s(*DatumGetName_s(index_getattr_s(itup))); */
 	datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
+
 	/* We assume we are comparing strings(varchars) */
-	/* if(rel->foid == 1078){ */
-	result = (int32) strcmp(scankey->sk_argument, datum);
-	/* } */
+    result = (int32) strncmp(scankey->sk_argument, datum, strlen(datum)-1);
 
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
@@ -496,8 +495,8 @@ _bt_first_ost(IndexScanDesc scan)
 	_bt_initialize_more_data_ost(so);
 	/* position to the precise item on the page */
 	offnum = _bt_binsrch_ost(rel, buf, keysCount, cur, nextkey);
-
-	/*
+	
+    /*
 	 * If nextkey = false, we are positioned at the first item >= scan key, or
 	 * possibly at the end of a page on which all the existing items are less
 	 * than the scan key and we know that everything on later pages is greater
@@ -531,7 +530,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		/* selog(DEBUG1, "Page has no match, move to next page!"); */
+		// selog(DEBUG1, "Page has no match, move to next page!"); 
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
