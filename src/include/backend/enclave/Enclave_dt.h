@@ -10,8 +10,7 @@ typedef unsigned int sgx_status_t;
 
 void		initSOE(const char *tName, const char *iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char *attrDesc, unsigned int attrDescLength);
 
-void		initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanout,
-					 int nlevels, unsigned int tOid, unsigned int iOid, char *pg_attr_desc, unsigned int pgDescSize);
+void		initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanout, unsigned int fanout_size, unsigned int nlevels, unsigned int tOid, unsigned int iOid, char *pg_attr_desc, unsigned int pgDescSize);
 
 void		insert(const char *heapTuple, unsigned int tupleSize, char *datum, unsigned int datumSize);
 

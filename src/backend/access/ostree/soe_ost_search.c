@@ -38,7 +38,6 @@ void bt_dummy_search_ost(OSTRelation rel, int maxHeight){
     #endif
 }
 
-
 /*
  *	_bt_search() -- Search the tree for a particular scankey,
  *		or more precisely for the first leaf page it could be on.
@@ -530,15 +529,17 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		// selog(DEBUG1, "Page has no match, move to next page!"); 
+		 selog(DEBUG1, "Page has no match, move to next page!"); 
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
 		 */
 		/* LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK); */
 #ifdef DUMMYS
+        selog(DEBUG1, "Not found");
         return false;
 #else
+        selog(DEBUG1, "On dummys not found");
         if (!_bt_steppage_ost(scan))
 			return false;
 #endif	
@@ -769,10 +770,10 @@ _bt_steppage_ost(IndexScanDesc scan)
 	so->currPos.moreLeft = true;
 
 	/* release the previous buffer, if pinned */
-	/* BTScanPosUnpinIfPinned(so->currPos); */
+	//BTScanPosUnpinIfPinned(so->currPos); 
 	/* Relase buffer? */
-	/* ReleaseBuffer_s((scanpos).buf); */
-	/* (scanpos).buf = InvalidBuffer;  */
+	ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+	so->currPos.buf = InvalidBuffer;
 
 	if (!_bt_readnextpage_ost(scan, blkno))
 		return false;
@@ -780,8 +781,8 @@ _bt_steppage_ost(IndexScanDesc scan)
 	/* Drop the lock, and maybe the pin, on the current page */
 	/* Release buffer? */
 	/* _bt_drop_lock_and_maybe_pin(scan, &so->currPos); */
-	/* ReleaseBuffer(scan->buf); */
-	/* scan->buf = InvalidBuffer; */
+	ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+	so->currPos.buf= InvalidBuffer;
 
 	return true;
 }

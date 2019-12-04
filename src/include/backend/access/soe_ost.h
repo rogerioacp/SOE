@@ -377,7 +377,7 @@ typedef BTScanOpaqueDataOST * BTScanOpaqueOST;
 /*
  * external entry points for btree, in nbtree.c
  */
-extern bool insert_ost(OSTRelation relstate, char *block, int level, int offset);
+extern bool insert_ost(OSTRelation relstate, char *block, unsigned int level, unsigned int offset);
 extern IndexScanDesc btbeginscan_ost(OSTRelation rel, const char *key, int keysize);
 extern bool btgettuple_ost(IndexScanDesc scan);
 extern void btendscan_ost(IndexScanDesc scan);

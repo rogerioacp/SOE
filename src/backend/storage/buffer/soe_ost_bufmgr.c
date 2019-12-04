@@ -101,6 +101,7 @@ ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 	}
 	else
 	{
+        //selog(DEBUG1, "Read oram ost block %d at level %d", blockNum, clevel);
 		result = read_oram(&page, blockNum, relation->osts->orams[clevel - 1], &clevel);
 
 		/**
@@ -291,7 +292,7 @@ closeOSTRelation(OSTRelation rel)
 		list_destroy(rel->buffers[l]);
 		free(rel->buffers);
 	}
-	/* free(rel->osts); */
+	free(rel->osts);
 
 	if (rel->tDesc->attrs != NULL)
 	{

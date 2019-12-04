@@ -5,8 +5,9 @@ enclave{
 
 			public void initSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, [in, size=pgDescSize] char* pg_attr_desc, unsigned int pgDescSize);
 
-			public void initFSOE([in, string] const char* tName, [in, string] const char* iName, int tNBlocks, [in, size=nlevels] int* fanout,
-			int nlevels, unsigned int tOid, unsigned int iOid, [in, size=pgDescSize] char* pg_attr_desc, unsigned int pgDescSize);
+			public void initFSOE([in, string] const char* tName, [in, string]
+            const char* iName, int tNBlocks, [in, size=fanout_size] int* fanout,
+            unsigned int fanout_size, unsigned int nlevels,  unsigned int tOid, unsigned int iOid, [in, size=pgDescSize] char* pg_attr_desc, unsigned int pgDescSize);
 
 			public void addIndexBlock([in, size=blockSize] char* block,
 			unsigned int blockSize, unsigned int offset, unsigned int level);

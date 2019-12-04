@@ -73,13 +73,12 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 	status = SGX_SUCCESS;
 	int			offset = 0;
 	int			boffset = 0;
-
-	do
+    //selog(DEBUG1," Heap file init");
+	
+    do
 	{
-		/*
-		 * selog(DEBUG1, "Going for boffset %d on heap init with tnblocks %d",
-		 * boffset, tnblocks);
-		 */
+		//selog(DEBUG1, "Going for boffset %d on heap init with tnblocks %d",boffset, tnblocks);
+	
 
 		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 

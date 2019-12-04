@@ -29,6 +29,7 @@
 #include "logger/logger.h"
 #include "storage/soe_ost_ofile.h"
 #include "storage/soe_bufpage.h"
+#include "storage/soe_ost_bufmgr.h"
 
 #include <oram/plblock.h>
 #include <string.h>
@@ -55,7 +56,7 @@
  *		new tuple, and put it there.
  */
 bool
-insert_ost(OSTRelation rel, char *block, int level, int offset)
+insert_ost(OSTRelation rel, char *block, unsigned int level, unsigned int offset)
 {
 	Buffer		buffer;
 	Page		page;
@@ -81,10 +82,11 @@ btgettuple_ost(IndexScanDesc scan)
 {
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	bool		res;
-
+    bool        first = false;
 	if (!BTScanPosIsValid_OST(so->currPos))
 	{
        	res = _bt_first_ost(scan);
+        first  = true;
 	}
 	else
 	{
@@ -96,10 +98,14 @@ btgettuple_ost(IndexScanDesc scan)
 #ifdef DUMMYS 
     if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
     {
-        selog(DEBUG1, "No results from now, but next page might have");
+        //selog(DEBUG1, "No results for now, but next page might have");
         return false;
     }
-
+    if(first){
+        selog(DEBUG1, "Not found, first and no more.");
+        BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
+        ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+    }
     return true;
 #else
     return res;

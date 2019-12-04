@@ -238,7 +238,7 @@ ost_fileClose(const char *filename, void *appData)
 	sgx_status_t status = SGX_SUCCESS;
 
 	status = outFileClose(filename);
-
+    free(o_nblocks);
 	if (status != SGX_SUCCESS)
 	{
 		selog(ERROR, "Could not close relation %s\n", filename);

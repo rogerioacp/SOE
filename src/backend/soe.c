@@ -127,7 +127,7 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 }
 
 void
-initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, int nlevels, unsigned int tOid, unsigned int iOid, char *attrDesc, unsigned int attrDescLength)
+initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, unsigned int fanout_size, unsigned int nlevels, unsigned int tOid, unsigned int iOid, char *attrDesc, unsigned int attrDescLength)
 {
 
 
@@ -176,7 +176,7 @@ initORAMState(const char *name, int nBlocks, AMOFile * (*ofile) (), bool isHeap)
 
 
 OSTreeState
-initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, int nlevels, AMOFile * (*ofile) ())
+initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, unsigned int nlevels, AMOFile * (*ofile) ())
 {
 
 	int			i;
@@ -199,7 +199,9 @@ initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, int nlevel
 
 	for (i = 0; i < nlevels; i++)
 	{
+    
 		size_t		fileSize = BLCKSZ * fanouts[i];
+        //selog(DEBUG1, "level %d fanout is %d",i, fanouts[i]);
 		Amgr	   *amgr;
 
 		amgr = (Amgr *) malloc(sizeof(Amgr));
@@ -208,10 +210,8 @@ initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, int nlevel
 		amgr->am_ofile = ofile();
 		/* setclevel(i); */
 
-		/*
-		 * selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i,
-		 * fileSize);
-		 */
+		
+		//selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i, fileSize);
 		ost->orams[i] = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr, &i);
 	}
 
@@ -259,7 +259,8 @@ void
 addIndexBlock(char *block, unsigned int blocksize, unsigned int offset, unsigned int level)
 {
 
-	insert_ost(ostIndex, block, level, offset);
+	//selog(DEBUG1, "Going to add index block %d at level %d", offset, level);
+    insert_ost(ostIndex, block, level, offset);
 }
 
 void
@@ -387,7 +388,11 @@ closeSoe()
 {
 	selog(DEBUG1, "Going to close soe");
 	closeVRelation(oTable);
-	closeVRelation(oIndex);
+    if(mode == DYNAMIC){
+	    closeVRelation(oIndex);
+    }else{
+        closeOSTRelation(ostIndex);
+    } 
 	free(tamgr);
 	free(iamgr);
 }

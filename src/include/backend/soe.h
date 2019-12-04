@@ -43,7 +43,7 @@ extern ORAMState initORAMState(const char *name, int nBlocks, AMOFile* (*ofile)(
 
 extern void FormIndexDatum_s(HeapTuple tuple, Datum *values, bool *isnull);
 
- OSTreeState initOSTreeProtocol(const char *name, unsigned int iOid, int* fanouts, int nlevels, AMOFile* (*ofile)());
+ OSTreeState initOSTreeProtocol(const char *name, unsigned int iOid, int* fanouts, unsigned int nlevels, AMOFile* (*ofile)());
 
 typedef enum {
     DYNAMIC=0,
