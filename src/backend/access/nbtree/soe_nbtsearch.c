@@ -790,7 +790,10 @@ _bt_steppage_s(IndexScanDesc scan)
 	/* Relase buffer? */
 	/* ReleaseBuffer_s((scanpos).buf); */
 	/* (scanpos).buf = InvalidBuffer;  */
-
+    if(so->currPos.buf != InvalidBuffer){
+        ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
+	    so->currPos.buf = InvalidBuffer;
+    }
 	if (!_bt_readnextpage_s(scan, blkno))
 		return false;
 
@@ -799,7 +802,8 @@ _bt_steppage_s(IndexScanDesc scan)
 	/* _bt_drop_lock_and_maybe_pin(scan, &so->currPos); */
 	/* ReleaseBuffer(scan->buf); */
 	/* scan->buf = InvalidBuffer; */
-
+    ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
+    so->currPos.buf = InvalidBuffer;
 	return true;
 }
 
