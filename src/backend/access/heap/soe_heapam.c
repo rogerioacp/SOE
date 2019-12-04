@@ -168,7 +168,7 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	{
 		selog(ERROR, "Requested Pointer does not match block number. %d != %d", ItemPointerGetBlockNumber_s(tid), BufferGetBlockNumber_s(buffer));
 	}
-
+    //selog(DEBUG1, "Heap read buffer %d", buffer);
 	page = BufferGetPage_s(rel, buffer);
 
 	offnum = ItemPointerGetOffsetNumber_s(tid);

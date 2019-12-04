@@ -237,7 +237,7 @@ ReleaseBuffer_ost(OSTRelation relation, Buffer buffer)
 	while (list_iter_next(&iter, &element) != CC_ITER_END)
 	{
 		vblock = (OSTVBlock) element;
-		if (vblock->id == buffer)
+        if (vblock->id == buffer)
 		{
 			found = true;
 			break;

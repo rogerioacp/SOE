@@ -117,7 +117,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
                 dummy = ReadDummyBuffer_ost(rel, height, 0);
                 height += 1;
                 rel->level += height;
-            } 
+            }
             #endif
 			break;
 		}
@@ -529,17 +529,17 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		 selog(DEBUG1, "Page has no match, move to next page!"); 
+		 //selog(DEBUG1, "Page has no match, move to next page!"); 
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
 		 */
 		/* LockBuffer(so->currPos.buf, BUFFER_LOCK_UNLOCK); */
 #ifdef DUMMYS
-        selog(DEBUG1, "Not found");
+        //selog(DEBUG1, "Not found");
         return false;
 #else
-        selog(DEBUG1, "On dummys not found");
+       // selog(DEBUG1, "On dummys not found");
         if (!_bt_steppage_ost(scan))
 			return false;
 #endif	
@@ -771,9 +771,13 @@ _bt_steppage_ost(IndexScanDesc scan)
 
 	/* release the previous buffer, if pinned */
 	//BTScanPosUnpinIfPinned(so->currPos); 
-	/* Relase buffer? */
-	ReleaseBuffer_ost(scan->ost, so->currPos.buf);
-	so->currPos.buf = InvalidBuffer;
+	
+    /* Relase buffer? */
+    
+    if(so->currPos.buf != InvalidBuffer){
+	    ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+	    so->currPos.buf = InvalidBuffer;
+    }
 
 	if (!_bt_readnextpage_ost(scan, blkno))
 		return false;

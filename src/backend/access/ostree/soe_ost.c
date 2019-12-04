@@ -98,13 +98,8 @@ btgettuple_ost(IndexScanDesc scan)
 #ifdef DUMMYS 
     if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
     {
-        //selog(DEBUG1, "No results for now, but next page might have");
+        //selog(DEBUG1, "No more results on the tree");
         return false;
-    }
-    if(first){
-        selog(DEBUG1, "Not found, first and no more.");
-        BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
-        ReleaseBuffer_ost(scan->ost, so->currPos.buf);
     }
     return true;
 #else
