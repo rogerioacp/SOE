@@ -38,18 +38,11 @@
 void
 heap_pageInit(Page page, int blkno, Size blocksize)
 {
-#ifdef PATHORAM
-	PageHeader	phdr;
 
-	PageInit_s(page, blocksize, 0);
-	phdr = (PageHeader) page;
-	phdr->pd_prune_xid = blkno;
-#else							/* // Forest ORAM */
-	PageHeader	phdr;
-
-	phdr = (PageHeader) page;
-	phdr->pd_prune_xid = blkno;
-#endif
+    int*     pblkno; 
+	PageInit_s(page, blocksize, sizeof(int));
+    pblkno = (int*) PageGetSpecialPointer_s(page);
+    *pblkno = blkno;
 }
 
 /**
@@ -117,41 +110,29 @@ void
 heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 
-	/* selog(DEBUG1, "heap_fileRead %d", ob_blkno); */
 	sgx_status_t status;
-
-	/* OblivPageOpaque oopaque = NULL; */
 	char	   *ciphertexBlock;
+	int*    r_blkno;
 
 	status = SGX_SUCCESS;
-	PageHeader	phdr;
 
 	block->block = (void *) malloc(BLCKSZ);
 	ciphertexBlock = (char *) malloc(BLCKSZ);
 
-	/* status = outFileRead(block->block, filename, ob_blkno, BLCKSZ); */
-	status = outFileRead(ciphertexBlock, filename, ob_blkno, BLCKSZ);
+	
+    status = outFileRead(ciphertexBlock, filename, ob_blkno, BLCKSZ);
 	page_decryption((unsigned char *) ciphertexBlock, (unsigned char *) block->block);
 
 	if (status != SGX_SUCCESS)
 	{
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
 	}
-	phdr = (PageHeader) block->block;
+   
+	r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
 
-	/*
-	 * oopaque = (OblivPageOpaque) PageGetSpecialPointer_s((Page)
-	 * block->block);
-	 */
-	block->blkno = phdr->pd_prune_xid;
+   	block->blkno = *r_blkno;
 	block->size = BLCKSZ;
 	free(ciphertexBlock);
-
-	/*
-	 * selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno,
-	 * block->blkno);
-	 */
-
 }
 
 
@@ -160,13 +141,17 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 {
 	sgx_status_t status = SGX_SUCCESS;
 	char	   *encPage = (char *) malloc(BLCKSZ);
+    int        *r_blkno;
+    
+    r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
 
-	/* OblivPageOpaque oopaque = NULL; */
-	/* PageHeader phdr; */
-
+    if(block->blkno != *r_blkno){
+        selog(ERROR, "Block blkno %d  and page blkno %d do not match", block->blkno, *r_blkno);
+    }
+    
 	if (block->blkno == DUMMY_BLOCK)
 	{
-		/* selog(DEBUG1, "Requested write of DUMMY_BLOCK"); */
+		//selog(DEBUG1, "Requested write of DUMMY_BLOCK"); 
 		/**
 		* When the blocks to write to the file are dummy, they have to be
 		* initialized to keep a consistent state for next reads. We might
@@ -174,25 +159,19 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 		* remove this extra step by removing some verifications
 		* on the ocalls.
 		*/
-		/* selog(DEBUG1, "Going to write DUMMY_BLOCK"); */
 		heap_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
-	page_encryption((unsigned char *) block->block, (unsigned char *) encPage);
-	/* phdr = (PageHeader) block->block; */
-
-	/* oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->block); */
-
-	/*
-	 * selog(DEBUG1, "heap_fileWrite %d with block %d and special %d ",
-	 * ob_blkno, block->blkno, phdr->pd_prune_xid);
-	 */
-	/* selog(DEBUG1, "heap_fileWrite for file %s", filename); */
+	
+    page_encryption((unsigned char *) block->block, (unsigned char *) encPage);
+ 	
+	
 	status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS)
 	{
 		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
 	}
+
 	free(encPage);
 }
 
