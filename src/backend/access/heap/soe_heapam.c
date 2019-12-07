@@ -115,33 +115,32 @@ heap_insert_block_s(VRelation rel, char *rpage)
 {
 	Buffer		buffer;
 	Page		page;
-	BlockNumber freeSpaceBlock;
+    BlockNumber freeSpaceBlock;
+    int* r_blkno;
+    int*  p_blkno;
 
-	/* ItemId lp; */
+
 	freeSpaceBlock = FreeSpaceBlock_s(rel);
-	/* selog(DEBUG1, "Received free space block %d", freeSpaceBlock); */
-	buffer = ReadBuffer_s(rel, freeSpaceBlock);
+    	
+    buffer = ReadBuffer_s(rel, freeSpaceBlock);
 	page = BufferGetPage_s(rel, buffer);
-/* 	uint32 len; */
 
-	/*
-	 * if(buffer == 0){ lp = PageGetItemId_s(rpage, 2); len =
-	 * ItemIdGetLength_s(lp); selog(DEBUG1, "The length of the item in block
-	 * %d and offset %d is %d", 0,2, len); }
-	 */
+
 	memcpy(page, rpage, BLCKSZ);
 
-	/*
-	 * if(buffer == 0){ lp = PageGetItemId_s(page, 2); len =
-	 * ItemIdGetLength_s(lp); selog(DEBUG1, "The length of the item in block
-	 * %d and offset %d is %d", 0,2, len); }
-	 */
+    r_blkno = (int*) PageGetSpecialPointer_s(rpage);
+    p_blkno = (int*) PageGetSpecialPointer_s(page);
+    
+    if(*r_blkno != *p_blkno){
+        selog(ERROR, "Block numbers in heap mage do not match %d %d", *r_blkno, *p_blkno);
+    }
+
+      
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
 	UpdateFSM(rel);
 	BufferFull_s(rel, buffer);
 
-	/* selog(DEBUG1, "Update block on buffer %d", buffer); */
 }
 
 /**

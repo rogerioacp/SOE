@@ -62,7 +62,7 @@ ost_pageInit(Page page, int blkno, Size blocksize)
 	ovflopaque->btpo_prev = InvalidBlockNumber;
 	ovflopaque->btpo_next = InvalidBlockNumber;
 	ovflopaque->btpo_flags = 0;
-	ovflopaque->btpo.o_blkno = blkno;
+	ovflopaque->o_blkno = blkno;
 
 }
 
@@ -172,7 +172,7 @@ ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, vo
 	}
 
 	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
-	block->blkno = oopaque->btpo.o_blkno;
+	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
 	free(ciphertextBlock);
 }
@@ -218,7 +218,7 @@ ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_bl
 		ost_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
 	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
-	oopaque->btpo.o_blkno = block->blkno;
+	oopaque->o_blkno = block->blkno;
 
 
 	page_encryption((unsigned char *) block->block, (unsigned char *) encpage);

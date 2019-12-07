@@ -59,11 +59,10 @@ typedef struct BTPageOpaqueDataOST
 	{
 		uint32		level;		/* tree level --- zero for leaf pages */
 		TransactionId xact;		/* next transaction ID, if deleted */
-		uint32		o_blkno;
-		/* used to store original block number inside soe */
 	}			btpo;
 	uint16		btpo_flags;		/* flag bits, see below */
 	BTCycleId_OST btpo_cycleid; /* vacuum cycle ID of latest split */
+	uint32		o_blkno; 		/* used to store original block number inside soe */
 }			BTPageOpaqueDataOST;
 
 typedef BTPageOpaqueDataOST * BTPageOpaqueOST;

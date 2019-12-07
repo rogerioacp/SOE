@@ -71,7 +71,6 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
 	void	   *element;
 	VBlock		searchVBlock;
 
-	/* OblivPageOpaque oopaque; */
 
 	isExtended = (blockNum == P_NEW);
 	BlockNumber blockID;
@@ -79,30 +78,22 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
 	int			result;
 
 
-
 	if (isExtended)
 	{
-		/*
-		 * selog(DEBUG1, "1 - Going to oram read real block %d",
-		 * relation->lastFreeBlock);
-		 */
 
 		result = read_oram(&page, relation->lastFreeBlock, relation->oram, NULL);
 		if (result == DUMMY_BLOCK)
 		{
-			/*
-			 * selog(DEBUG1, "Found Dummy block, going to initialize to blkno
-			 * %d", relation->lastFreeBlock);
-			 */
+			
 			/**
              *  When the read returns a DUMMY_BLOCK page  it means its the
              *  first time the page is read from the disk.
              *  As such, a new page needs to be allocated.
              **/
 
-			page = (char *) malloc(BLCKSZ);
+			page = (char *) malloc(BLCKSZ); 
 			relation->pageinit(page, relation->lastFreeBlock, BLCKSZ);
-		}
+        }
 
 		/**
          * When the read returns a DUMMY_BLOCK page  it means its the first time the page is read from the disk.
@@ -138,7 +129,6 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
 			}
 		}
 
-		/* selog(DEBUG1, "2 - Going to oram read real block %d", blockNum); */
 		result = read_oram(&page, blockNum, relation->oram, NULL);
 		if (result == DUMMY_BLOCK)
 		{
@@ -158,13 +148,6 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
 	block->id = blockID;
 	block->page = page;
 	list_add(relation->buffer, block);
-
-	/* oopaque = (OblivPageOpaque) PageGetSpecialPointer((Page) block->page); */
-
-	/*
-	 * selog(DEBUG1, "Inserted block on buffer list with blkno %d and special
-	 * %d", block->id, oopaque->o_blkno);
-	 */
 
 	return blockID;
 }
@@ -206,7 +189,6 @@ MarkBufferDirty_s(VRelation relation, Buffer buffer)
 	bool		found = false;
 
 	result = 0;
-	/* OblivPageOpaque oopaque; */
 
 	list_iter_init(&iter, relation->buffer);
 
@@ -217,27 +199,11 @@ MarkBufferDirty_s(VRelation relation, Buffer buffer)
 		if (vblock->id == buffer)
 		{
 			found = true;
-
-			/*
-			 * oopaque = (OblivPageOpaque) PageGetSpecialPointer( (Page)
-			 * vblock->page);
-			 */
-
-			/*
-			 * selog(DEBUG1, "Found page on buffer list with blkno %d and
-			 * special %d", vblock->id, oopaque->o_blkno);
-			 */
-
 			break;
 		}
 	}
 	if (found)
-	{
-		/* selog(DEBUG1,  "Found buffer %d to update", buffer); */
-		/*
-		 * selog(DEBUG1, "GOING to oblivious write to real blkno %d",
-		 * vblock->id);
-		 */
+	{	
 		result = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram, NULL);
 	}
 	else
@@ -282,7 +248,6 @@ ReleaseBuffer_s(VRelation relation, Buffer buffer)
 	 */
 	if (found)
 	{
-		/* selog(DEBUG1, "Going to release buffer %d", buffer); */
 		list_remove(relation->buffer, vblock, &toFree);
 		free(((VBlock) toFree)->page);
 		free(toFree);
