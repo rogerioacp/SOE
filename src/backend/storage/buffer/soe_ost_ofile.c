@@ -112,7 +112,14 @@ ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize,
 			{
 				destPage = blocks + (offset * BLCKSZ);
 				ost_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-				page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+
+				#ifndef CPAGES
+					page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+				#else
+					memcpy(destPage, tmpPage, BLCKSZ);
+				#endif
+
+                memcpy(destPage, tmpPage, BLCKSZ);
 			}
 
 			status = outFileInit(filename, blocks, allocBlocks, blocksize, allocBlocks * BLCKSZ, boffset);
@@ -164,8 +171,13 @@ ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, vo
 	ciphertextBlock = (char *) malloc(BLCKSZ);
 
 	status = outFileRead(ciphertextBlock, filename, l_ob_blkno, BLCKSZ);
-	page_decryption((unsigned char *) ciphertextBlock, (unsigned char *) block->block);
 
+	#ifndef CPAGES
+		page_decryption((unsigned char *) ciphertextBlock, (unsigned char *) block->block);
+	#else
+    	memcpy(block->block, ciphertextBlock, BLCKSZ);
+	#endif
+    
 	if (status != SGX_SUCCESS)
 	{
 		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
@@ -175,6 +187,7 @@ ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, vo
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
 	free(ciphertextBlock);
+
 }
 
 
@@ -220,9 +233,13 @@ ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_bl
 	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
 	oopaque->o_blkno = block->blkno;
 
+	#ifndef CPAGES
+		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
+	#else
+ 		memcpy(encpage, block->block, BLCKSZ);
+	#endif
 
-	page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
-	status = outFileWrite(encpage, filename, l_ob_blkno, BLCKSZ);
+    status = outFileWrite(encpage, filename, l_ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS)
 	{

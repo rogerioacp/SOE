@@ -84,7 +84,11 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 		{
 			destPage = blocks + (offset * BLCKSZ);
 			nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-			page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+			#ifndef CPAGES
+				page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+			#else
+				memcpy(destPage, tmpPage, BLCKSZ);
+			#endif
 			/* memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize); */
 			/* oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page); */
 
@@ -124,7 +128,11 @@ nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno,
 	ciphertextBlock = (char *) malloc(BLCKSZ);
 
 	status = outFileRead(ciphertextBlock, filename, ob_blkno, BLCKSZ);
-	page_decryption((unsigned char *) ciphertextBlock, (unsigned char *) block->block);
+	#ifndef CPAGES
+		page_decryption((unsigned char *) ciphertextBlock, (unsigned char *) block->block);
+	#else
+    	memcpy(block->block, ciphertextBlock, BLCKSZ);
+	#endif
 
 	if (status != SGX_SUCCESS)
 	{
@@ -181,7 +189,11 @@ nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob
 	 * ob_blkno, block->blkno, oopaque->o_blkno);
 	 */
 	/* selog(DEBUG1, "hash_fileWrite for file %s", filename); */
-	page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
+	#ifndef CPAGES
+		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
+	#else
+		 memcpy(encpage, block->block, BLCKSZ);
+	#endif
 	status = outFileWrite(encpage, filename, ob_blkno, BLCKSZ);
 
 	if (status != SGX_SUCCESS)

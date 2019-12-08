@@ -78,16 +78,19 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 		blocks = (char *) malloc(BLCKSZ * allocBlocks);
 		tmpPage = (char *) malloc(blocksize);
 
-		/*
-		 * selog(DEBUG1, "going to initialize %u pages of relation  %s\n",
-		 * nblocks, filename);
-		 */
+		
+		// selog(DEBUG1, "going to initialize %u pages of relation  %s\n",nblocks, filename);
+		
 
 		for (offset = 0; offset < allocBlocks; offset++)
 		{
 			destPage = blocks + (offset * BLCKSZ);
-			heap_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-			page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+			heap_pageInit(tmpPage, DUMMY_BLOCK, BLCKSZ);
+			#ifndef CPAGES
+				page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+			#else
+				memcpy(destPage, tmpPage, BLCKSZ);
+			#endif
 		}
 
 		status = outFileInit(filename, blocks, allocBlocks, BLCKSZ, allocBlocks * BLCKSZ, boffset);
@@ -121,7 +124,12 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, v
 
 	
     status = outFileRead(ciphertexBlock, filename, ob_blkno, BLCKSZ);
-	page_decryption((unsigned char *) ciphertexBlock, (unsigned char *) block->block);
+
+	#ifndef CPAGES
+		page_decryption((unsigned char *) ciphertexBlock, (unsigned char *) block->block);
+	#else
+    	memcpy(block->block, ciphertexBlock, BLCKSZ);
+	#endif
 
 	if (status != SGX_SUCCESS)
 	{
@@ -133,6 +141,8 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, v
    	block->blkno = *r_blkno;
 	block->size = BLCKSZ;
 	free(ciphertexBlock);
+    //selog(DEBUG1, "Requested read oblivious block %d that has real block %d", ob_blkno, block->blkno);
+
 }
 
 
@@ -144,6 +154,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
     int        *r_blkno;
     
     r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
+    //selog(DEBUG1, "Requested write  oblivious block %d that has real block %d", ob_blkno, *r_blkno);
 
     if(block->blkno != *r_blkno){
         selog(ERROR, "Block blkno %d  and page blkno %d do not match", block->blkno, *r_blkno);
@@ -161,9 +172,11 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 		*/
 		heap_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
-	
-    page_encryption((unsigned char *) block->block, (unsigned char *) encPage);
- 	
+	#ifndef CPAGES
+		page_encryption((unsigned char *) block->block, (unsigned char *) encPage);
+	#else
+		memcpy(encPage, block->block, BLCKSZ);
+ 	#endif
 	
 	status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 

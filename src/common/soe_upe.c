@@ -69,9 +69,6 @@ page_encryption(unsigned char *plaintext, unsigned char *ciphertext)
 
 	/* Clean up */
 	EVP_CIPHER_CTX_free(ctx);
-#else
-	/* If the pages are in cleartext */
-	memcpy(ciphertext, plaintext, BLCKSZ);
 #endif
 
 }
@@ -128,8 +125,7 @@ page_decryption(unsigned char *ciphertext, unsigned char *plaintext)
 
 	/* Clean up */
 	EVP_CIPHER_CTX_free(ctx);
-#else
-	memcpy(plaintext, ciphertext, BLCKSZ);
+
 #endif
 
 }
