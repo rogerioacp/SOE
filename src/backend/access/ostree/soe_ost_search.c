@@ -110,6 +110,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		/* if this is a leaf page, we're done */
 		page = BufferGetPage_ost(rel, *bufP);
 		opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
+
 		if (P_ISLEAF_OST(opaque))
 		{
             #ifdef DUMMYS
@@ -601,7 +602,12 @@ _bt_next_ost(IndexScanDesc scan)
 			return false;
         }
 	}else{
-      bt_dummy_search_ost(scan->ost, scan->ost->osts->nlevels);
+		if(so->currPos.buf != InvalidBuffer){
+			ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+			so->currPos.buf= InvalidBuffer;
+		}
+		
+      	bt_dummy_search_ost(scan->ost, scan->ost->osts->nlevels);
     }
 
 
@@ -785,8 +791,10 @@ _bt_steppage_ost(IndexScanDesc scan)
 	/* Drop the lock, and maybe the pin, on the current page */
 	/* Release buffer? */
 	/* _bt_drop_lock_and_maybe_pin(scan, &so->currPos); */
-	ReleaseBuffer_ost(scan->ost, so->currPos.buf);
-	so->currPos.buf= InvalidBuffer;
+	if(so->currPos.buf != InvalidBuffer){
+		ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+		so->currPos.buf= InvalidBuffer;
+	}
 
 	return true;
 }
@@ -838,12 +846,21 @@ _bt_readnextpage_ost(IndexScanDesc scan, BlockNumber blkno)
 			/* PredicateLockPage(rel, blkno, scan->xs_snapshot); */
 			/* see if there are any matches on this page */
 			/* note that this will clear moreRight if we can stop */
-			if (_bt_readpage_ost(scan, P_FIRSTDATAKEY_OST(opaque)))
+			if (_bt_readpage_ost(scan, P_FIRSTDATAKEY_OST(opaque))){
+				if(so->currPos.buf != InvalidBuffer){
+					_bt_relbuf_ost(rel, so->currPos.buf);
+					so->currPos.buf= InvalidBuffer;
+				}
 				break;
+			}
 		}
 
+
 		blkno = opaque->btpo_next;
-		_bt_relbuf_ost(rel, so->currPos.buf);
+		if(so->currPos.buf != InvalidBuffer){
+			_bt_relbuf_ost(rel, so->currPos.buf);
+			so->currPos.buf= InvalidBuffer;
+		}
 
 	}
 

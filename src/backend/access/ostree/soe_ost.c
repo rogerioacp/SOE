@@ -82,11 +82,13 @@ btgettuple_ost(IndexScanDesc scan)
 {
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	bool		res;
-    bool        first = false;
+
 	if (!BTScanPosIsValid_OST(so->currPos))
 	{
        	res = _bt_first_ost(scan);
-        first  = true;
+       	ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+       	so->currPos.buf = InvalidBuffer;
+
 	}
 	else
 	{
@@ -98,6 +100,8 @@ btgettuple_ost(IndexScanDesc scan)
 #ifdef DUMMYS 
     if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
     {
+
+    	//ReleaseBuffer_ost(scan->ost, so->currPos.buf);
         //selog(DEBUG1, "No more results on the tree");
         return false;
     }
@@ -119,7 +123,6 @@ btbeginscan_ost(OSTRelation rel, const char *key, int keysize)
 	ScanKey		scanKey;
 
 	scanKey = (ScanKey) malloc(sizeof(ScanKeyData));
-	/* scanKey->sk_subtype = rel->foid; */
 	scanKey->sk_argument = (char *) malloc(keysize);
 	memcpy(scanKey->sk_argument, key, keysize);
 	scanKey->datumSize = keysize;

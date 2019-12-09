@@ -389,8 +389,14 @@ closeSoe()
 	selog(DEBUG1, "Going to close soe");
 	closeVRelation(oTable);
     if(mode == DYNAMIC){
+    	if(scan != NULL){
+			btendscan_s(scan);
+    	}
 	    closeVRelation(oIndex);
     }else{
+    	if(scan != NULL){
+    		btendscan_ost(scan);
+    	}
         closeOSTRelation(ostIndex);
     } 
 	free(tamgr);
