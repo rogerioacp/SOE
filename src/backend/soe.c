@@ -131,12 +131,14 @@ initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, unsig
 {
 
 
-	selog(DEBUG1, "Initializing FSOE for relation %s and index %s", tName, iName);
-	stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
+	selog(DEBUG1, "Initializing FSOE for relation %s with %d blocks", tName, tNBlocks);
+
+    stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
 	oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
 
-	/* Handle the initialization of the tree index. */
+    selog(DEBUG1, "Initializing FSOE for index %s for %d levels", iName, nlevels);
 
+	/* Handle the initialization of the tree index. */
 	ostTable = initOSTreeProtocol(iName, iOid, fanouts, nlevels, &ost_ofileCreate);
 
 
@@ -152,7 +154,7 @@ initORAMState(const char *name, int nBlocks, AMOFile * (*ofile) (), bool isHeap)
 {
 
 
-	size_t		fileSize = nBlocks * BLCKSZ;
+	//size_t		fileSize = nBlocks * BLCKSZ;
 	Amgr	   *amgr;
 	ORAMState	state;
 
@@ -170,7 +172,7 @@ initORAMState(const char *name, int nBlocks, AMOFile * (*ofile) (), bool isHeap)
 		iamgr = amgr;
 	}
 
-	state = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr, NULL);
+	state = init_oram(name, nBlocks, BLCKSZ, BKCAP, amgr, NULL);
 	return state;
 }
 
@@ -200,7 +202,7 @@ initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, unsigned i
 	for (i = 0; i < nlevels; i++)
 	{
     
-		size_t		fileSize = BLCKSZ * fanouts[i];
+		//size_t		fileSize = BLCKSZ * fanouts[i];
         //selog(DEBUG1, "level %d fanout is %d",i, fanouts[i]);
 		Amgr	   *amgr;
 
@@ -212,7 +214,7 @@ initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, unsigned i
 
 		
 		//selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i, fileSize);
-		ost->orams[i] = init_oram(name, fileSize, BLCKSZ, BKCAP, amgr, &i);
+		ost->orams[i] = init_oram(name, fanouts[i], BLCKSZ, BKCAP, amgr, &i);
 	}
 
 	return ost;
