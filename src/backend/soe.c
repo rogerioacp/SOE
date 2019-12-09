@@ -83,46 +83,20 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 	stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
 	oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
 
-	if (indexOid == F_HASHHANDLER)
-	{
-		selog(DEBUG1, "going to init oblivious hash file");
-		stateIndex = initORAMState(iName, iNBlocks, &hash_ofileCreate, false);
-		oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &hash_pageInit);
-	}
-	else if (indexOid == F_BTHANDLER)
-	{
-		selog(DEBUG1, "going to init nbtree oblivious heap file");
-		stateIndex = initORAMState(iName, iNBlocks, &nbtree_ofileCreate, false);
-		oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &nbtree_pageInit);
-	}
-	else
-	{
-		selog(ERROR, "unsupported index");
-	}
+
+	selog(DEBUG1, "going to init nbtree oblivious heap file");
+	stateIndex = initORAMState(iName, iNBlocks, &nbtree_ofileCreate, false);
+	oIndex = InitVRelation(stateIndex, iOid, iNBlocks, &nbtree_pageInit);
 
 	oIndex->foid = functionOid;
 	oIndex->indexOid = indexOid;
 	oIndex->tDesc->natts = 1;
 	oIndex->tDesc->attrs = (FormData_pg_attribute *) malloc(sizeof(struct FormData_pg_attribute));
 	memcpy(oIndex->tDesc->attrs, attrDesc, attrDescLength);
-	/* selog(DEBUG1, "the key length is %d", oIndex->tDesc->attrs->attlen); */
-	if (indexOid == F_HASHHANDLER)
-	{
-		oIndex->tDesc->isnbtree = false;
-		/* selog(DEBUG1, "Going to init hash metapage"); */
-		_hash_init_s(oIndex, 0);
-	}
-	else if (indexOid == F_BTHANDLER)
-	{
-		oIndex->tDesc->isnbtree = true;
-		/* selog(DEBUG1, "Going to init nbtree metapage"); */
-		_bt_initmetapage_s(oIndex, P_NONE, 0);
-	}
-	else
-	{
-		selog(ERROR, "unsupported index");
-	}
-	scan = NULL;
+	
+	//oIndex->tDesc->isnbtree = true;
+	
+    scan = NULL;
     mode = DYNAMIC;
 }
 
@@ -262,13 +236,18 @@ addIndexBlock(char *block, unsigned int blocksize, unsigned int offset, unsigned
 {
 
 	//selog(DEBUG1, "Going to add index block %d at level %d", offset, level);
-    insert_ost(ostIndex, block, level, offset);
+    
+    if(mode == DYNAMIC){
+        btree_load_s(oIndex, block, offset);
+    }else{
+        insert_ost(ostIndex, block, level, offset);
+    }
 }
 
 void
 addHeapBlock(char *block, unsigned int blockSize, unsigned int blkno)
 {
-	heap_insert_block_s(oTable, block);
+	heap_insert_block_s(oTable, block, blkno);
 }
 
 int

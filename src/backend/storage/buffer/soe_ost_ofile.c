@@ -58,7 +58,6 @@ ost_pageInit(Page page, int blkno, Size blocksize)
 
 	ovflopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
 
-
 	ovflopaque->btpo_prev = InvalidBlockNumber;
 	ovflopaque->btpo_next = InvalidBlockNumber;
 	ovflopaque->btpo_flags = 0;

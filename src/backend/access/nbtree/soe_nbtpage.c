@@ -129,99 +129,11 @@ _bt_upgrademetapage_s(Page page)
 Buffer
 _bt_getroot_s(VRelation rel, int access)
 {
-	Buffer		metabuf;
-	Page		metapg;
-	BTPageOpaque metaopaque;
-	Buffer		rootbuf;
-	Page		rootpage;
-	BTPageOpaque rootopaque;
-	BlockNumber rootblkno;
-	uint32		rootlevel;
-	BTMetaPageData *metad;
+    Buffer rootbuf;
 
+    rootbuf = ReadBuffer_s(rel,0);
 
-	metabuf = _bt_getbuf_s(rel, BTREE_METAPAGE, BT_READ);
-	metapg = BufferGetPage_s(rel, metabuf);
-	metaopaque = (BTPageOpaque) PageGetSpecialPointer_s(metapg);
-	metad = BTPageGetMeta_s(metapg);
-	/* selog(DEBUG1, "Metabuffer page is %d", metabuf); */
-	/* sanity-check the metapage */
-	if (!P_ISMETA_s(metaopaque) ||
-		metad->btm_magic != BTREE_MAGIC)
-		selog(ERROR, "index is not a btree");
-
-	if (metad->btm_version < BTREE_MIN_VERSION ||
-		metad->btm_version > BTREE_VERSION)
-		selog(ERROR, "version mismatch in index: file version %d, "
-			  "current version %d, minimal supported version %d",
-			  metad->btm_version, BTREE_VERSION, BTREE_MIN_VERSION
-			);
-
-	/* if no root page initialized yet, do it */
-	if (metad->btm_root == P_NONE)
-	{
-		/* selog(DEBUG1, "going to initialize root page"); */
-		/* If access = BT_READ, caller doesn't want us to create root yet */
-		if (access == BT_READ)
-		{
-			ReleaseBuffer_s(rel, metabuf);
-			return InvalidBuffer;
-		}
-
-		/*
-		 * Get, initialize, write, and leave a lock of the appropriate type on
-		 * the new root page.  Since this is the first page in the tree, it's
-		 * a leaf as well as the root.
-		 */
-		rootbuf = _bt_getbuf_s(rel, P_NEW, BT_WRITE);
-		rootblkno = BufferGetBlockNumber_s(rootbuf);
-		rootpage = BufferGetPage_s(rel, rootbuf);
-		rootopaque = (BTPageOpaque) PageGetSpecialPointer_s(rootpage);
-		rootopaque->btpo_prev = rootopaque->btpo_next = P_NONE;
-		rootopaque->btpo_flags = (BTP_LEAF | BTP_ROOT);
-		rootopaque->btpo.level = 0;
-
-		/* NO ELOG(ERROR) till meta is updated */
-
-		/* upgrade metapage if needed */
-		metad->btm_root = rootblkno;
-		metad->btm_level = 0;
-		metad->btm_fastroot = rootblkno;
-		metad->btm_fastlevel = 0;
-		/* metad->btm_last_cleanup_num_heap_tuples = -1.0; */
-		MarkBufferDirty_s(rel, rootbuf);
-		MarkBufferDirty_s(rel, metabuf);
-
-		/* okay, metadata is correct, release lock on it */
-		ReleaseBuffer_s(rel, metabuf);
-	}
-	else
-	{
-
-		rootblkno = metad->btm_fastroot;
-		rootlevel = metad->btm_fastlevel;
-
-		/*
-		 * We are done with the metapage; arrange to release it via first
-		 * _bt_relandgetbuf call
-		 */
-		rootbuf = metabuf;
-		ReleaseBuffer_s(rel, rootbuf);
-		rootbuf = ReadBuffer_s(rel, rootblkno);
-		rootpage = BufferGetPage_s(rel, rootbuf);
-		rootopaque = (BTPageOpaque) PageGetSpecialPointer_s(rootpage);
-
-		/* Note: can't check btpo.level on deleted pages */
-		if (rootopaque->btpo.level != rootlevel)
-			selog(ERROR, "root page %u of index has level %u, expected %u",
-				  rootblkno, rootopaque->btpo.level, rootlevel);
-	}
-
-	/*
-	 * By here, we have a pin and read lock on the root page, and no lock set
-	 * on the metadata page.  Return the root page's buffer.
-	 */
-	return rootbuf;
+    return rootbuf;
 }
 
 

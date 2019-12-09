@@ -45,9 +45,4 @@ extern void FormIndexDatum_s(HeapTuple tuple, Datum *values, bool *isnull);
 
  OSTreeState initOSTreeProtocol(const char *name, unsigned int iOid, int* fanouts, unsigned int nlevels, AMOFile* (*ofile)());
 
-typedef enum {
-    DYNAMIC=0,
-    OST = 1
-} Mode;
-
 #endif 	/* SOE_H */

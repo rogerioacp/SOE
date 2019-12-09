@@ -44,12 +44,11 @@ nbtree_pageInit(Page page, int blkno, Size blocksize)
 
 	ovflopaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
 
-	ovflopaque->o_blkno = blkno;
-
 	ovflopaque->btpo_prev = InvalidBlockNumber;
 	ovflopaque->btpo_next = InvalidBlockNumber;
 	ovflopaque->btpo.level = 0;
 	ovflopaque->btpo_flags = 0;
+    ovflopaque->o_blkno = blkno;
 }
 
 /**

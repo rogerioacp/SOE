@@ -74,8 +74,8 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
     *bufP = _bt_getroot_s(rel, access);
 
 	/* If index is empty and access = BT_READ, no root page is created. */
-	if (!BufferIsValid_s(rel, *bufP))
-		return (BTStack) NULL;
+	//if (!BufferIsValid_s(rel, *bufP))
+	//	return (BTStack) NULL;
 
 	/* Loop iterates once per level descended in the tree */
 	for (;;)
@@ -326,13 +326,16 @@ _bt_compare_s(VRelation rel,
 
 
 
-	datum = index_getattr_s(itup);
+	//datum = index_getattr_s(itup);
+    datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
 
 	/* We assume we are comparing strings(varchars) */
-	if (rel->foid == 1078)
-	{
-		result = (int32) strcmp(scankey->sk_argument, datum);
-	}
+	//if (rel->foid == 1078)
+	//{
+	//	result = (int32) strcmp(scankey->sk_argument, datum);
+	//}
+
+    result = (int32) strncmp(scankey->sk_argument, datum, strlen(datum)-1);
 
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
@@ -802,8 +805,11 @@ _bt_steppage_s(IndexScanDesc scan)
 	/* _bt_drop_lock_and_maybe_pin(scan, &so->currPos); */
 	/* ReleaseBuffer(scan->buf); */
 	/* scan->buf = InvalidBuffer; */
-    ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
-    so->currPos.buf = InvalidBuffer;
+    if(so->currPos.buf != InvalidBuffer){
+        ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
+        so->currPos.buf = InvalidBuffer;
+    }
+
 	return true;
 }
 
@@ -857,8 +863,15 @@ _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno)
 			/* PredicateLockPage(rel, blkno, scan->xs_snapshot); */
 			/* see if there are any matches on this page */
 			/* note that this will clear moreRight if we can stop */
-			if (_bt_readpage_s(scan, P_FIRSTDATAKEY_s(opaque)))
-				break;
+			if (_bt_readpage_s(scan, P_FIRSTDATAKEY_s(opaque))){
+				
+                if(so->currPos.buf != InvalidBuffer){
+                    _bt_relbuf_s(rel, so->currPos.buf);
+                    so->currPos.buf = InvalidBuffer;
+                }
+                
+                break;
+            }
 		}else{
             //In this prototype pages should be no deleted pages to be ignored.
             //If a page was ignored, then an extra access was made which
@@ -867,7 +880,10 @@ _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno)
         }
 
 		blkno = opaque->btpo_next;
-		_bt_relbuf_s(rel, so->currPos.buf);
+        if(so->currPos.buf != InvalidBuffer){
+		    _bt_relbuf_s(rel, so->currPos.buf);
+            so->currPos.buf = InvalidBuffer;
+        }
 
 	}
 

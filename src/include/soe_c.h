@@ -34,6 +34,11 @@
 
 #endif
 
+typedef enum {
+    DYNAMIC=0,
+    OST = 1
+} Mode;
+
 /*
  * intN
  *		Signed integer, EXACTLY N BITS IN SIZE,

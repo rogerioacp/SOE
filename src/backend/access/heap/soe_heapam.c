@@ -111,24 +111,29 @@ heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple)
 }
 
 void
-heap_insert_block_s(VRelation rel, char *rpage)
+heap_insert_block_s(VRelation rel, char *rpage, int blkno)
 {
 	Buffer		buffer;
 	Page		page;
-    BlockNumber freeSpaceBlock;
     int* r_blkno;
     int*  p_blkno;
 
 
-	freeSpaceBlock = FreeSpaceBlock_s(rel);
-    	
-    buffer = ReadBuffer_s(rel, freeSpaceBlock);
+	//freeSpaceBlock = FreeSpaceBlock_s(rel);
+	
+    r_blkno = (int*) PageGetSpecialPointer_s(rpage);
+   
+    if(*r_blkno != blkno){
+        selog(ERROR, "Page block %d number does not match offset %d", *r_blkno, blkno);
+    }
+
+
+    buffer = ReadBuffer_s(rel, *r_blkno);
 	page = BufferGetPage_s(rel, buffer);
 
 
 	memcpy(page, rpage, BLCKSZ);
 
-    r_blkno = (int*) PageGetSpecialPointer_s(rpage);
     p_blkno = (int*) PageGetSpecialPointer_s(page);
     
     if(*r_blkno != *p_blkno){

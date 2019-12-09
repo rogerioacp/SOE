@@ -54,6 +54,19 @@
  */
 
 
+void btree_load_s(VRelation indexRel, char* block, unsigned int  offset)
+{
+    Buffer buffer;
+    Page    page;
+
+    buffer = ReadBuffer_s(indexRel, offset);
+    page = BufferGetPage_s(indexRel, buffer);
+
+    memcpy(page, block, BLCKSZ);
+
+    MarkBufferDirty_s(indexRel, buffer);
+    ReleaseBuffer_s(indexRel, buffer);
+}
 
 /*
  *	btinsert() -- insert an index tuple into a btree.
@@ -96,34 +109,12 @@ btgettuple_s(IndexScanDesc scan)
 	bool		res;
 
 
-	/*
-	 * If we have any array keys, initialize them during first call for a
-	 * scan.  We can't do this in btrescan because we don't know the scan
-	 * direction at that time.
-	 */
-	/* if (so->numArrayKeys && !BTScanPosIsValid_s(so->currPos)) */
-	/* { */
-	/* punt if we have any unsatisfiable array keys */
-	/* if (so->numArrayKeys < 0) */
-	/* return false; */
-/*  */
-/* 		_bt_start_array_keys(scan, dir); */
-/* 	} */
-
-	/* This loop handles advancing to the next array elements, if any */
-	/* do */
-	/* { */
-
-	/*
-	 * If we've already initialized this scan, we can just advance it in the
-	 * appropriate direction.  If we haven't done so yet, we call _bt_first()
-	 * to get the first item in the scan.
-	 */
-
-
     if (!BTScanPosIsValid_s(so->currPos))
     {
-        res = _bt_first_s(scan);
+        res = _bt_first_s(scan); 
+        ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
+        so->currPos.buf = InvalidBuffer;
+
     }
     else
     {

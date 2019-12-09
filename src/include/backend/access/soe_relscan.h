@@ -33,6 +33,8 @@ typedef struct IndexScanDescData
 
 	unsigned int opoid;
 	/* oid of where comparison clause. */
+    //Forest ORAM or PathORAM
+    Mode mode;
 
 
 }			IndexScanDescData;

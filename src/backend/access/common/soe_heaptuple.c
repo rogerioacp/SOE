@@ -55,14 +55,16 @@ heap_compute_data_size_s(TupleDesc tupleDesc,
 		/* data_length = data_length + (strlen((char*) val)+1); */
 
 		/* README atti->attlen has an invalid value */
-		if (tupleDesc->isnbtree)
-		{
-			data_length = data_length + (strlen((char *) val) + 1);
-		}
-		else
-		{
-			data_length = data_length + atti->attlen;
-		}
+		//if (tupleDesc->isnbtree)
+		//{
+		//	data_length = data_length + (strlen((char *) val) + 1);
+		//}
+		//else
+		//{
+		//	data_length = data_length + atti->attlen;
+		//}
+        selog(DEBUG1, "ERROR ERROR");
+        //exit(1);
 	}
 
 	return data_length;

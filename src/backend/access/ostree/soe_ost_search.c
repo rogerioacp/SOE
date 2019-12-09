@@ -847,13 +847,21 @@ _bt_readnextpage_ost(IndexScanDesc scan, BlockNumber blkno)
 			/* see if there are any matches on this page */
 			/* note that this will clear moreRight if we can stop */
 			if (_bt_readpage_ost(scan, P_FIRSTDATAKEY_OST(opaque))){
-				if(so->currPos.buf != InvalidBuffer){
+				
+                if(so->currPos.buf != InvalidBuffer){
 					_bt_relbuf_ost(rel, so->currPos.buf);
-					so->currPos.buf= InvalidBuffer;
+					so->currPos.buf = InvalidBuffer;
 				}
+
 				break;
 			}
-		}
+		}else{
+             //In this prototype pages should be no deleted pages to be ignored.
+            //If a page was ignored, then an extra access was made which
+            //might compromise security.
+            selog(ERROR, "Page was ignored!");
+
+        }
 
 
 		blkno = opaque->btpo_next;

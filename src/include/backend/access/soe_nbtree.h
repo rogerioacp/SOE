@@ -57,13 +57,11 @@ typedef struct BTPageOpaqueData
 	union
 	{
 		uint32		level;		/* tree level --- zero for leaf pages */
+	    TransactionId xact;
 	}			btpo;
 	uint16		btpo_flags;		/* flag bits, see below */
-	/* vacuum cycle ID of latest split */
-	/* BTCycleId	btpo_cycleid;*/		
- 
-    /* block number */
-    int o_blkno;
+	BTCycleId   btpo_cycleid; /* vacuum cycle ID of latest split */
+	uint32		o_blkno; 		/* used to store original block number inside soe */
 }			BTPageOpaqueData;
 
 typedef BTPageOpaqueData * BTPageOpaque;
@@ -388,7 +386,7 @@ extern bool btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_cti
 extern IndexScanDesc btbeginscan_s(VRelation rel, const char *key, int keysize);
 extern bool btgettuple_s(IndexScanDesc scan);
 extern void btendscan_s(IndexScanDesc scan);
-
+extern void btree_load_s(VRelation indexRel, char* block, unsigned int  offset);
 
 
 

@@ -126,11 +126,13 @@ _bt_checkkeys_s(IndexScanDesc scan,
 
 
 	tuple = (IndexTuple) PageGetItem_s(page, iid);
-	datum = index_getattr_s(tuple);
+	//datum = index_getattr_s(tuple);
+    datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(tuple)));
 	/* datumSize = strlen(datum)+1; */
 	keyValue = scan->keyData->sk_argument;
 	/* the prototype assumes string comparisons */
-	test = (int32) strcmp(datum, keyValue);
+	//test = (int32) strcmp(datum, keyValue);
+    test = (int32) strncmp(datum, keyValue, strlen(datum)-1);
 	/**
 	* Look at soe_nbtsearch.c function _bt_first_s to which operations the
 	* opoids correspond to.

@@ -30,7 +30,7 @@
 #include "storage/soe_ost_ofile.h"
 #include "storage/soe_bufpage.h"
 #include "storage/soe_ost_bufmgr.h"
-
+#include "storage/soe_bufmgr.h"
 #include <oram/plblock.h>
 #include <string.h>
 #include <stdlib.h>
@@ -85,8 +85,8 @@ btgettuple_ost(IndexScanDesc scan)
 
 	if (!BTScanPosIsValid_OST(so->currPos))
 	{
-       	res = _bt_first_ost(scan);
-       	ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+       	res = _bt_first_ost(scan); 
+        ReleaseBuffer_ost(scan->ost, so->currPos.buf);
        	so->currPos.buf = InvalidBuffer;
 
 	}

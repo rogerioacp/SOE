@@ -175,16 +175,6 @@ MarkBufferDirty_ost(OSTRelation relation, Buffer buffer)
 		{
 			found = true;
 
-			/*
-			 * oopaque = (OblivPageOpaque) PageGetSpecialPointer( (Page)
-			 * vblock->page);
-			 */
-
-			/*
-			 * selog(DEBUG1, "Found page on buffer list with blkno %d and
-			 * special %d", vblock->id, oopaque->o_blkno);
-			 */
-
 			break;
 		}
 	}
@@ -246,7 +236,6 @@ ReleaseBuffer_ost(OSTRelation relation, Buffer buffer)
 
 	if (found)
 	{
-		/* selog(DEBUG1, "Going to release buffer %d", buffer); */
 		list_remove(relation->buffers[clevel], vblock, &toFree);
 		free(((VBlock) toFree)->page);
 		free(toFree);
