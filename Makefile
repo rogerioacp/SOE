@@ -155,6 +155,10 @@ ifeq ($(DUMMYS),1)
 	Enclave_C_Flags += -DDUMMYS
 endif
 
+ifeq ($(STASH_COUNT),1)
+	Enclave_C_Flags += -DSTASH_COUNT
+endif
+
 
 ifeq ($(SINGLE_ORAM), 1)
 	Enclave_C_Flags += -DSINGLE_ORAM

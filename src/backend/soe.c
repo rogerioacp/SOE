@@ -54,6 +54,8 @@ IndexScanDesc scan;
 
 //Operation mode
 Mode        mode;
+int counter = 0;
+
 
 void
 initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
@@ -254,6 +256,7 @@ int
 getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen)
 {
 
+
 	HeapTuple	heapTuple;
 	ItemPointerData tid;
     ItemPointer dtid;
@@ -290,7 +293,12 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySi
     }
 
     matchFound = mode == DYNAMIC? btgettuple_s(scan): btgettuple_ost(scan);
-
+    #ifdef STASH_COUNT
+        counter +=1;
+        if(counter%1000==0){
+            logStashes(oTable->oram);
+        }
+    #endif
     if(matchFound){
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
