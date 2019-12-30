@@ -172,6 +172,9 @@ else ifeq ($(ORAM_LIB), FORESTORAM)
 		ORAM_LADD := -lforestoram
 endif
 
+ifeq ($(SMALL_BKCAP), 1)
+	Enclave_C_Flags += -DSMALL_BKCAP
+endif
 
 SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/usr/local/opt/openssl/lib -lssl -lcrypto
 Enclave_C_Flags += $(Soe_Include_Path)

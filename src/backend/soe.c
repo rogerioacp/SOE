@@ -29,7 +29,11 @@
 
 
 /*  Bucket capacity */
+#ifdef SMALL_BKCAP
 #define BKCAP 1
+#else
+#define BKCAP 4
+#endif
 
 /* Predefined max tuple size for sgx to copy the real tuple to*/
 #define MAX_TUPLE_SIZE 1400
