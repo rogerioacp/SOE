@@ -79,7 +79,7 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 		tmpPage = (char *) malloc(blocksize);
 
 		
-		// selog(DEBUG1, "going to initialize %u pages of relation  %s\n",nblocks, filename);
+		//selog(DEBUG1, "going to initialize %u pages of relation  %s\n",nblocks, filename);
 		
 
 		for (offset = 0; offset < allocBlocks; offset++)
@@ -154,6 +154,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
     int        *r_blkno;
     
     r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
+    
     //selog(DEBUG1, "Requested write  oblivious block %d that has real block %d", ob_blkno, *r_blkno);
 
     if(block->blkno != *r_blkno){

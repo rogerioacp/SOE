@@ -111,7 +111,7 @@ initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, unsig
 {
 
 
-	selog(DEBUG1, "Initializing FSOE for relation %s with %d blocks", tName, tNBlocks);
+	selog(DEBUG1, "Initializing FSOE for relation %s with %d blocks and BKCAP %d", tName, tNBlocks, BKCAP);
 
     stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
 	oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
@@ -168,34 +168,38 @@ initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, unsigned i
 
 	ost->fanouts = (int *) malloc(sizeof(int) * nlevels);
 	memcpy(ost->fanouts, fanouts, sizeof(int) * nlevels);
+
 	ost->nlevels = nlevels;
 	ost->iOid = iOid;
+
 	namelen = strlen(name) + 1;
 	ost->iname = (char *) malloc(namelen);
 	memcpy(ost->iname, name, namelen);
 
-
-	ost->orams = (ORAMState *) malloc(sizeof(ORAMState) * nlevels);
-
-	ost_status(ost);
-
-	for (i = 0; i < nlevels; i++)
-	{
+    init_root(name);
     
-		//size_t		fileSize = BLCKSZ * fanouts[i];
-        //selog(DEBUG1, "level %d fanout is %d",i, fanouts[i]);
-		Amgr	   *amgr;
+    if(nlevels > 0){
 
-		amgr = (Amgr *) malloc(sizeof(Amgr));
-		amgr->am_stash = stashCreate();
-		amgr->am_pmap = pmapCreate();
-		amgr->am_ofile = ofile();
-		/* setclevel(i); */
+	    ost->orams = (ORAMState *) malloc(sizeof(ORAMState) * nlevels);
 
-		
-		//selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i, fileSize);
-		ost->orams[i] = init_oram(name, fanouts[i], BLCKSZ, BKCAP, amgr, &i);
-	}
+	    ost_status(ost);
+
+	    for (i = 0; i < nlevels; i++)
+	    {
+    
+		    //size_t		fileSize = BLCKSZ * fanouts[i];
+            //selog(DEBUG1, "level %d fanout is %d",i, fanouts[i]);
+		    Amgr	   *amgr;
+
+		    amgr = (Amgr *) malloc(sizeof(Amgr));
+		    amgr->am_stash = stashCreate();
+		    amgr->am_pmap = pmapCreate();
+		    amgr->am_ofile = ofile();
+			
+		    //selog(DEBUG1, "Initiating ORAM on level %d with filesize %d", i, fileSize);
+		    ost->orams[i] = init_oram(name, fanouts[i], BLCKSZ, BKCAP, amgr, &i);
+	    }
+    }
 
 	return ost;
 }

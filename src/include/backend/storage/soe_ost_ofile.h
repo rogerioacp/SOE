@@ -9,9 +9,12 @@
 
 #include <oram/ofile.h>
 
-void		ost_pageInit(Page page, int blkno, Size blocksize);
-extern AMOFile * ost_ofileCreate();
+
+extern void init_root(const char* filename);
 extern void ost_status(OSTreeState state);
+extern AMOFile * ost_ofileCreate();
+
+void		ost_pageInit(Page page, int blkno, Size blocksize);
 
 void		ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData);
 void

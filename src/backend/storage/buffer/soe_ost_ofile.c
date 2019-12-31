@@ -36,17 +36,54 @@
 
 
 OSTreeState ostate;
-int			initialized;
+
+unsigned int init_offset;
 
 /* number of blocks requested to be allocated for each oram level. */
 int		   *o_nblocks;
 
 
+
+
+void init_root(const char* filename){
+
+    char	    *tmpPage;
+    char        *destPage;
+    sgx_status_t status;
+    
+
+    status = SGX_SUCCESS;
+
+
+    tmpPage = malloc(BLCKSZ);
+    destPage = malloc(BLCKSZ);
+
+
+    ost_pageInit(tmpPage, DUMMY_BLOCK, BLCKSZ);
+
+#ifndef CPAGES
+    page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+#else
+    memcpy(destPage, tmpPage, BLCKSZ);
+#endif
+
+    status = outFileInit(filename, destPage, 1, BLCKSZ, BLCKSZ, 0);
+
+	if (status != SGX_SUCCESS){
+        selog(ERROR, "Could not initialize relation %s\n", filename);
+	}
+
+    free(tmpPage);
+    free(destPage);
+    init_offset++;
+
+}
+
 void
 ost_status(OSTreeState state)
 {
 	ostate = state;
-	initialized = 0;
+   o_nblocks = (int *) malloc(sizeof(int) * ostate->nlevels); 
 }
 
 void
@@ -81,45 +118,34 @@ ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize,
 
 	/* At least one block for the root. */
 
-	int			tnblocks = 1;
+	int			tnblocks = nblocks;
 
 	int         offset;
 	int			allocBlocks = 0;
-	int			boffset = 0;
-	int			l = 0;
+	int			boffset = init_offset;
 	int			clevel = *((int *) appData);
+    
 
-	if (!initialized)
-	{
-		o_nblocks = (int *) malloc(sizeof(int) * ostate->nlevels);
+    selog(DEBUG1, "request ost_fileInit of %d nblocks\n", nblocks);
 
-		for (l = 0; l < ostate->nlevels; l++)
-		{
-			tnblocks += ostate->fanouts[l];
-		}
-		tnblocks = tnblocks * 2;
+    do
+    {
+	    allocBlocks = Min_s(tnblocks, BATCH_SIZE);
+        
+        blocks = (char *) malloc(BLCKSZ * allocBlocks);
+		tmpPage = malloc(blocksize);
 
-		do
-		{
-			/* BTPageOpaque oopaque; */
-			allocBlocks = Min_s(tnblocks, BATCH_SIZE);
+        for (offset = 0; offset < allocBlocks; offset++)
+        {
+            destPage = blocks + (offset * BLCKSZ);
+			ost_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
 
-			blocks = (char *) malloc(BLCKSZ * allocBlocks);
-			tmpPage = malloc(blocksize);
-
-			for (offset = 0; offset < allocBlocks; offset++)
-			{
-				destPage = blocks + (offset * BLCKSZ);
-				ost_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
-
-				#ifndef CPAGES
-					page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
-				#else
-					memcpy(destPage, tmpPage, BLCKSZ);
-				#endif
-
-                memcpy(destPage, tmpPage, BLCKSZ);
-			}
+        #ifndef CPAGES
+			page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
+		#else
+			memcpy(destPage, tmpPage, BLCKSZ);
+		#endif
+        }
 
 			status = outFileInit(filename, blocks, allocBlocks, blocksize, allocBlocks * BLCKSZ, boffset);
 
@@ -132,10 +158,10 @@ ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize,
 
 			tnblocks -= BATCH_SIZE;
 			boffset += BATCH_SIZE;
-		} while (tnblocks > 0);
-		initialized = 1;
-	}
+	} while (tnblocks > 0);
 
+    init_offset += nblocks;
+    selog(DEBUG1, "Init offset is at %d\n", init_offset);
 	o_nblocks[clevel] = nblocks;
 
 }
