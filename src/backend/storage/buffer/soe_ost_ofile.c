@@ -44,7 +44,6 @@ int		   *o_nblocks;
 
 
 
-
 void init_root(const char* filename){
 
     char	    *tmpPage;
@@ -278,13 +277,15 @@ void
 ost_fileClose(const char *filename, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
-
-	status = outFileClose(filename);
-    free(o_nblocks);
-	if (status != SGX_SUCCESS)
-	{
-		selog(ERROR, "Could not close relation %s\n", filename);
-	}
+    if(o_nblocks != NULL){
+	    status = outFileClose(filename);
+        free(o_nblocks);
+        o_nblocks = NULL;
+	    if (status != SGX_SUCCESS)
+	    {
+		    selog(ERROR, "Could not close relation %s\n", filename);
+	    }
+    }
 }
 
 

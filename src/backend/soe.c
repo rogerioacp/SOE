@@ -62,8 +62,10 @@ int counter = 0;
 
 
 void
-initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
-		unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexOid, char *attrDesc, unsigned int attrDescLength)
+initSOE(const char *tName, const char *iName, int tNBlocks, int* fanouts,
+        unsigned int fanout_size, unsigned int nlevels, int iNBlocks,
+		unsigned int tOid, unsigned int iOid, unsigned int functionOid, 
+        unsigned int indexOid, char *attrDesc, unsigned int attrDescLength)
 {
 	/* VALGRIND_DO_LEAK_CHECK; */
 
@@ -85,7 +87,7 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
     tNBlocks += iNBlocks;
     iNBlocks += tNBlocks;
 #endif
-	selog(DEBUG1, "Initializing SOE for relation %s and index  %s", tName, iName);
+	selog(DEBUG1, "Initializing SOE for relation %s with %d blocks and index %s with %d blocks", tName, tNBlocks, iName, iNBlocks);
 	stateTable = initORAMState(tName, tNBlocks, &heap_ofileCreate, true);
 	oTable = InitVRelation(stateTable, tOid, tNBlocks, &heap_pageInit);
 
@@ -99,7 +101,7 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 	oIndex->tDesc->natts = 1;
 	oIndex->tDesc->attrs = (FormData_pg_attribute *) malloc(sizeof(struct FormData_pg_attribute));
 	memcpy(oIndex->tDesc->attrs, attrDesc, attrDescLength);
-	
+	btree_fanout_setup(fanouts, fanout_size, nlevels);
 	//oIndex->tDesc->isnbtree = true;
 	
     scan = NULL;
@@ -107,7 +109,9 @@ initSOE(const char *tName, const char *iName, int tNBlocks, int iNBlocks,
 }
 
 void
-initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, unsigned int fanout_size, unsigned int nlevels, unsigned int tOid, unsigned int iOid, char *attrDesc, unsigned int attrDescLength)
+initFSOE(const char *tName, const char *iName, int tNBlocks, int *fanouts, 
+         unsigned int fanout_size, unsigned int nlevels, unsigned int tOid, 
+         unsigned int iOid, char *attrDesc, unsigned int attrDescLength)
 {
 
 
@@ -151,14 +155,15 @@ initORAMState(const char *name, int nBlocks, AMOFile * (*ofile) (), bool isHeap)
 	{
 		iamgr = amgr;
 	}
-
-	state = init_oram(name, nBlocks, BLCKSZ, BKCAP, amgr, NULL);
+    
+    state = init_oram(name, nBlocks, BLCKSZ, BKCAP, amgr, NULL);
 	return state;
 }
 
 
 OSTreeState
-initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, unsigned int nlevels, AMOFile * (*ofile) ())
+initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, 
+                   unsigned int nlevels, AMOFile * (*ofile) ())
 {
 
 	int			i;
@@ -205,7 +210,8 @@ initOSTreeProtocol(const char *name, unsigned int iOid, int *fanouts, unsigned i
 }
 
 void
-insert(const char *heapTuple, unsigned int tupleSize, char *datum, unsigned int datumSize)
+insert(const char *heapTuple, unsigned int tupleSize, char *datum, 
+       unsigned int datumSize)
 {
 
 	HeapTuple	hTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
@@ -242,13 +248,14 @@ insert(const char *heapTuple, unsigned int tupleSize, char *datum, unsigned int 
 
 
 void
-addIndexBlock(char *block, unsigned int blocksize, unsigned int offset, unsigned int level)
+addIndexBlock(char *block, unsigned int blocksize, unsigned int offset, 
+              unsigned int level)
 {
 
 	//selog(DEBUG1, "Going to add index block %d at level %d", offset, level);
     
     if(mode == DYNAMIC){
-        btree_load_s(oIndex, block, offset);
+        btree_load_s(oIndex, block, level, offset);
     }else{
         insert_ost(ostIndex, block, level, offset);
     }
@@ -261,7 +268,9 @@ addHeapBlock(char *block, unsigned int blockSize, unsigned int blkno)
 }
 
 int
-getTuple(unsigned int opmode, unsigned int opoid, const char *key, int scanKeySize, char *tuple, unsigned int tupleLen, char *tupleData, unsigned int tupleDataLen)
+getTuple(unsigned int opmode, unsigned int opoid, const char *key, 
+         int scanKeySize, char *tuple, unsigned int tupleLen, 
+         char *tupleData, unsigned int tupleDataLen)
 {
 
 

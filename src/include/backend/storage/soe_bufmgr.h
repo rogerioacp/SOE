@@ -85,6 +85,12 @@ typedef struct VRelation
     
     unsigned int tHeight;
 
+
+	/* Current level of the logical tree. Used to support block loading on
+     * baseline index 
+     * */
+    unsigned int level;
+
 }		   *VRelation;
 
 typedef struct VBlock

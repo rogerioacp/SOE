@@ -117,7 +117,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
             while(doDummy && height < rel->osts->nlevels){
                 dummy = ReadDummyBuffer_ost(rel, height, 0);
                 height += 1;
-                rel->level += height;
+                rel->level = height;
             }
             #endif
 			break;

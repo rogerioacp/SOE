@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <collectc/list.h>
 
+
 /* zero index block */
 /* If the VRelation has 1 block, it only has the offset 0. */
 BlockNumber
@@ -38,6 +39,7 @@ InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, pageinit_f
 	vrel->tDesc->attrs = NULL;
 
     vrel->tHeight = 0;
+    vrel->level = 0;
 	return vrel;
 }
 
@@ -69,7 +71,7 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
 	char	   *page = NULL;
     VBlock      block;	
 	int			result;
-	
+
     result = read_oram(&page, blockNum, relation->oram, NULL);
 	
 
@@ -80,12 +82,13 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
      **/
 
     if (result == DUMMY_BLOCK){
-		page = (char *) malloc(BLCKSZ); 
+        page = (char *) malloc(BLCKSZ); 
         memset(page, 0, BLCKSZ);
-    }
+    } 
 
     block = (VBlock) malloc(sizeof(struct VBlock));
     
+  
     block->id = blockNum;
 	block->page = page;
 	list_add(relation->buffer, block);

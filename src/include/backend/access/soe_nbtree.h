@@ -386,8 +386,10 @@ extern bool btinsert_s(VRelation indexRel, VRelation heapRel, ItemPointer ht_cti
 extern IndexScanDesc btbeginscan_s(VRelation rel, const char *key, int keysize);
 extern bool btgettuple_s(IndexScanDesc scan);
 extern void btendscan_s(IndexScanDesc scan);
-extern void btree_load_s(VRelation indexRel, char* block, unsigned int  offset);
-
+extern void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned int  offset);
+extern void btree_fanout_setup(int* fanouts, 
+                               unsigned int fanout_size,
+                               unsigned int nlevels);
 
 
 /*
@@ -406,6 +408,7 @@ extern void _bt_checkpage_s(VRelation rel, Buffer buf);
 extern Buffer _bt_getbuf_s(VRelation rel, BlockNumber blkno, int access);
 extern void _bt_relbuf_s(VRelation rel, Buffer buf);
 extern void _bt_pageinit_s(Page page, Size size);
+extern Buffer _bt_getbuf_level_s(VRelation rel, BlockNumber blkno);
 
 /*
  * prototypes for functions in nbtsearch.c

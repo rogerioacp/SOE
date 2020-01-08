@@ -40,7 +40,8 @@ InitOSTRelation(OSTreeState relstate, unsigned int oid, char *attrDesc, unsigned
 	return rel;
 }
 
-Buffer ReadDummyBuffer_ost(OSTRelation relation, int treeLevel,  BlockNumber blkno){
+Buffer ReadDummyBuffer_ost(OSTRelation relation, int treeLevel, 
+                           BlockNumber blkno){
     int result = 0;
 
     #ifdef DUMMYS 
@@ -279,8 +280,9 @@ closeOSTRelation(OSTRelation rel)
 
 		list_remove_all_cb(rel->buffers[l], &destroyOSTVBlock);
 		list_destroy(rel->buffers[l]);
-		free(rel->buffers);
 	}
+
+    free(rel->buffers);
 	free(rel->osts);
 
 	if (rel->tDesc->attrs != NULL)

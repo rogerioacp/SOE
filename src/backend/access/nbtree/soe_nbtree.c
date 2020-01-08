@@ -40,6 +40,8 @@
 #include <oram/plblock.h>
 #include <string.h>
 #include <stdlib.h>
+
+
 /*
  * BTPARALLEL_NOT_INITIALIZED indicates that the scan has not started.
  *
@@ -54,12 +56,16 @@
  */
 
 
-void btree_load_s(VRelation indexRel, char* block, unsigned int  offset)
+void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned int offset)
 {
     Buffer buffer;
     Page    page;
 
-    buffer = ReadBuffer_s(indexRel, offset);
+
+    indexRel->level = level;
+   
+    buffer = _bt_getbuf_level_s(indexRel, offset); 
+
     page = BufferGetPage_s(indexRel, buffer);
 
     memcpy(page, block, BLCKSZ);

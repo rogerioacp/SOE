@@ -64,14 +64,14 @@ bt_dummy_search_s(VRelation rel, int maxHeight){
  */
 BTStack
 _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
-			 Buffer * bufP, int access,  bool doDummy)
+			 Buffer* bufP, int access,  bool doDummy)
 {
     BTStack		stack_in = NULL;
     int         tHeight = 0;
 
-
+    rel->level = tHeight;
 	/* Get the root page to start with */
-    *bufP = _bt_getroot_s(rel, access);
+    *bufP = _bt_getbuf_level_s(rel, 0);
 
 	/* If index is empty and access = BT_READ, no root page is created. */
 	//if (!BufferIsValid_s(rel, *bufP))
@@ -149,14 +149,17 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		new_stack->bts_parent = stack_in;
 
 		ReleaseBuffer_s(rel, *bufP);
-		*bufP = ReadBuffer_s(rel, blkno);
+
+        tHeight++;
+        rel->level = tHeight;
+
+		*bufP = _bt_getbuf_level_s(rel, blkno);
 		/* drop the read lock on the parent page, acquire one on the child */
 		/* *bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ); */
 
 		/* okay, all set to move down a level */
         
 		stack_in = new_stack;
-        tHeight++;
 	}
 
 	return stack_in;
@@ -850,8 +853,9 @@ _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno)
 		/* check for interrupts while we're not holding any buffer lock */
 		/* CHECK_FOR_INTERRUPTS(); */
 		/* step right one page */
-		so->currPos.buf = _bt_getbuf_s(rel, blkno, BT_READ);
-        
+		//so->currPos.buf = _bt_getbuf_s(rel, blkno, BT_READ);
+        so->currPos.buf = _bt_getbuf_level_s(rel, blkno);
+
        
 		page = BufferGetPage_s(rel, so->currPos.buf);
 		/* TestForOldSnapshot(scan->xs_snapshot, rel, page); */

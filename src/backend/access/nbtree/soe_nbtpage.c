@@ -24,6 +24,19 @@
 #include "access/soe_nbtree.h"
 #include "logger/logger.h"
 
+int* sfanouts;
+unsigned int snlevels;
+
+extern void btree_fanout_setup(int* fanouts,unsigned int fanout_size, 
+                               unsigned int nlevels){
+    
+    sfanouts = (int*)malloc(fanout_size);
+    memcpy(sfanouts, fanouts, fanout_size);
+    snlevels = nlevels;
+}
+
+
+
 /*
  *	_bt_initmetapage() -- Fill a page buffer with a correct metapage image
  */
@@ -189,16 +202,39 @@ _bt_getbuf_s(VRelation rel, BlockNumber blkno, int access)
 	}
 	else
 	{
-/* 		bool		needLock; */
-/* 		Page		page; */
 		buf = ReadBuffer_s(rel, P_NEW);
-		/* Initalization is done by the ReadBuffer */
-		/* Initialize the new page before returning it */
-		/* page = BufferGetPage(buf); */
 	}
 
 	/* ref count and lock type are correct */
 	return buf;
+}
+
+Buffer
+_bt_getbuf_level_s(VRelation rel, BlockNumber blkno)
+{
+
+    unsigned int clevel = rel->level;
+    unsigned int l_offset;
+    unsigned int l_ob_blkno;
+    Buffer  buf;
+
+    if(clevel == 0){
+        l_ob_blkno = blkno;
+
+    }else{
+
+        l_offset = 1;
+
+        for(int i=0; i < clevel-1; i++){
+            l_offset += sfanouts[i];
+        }
+    
+        l_ob_blkno = l_offset + blkno;
+    }
+    
+    buf = ReadBuffer_s(rel, l_ob_blkno);
+
+    return buf;
 }
 
 

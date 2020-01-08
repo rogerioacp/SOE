@@ -35,6 +35,7 @@
 #include <stdlib.h>
 
 
+
 void
 nbtree_pageInit(Page page, int blkno, Size blocksize)
 {
@@ -63,15 +64,15 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 	char	   *blocks;
 	char	   *destPage;
 	char	   *tmpPage;
-
-	status = SGX_SUCCESS;
-
 	int			tnblocks = nblocks;
 	int			offset;
 	int			allocBlocks = 0;
 	int			boffset = 0;
 
-	do
+
+	status = SGX_SUCCESS;
+	
+    do
 	{
 		/* BTPageOpaque oopaque; */
 		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
@@ -82,28 +83,21 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 		for (offset = 0; offset < allocBlocks; offset++)
 		{
 			destPage = blocks + (offset * BLCKSZ);
-			nbtree_pageInit(tmpPage, DUMMY_BLOCK, (Size) blocksize);
+			nbtree_pageInit(tmpPage, DUMMY_BLOCK, BLCKSZ);
 			#ifndef CPAGES
 				page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
 			#else
 				memcpy(destPage, tmpPage, BLCKSZ);
 			#endif
-			/* memcpy((char*) blocks + (offset*BLCKSZ), page, blocksize); */
-			/* oopaque = (BTPageOpaque) PageGetSpecialPointer_s(page); */
-
-			/*
-			 * selog(DEBUG1, "hash_fileinit block %d has real block id %d",
-			 * offset, oopaque->o_blkno);
-			 */
-
 		}
 
-		status = outFileInit(filename, blocks, allocBlocks, blocksize, allocBlocks * BLCKSZ, boffset);
+		status = outFileInit(filename, blocks, allocBlocks, BLCKSZ, allocBlocks * BLCKSZ, boffset);
 
 		if (status != SGX_SUCCESS)
 		{
 			selog(ERROR, "Could not initialize relation %s\n", filename);
 		}
+        
 		free(blocks);
 		free(tmpPage);
 
@@ -143,10 +137,6 @@ nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno,
 	block->size = BLCKSZ;
 	free(ciphertextBlock);
 
-	/*
-	 * selog(DEBUG1, "requested %d and block has real blkno %d", ob_blkno,
-	 * block->blkno);
-	 */
 }
 
 
@@ -154,6 +144,7 @@ void
 nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
+    BTPageOpaque oopaque;
 
 	/* BTPageOpaque oopaque = NULL; */
 	char	   *encpage;
@@ -170,24 +161,13 @@ nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob
 		* remove this extra step by removing some verifications
 		* on the ocalls.
 		*/
-		/* selog(DEBUG1, "Going to write DUMMY_BLOCK"); */
+		//selog(DEBUG1, "Going to write DUMMY_BLOCK");
 		nbtree_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
 	}
 
-	/*
-	 * oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block->block);
-	 *
-	 * if(block->blkno == 0 ){ BTMetaPageData *metad; metad =
-	 * BTPageGetMeta_s((Page) block->block); selog(DEBUG1, "2-Metapage current
-	 * root is %d and level is %d and special
-	 * %d",metad->btm_root,metad->btm_level, oopaque->o_blkno); }
-	 */
-
-	/*
-	 * selog(DEBUG1, "hash_fileWrite %d with block %d and special %d ",
-	 * ob_blkno, block->blkno, oopaque->o_blkno);
-	 */
-	/* selog(DEBUG1, "hash_fileWrite for file %s", filename); */
+    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page)block->block);
+    oopaque->o_blkno = block->blkno;
+     
 	#ifndef CPAGES
 		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
 	#else

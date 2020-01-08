@@ -66,7 +66,6 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 	status = SGX_SUCCESS;
 	int			offset = 0;
 	int			boffset = 0;
-    //selog(DEBUG1," Heap file init");
 	
     do
 	{
@@ -77,10 +76,7 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 
 		blocks = (char *) malloc(BLCKSZ * allocBlocks);
 		tmpPage = (char *) malloc(blocksize);
-
-		
-		//selog(DEBUG1, "going to initialize %u pages of relation  %s\n",nblocks, filename);
-		
+	
 
 		for (offset = 0; offset < allocBlocks; offset++)
 		{
@@ -94,13 +90,15 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 		}
 
 		status = outFileInit(filename, blocks, allocBlocks, BLCKSZ, allocBlocks * BLCKSZ, boffset);
-		if (status != SGX_SUCCESS)
+		
+        if (status != SGX_SUCCESS)
 		{
 			selog(ERROR, "Could not initialize relation %s\n", filename);
 		}
 
 		free(blocks);
 		free(tmpPage);
+        
 		tnblocks -= BATCH_SIZE;
 		boffset += BATCH_SIZE;
 	} while (tnblocks > 0);
@@ -158,7 +156,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
     //selog(DEBUG1, "Requested write  oblivious block %d that has real block %d", ob_blkno, *r_blkno);
 
     if(block->blkno != *r_blkno){
-        selog(ERROR, "Block blkno %d  and page blkno %d do not match", block->blkno, *r_blkno);
+        selog(ERROR, "Block blkno %d and page blkno %d do not match", block->blkno, *r_blkno);
     }
     
 	if (block->blkno == DUMMY_BLOCK)

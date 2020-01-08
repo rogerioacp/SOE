@@ -114,10 +114,9 @@ void
 heap_insert_block_s(VRelation rel, char *rpage, int blkno)
 {
 	Buffer		buffer;
-	Page		page;
+    Page		page;
     int* r_blkno;
-    int*  p_blkno;
-
+    int* p_blkno;
 
 	//freeSpaceBlock = FreeSpaceBlock_s(rel);
 	
@@ -131,20 +130,25 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     buffer = ReadBuffer_s(rel, *r_blkno);
 	page = BufferGetPage_s(rel, buffer);
 
+    if(page == NULL){
+        selog(ERROR, "Page accessed on block loading %d is null", *r_blkno);
+    }
 
 	memcpy(page, rpage, BLCKSZ);
+
+
 
     p_blkno = (int*) PageGetSpecialPointer_s(page);
     
     if(*r_blkno != *p_blkno){
-        selog(ERROR, "Block numbers in heap mage do not match %d %d", *r_blkno, *p_blkno);
+        selog(ERROR, "Block numbers in heap page do not match %d %d", *r_blkno, *p_blkno);
     }
 
       
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
-	UpdateFSM(rel);
-	BufferFull_s(rel, buffer);
+	//UpdateFSM(rel);
+	//BufferFull_s(rel, buffer);
 
 }
 
