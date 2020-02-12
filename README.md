@@ -43,21 +43,29 @@ The makefile has the following options to confugre the make process:
 - SGX_DEBUG (0,1): Compile binary for debug.
 - UNSAFE (0,1) Compiles binary to be executed outside of an enclave. Neither simulation nor Hardware mode.
 - CPAGES (0,1): Set pages to be encrypted.
+- DUMMYS (0,1): Dummy requests to hide volume leakage.
+- SINGLE_ORAM (0,1): Simulates the execution of the baseline benchmark in a
+  single ORAM. Makes the size of the number of blocks of the tree and table
+  ORAMs the same.
 - ORAM_LIB:
     - FORESTORAM - Compile binary with Forest ORAM lib. 
     - PATHORAM - Compile binary with Path ORAM lib.
+- SMALL_BKCAP (0,1): If defines sets the number of of blocks per Path ORAM node (Z) to 1. The default is 4 blocks per node (Z=4).
+- STASH_COUNT: Logs the number of elements in a stash on a ORAM construction.
 
 To compile PathORAM for production, use the following flags:
 
-> make SGX_MODE=HW SGX_DEBUG=0 UNSAFE=0 CPAGES=1 ORAM_LIB=PATHORAM
+> make SGX_MODE=HW SGX_DEBUG=0 UNSAFE=0 CPAGES=1 DUMMYS=1 SINGLE_ORAM=1
+> SMALL_BKCAP=0 STASH_COUNT=0 ORAM_LIB=PATHORAM
 
 To Compile ForestORAM for production, use the following flags:
 
-> make SGX_MODE=SIM SGX_DEBUG=0 UNSAFE=1 CPAGES=0 ORAM_LIB=PATHORAM
+> make SGX_MODE=SIM SGX_DEBUG=0 UNSAFE=1 CPAGES=0 DUMMYS=1 SINGLE_ORAM=0
+> SMALL_BKCAP=0 STASH_COUNT=0 ORAM_LIB=FOREST_ORAM
 
-To compile for development and debug  use the following flags:
+To compile for development and debug use the following flags:
 
-> make SGX_MODE=SIM SGX_DEBUG=1 UNSAFE=1 CPAGES=0 ORAM_LIB=(FORESTORAM or PATHORAM)
+> make SGX_MODE=SIM SGX_DEBUG=1 UNSAFE=1 CPAGES=0 DUMMYS=0 SINGLE_ORAM=0 SMALL_BKCAP=1 STASH_COUNT=1 ORAM_LIB=(FORESTORAM or PATHORAM)
 
 To install run the following command:
 
