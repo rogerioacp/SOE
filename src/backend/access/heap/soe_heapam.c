@@ -117,8 +117,6 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     Page		page;
     int* r_blkno;
     int* p_blkno;
-
-	//freeSpaceBlock = FreeSpaceBlock_s(rel);
 	
     r_blkno = (int*) PageGetSpecialPointer_s(rpage);
    
@@ -147,9 +145,6 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
       
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
-	//UpdateFSM(rel);
-	//BufferFull_s(rel, buffer);
-
 }
 
 /**
