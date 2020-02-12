@@ -16,9 +16,8 @@ extern AMOFile * ost_ofileCreate();
 
 void		ost_pageInit(Page page, int blkno, Size blocksize);
 
-void		ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData);
-void
-			ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData);
+void		ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData);
+void        ost_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData);
 
 
 /* extern void setclevelo(unsigned int nlevel); */

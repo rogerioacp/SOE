@@ -35,6 +35,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+
+
 void
 heap_pageInit(Page page, int blkno, Size blocksize)
 {
@@ -52,7 +54,7 @@ heap_pageInit(Page page, int blkno, Size blocksize)
  * the oram relation so that future read or write requests don't have to worry about this. Furthermore, since we know the
  * exact number of blocks the relation must have, we can allocate the space once and never worry about this again.
  * */
-void
+FileHandler
 heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void *appData)
 {
 	sgx_status_t status;
@@ -103,12 +105,13 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 		boffset += BATCH_SIZE;
 	} while (tnblocks > 0);
 
+    return NULL;
 }
 
 
 
 void
-heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 
 	sgx_status_t status;
@@ -145,7 +148,7 @@ heap_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, v
 
 
 void
-heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
 	char	   *encPage = (char *) malloc(BLCKSZ);
@@ -189,7 +192,7 @@ heap_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_b
 
 
 void
-heap_fileClose(const char *filename, void *appData)
+heap_fileClose(FileHandler handler, const char *filename, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
 

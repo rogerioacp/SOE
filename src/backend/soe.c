@@ -324,8 +324,20 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         }
          
      #ifdef DUMMYS
-        //When dummys are being used and current index does not have a result,
-        //but there are still right leafs to iterate.
+        selog(DEBUG1, "Dummy Accesses in weird corner case"); 
+        /*
+         * When DUMMY accesses are being made and the first (e.g.:_bt_first_ost)
+         * scan of a search did not find a valid result in a tree page but there
+         * are still right leafs to access.
+         * 
+         * In these cases, the postgres codes moves on to the next leaf page
+         * (soe_ost_search.c:532. However, in our solution this can not happen
+         * as it leaks information. Thus, a dummy access is made to the table
+         * heap and the next tree scan goes to the next leaf page and searches
+         * for the correct result.
+         *
+         */
+
         if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
             ItemPointerSet_s(dtid, 0, 1);

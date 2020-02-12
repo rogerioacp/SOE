@@ -105,7 +105,7 @@ ost_pageInit(Page page, int blkno, Size blocksize)
  * TODO: initialize the file only once as this function will be called
  * multiple times, one for each ORAM.
  * */
-void
+FileHandler
 ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void *appData)
 {
 	sgx_status_t status;
@@ -163,11 +163,12 @@ ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize,
     selog(DEBUG1, "Init offset is at %d\n", init_offset);
 	o_nblocks[clevel] = nblocks;
 
+    return NULL;
 }
 
 
 void
-ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 	sgx_status_t status;
 	BTPageOpaqueOST oopaque;
@@ -216,7 +217,7 @@ ost_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, vo
 
 
 void
-ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+ost_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 
 	sgx_status_t status = SGX_SUCCESS;
@@ -274,7 +275,7 @@ ost_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_bl
 
 
 void
-ost_fileClose(const char *filename, void *appData)
+ost_fileClose(FileHandler handler, const char *filename, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
     if(o_nblocks != NULL){

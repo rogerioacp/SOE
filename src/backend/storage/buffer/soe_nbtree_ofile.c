@@ -57,7 +57,7 @@ nbtree_pageInit(Page page, int blkno, Size blocksize)
  * This function follows a logic similar to the function
  * _hash_alloc_buckets in soe_hashpage.c.
  * */
-void
+FileHandler
 nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void *appData)
 {
 	sgx_status_t status;
@@ -104,11 +104,13 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 		tnblocks -= BATCH_SIZE;
 		boffset += BATCH_SIZE;
 	} while (tnblocks > 0);
+
+    return NULL;
 }
 
 
 void
-nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+nbtree_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 	sgx_status_t status;
 	BTPageOpaque oopaque;
@@ -141,7 +143,7 @@ nbtree_fileRead(PLBlock block, const char *filename, const BlockNumber ob_blkno,
 
 
 void
-nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+nbtree_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
     BTPageOpaque oopaque;
@@ -184,7 +186,7 @@ nbtree_fileWrite(const PLBlock block, const char *filename, const BlockNumber ob
 
 
 void
-nbtree_fileClose(const char *filename, void *appData)
+nbtree_fileClose(FileHandler handler, const char *filename, void *appData)
 {
 	sgx_status_t status = SGX_SUCCESS;
 

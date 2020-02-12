@@ -57,7 +57,7 @@ Buffer ReadDummyBuffer_ost(OSTRelation relation, int treeLevel,
 		 * The OST fileRead always allocates and writes the content of the
 		 * file page, even if the content is a dummy page.
 		 */
-		ost_fileRead(plblock, relation->osts->iname, blkno, &clevel);
+		ost_fileRead(NULL, plblock, relation->osts->iname, blkno, &clevel);
 	    free(plblock);
         result = plblock->size;
     }else{
@@ -96,7 +96,7 @@ ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 		 * The OST fileRead always allocates and writes the content of the
 		 * file page, even if the content is a dummy page.
 		 */
-		ost_fileRead(plblock, relation->osts->iname, blockNum, &clevel);
+		ost_fileRead(NULL, plblock, relation->osts->iname, blockNum, &clevel);
 		page = plblock->block;
 		free(plblock);
 	}
@@ -189,7 +189,7 @@ MarkBufferDirty_ost(OSTRelation relation, Buffer buffer)
 			block->blkno = vblock->id;
 			block->block = vblock->page;
 			block->size = BLCKSZ;
-			ost_fileWrite(block, relation->osts->iname, vblock->id, &clevel);
+			ost_fileWrite(NULL, block, relation->osts->iname, vblock->id, &clevel);
 			free(block);
 		}
 		else

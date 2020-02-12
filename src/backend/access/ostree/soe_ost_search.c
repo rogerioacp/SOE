@@ -418,6 +418,7 @@ _bt_first_ost(IndexScanDesc scan)
 			/* BTLessStrategyNumber: */
 
 			/*
+             *
 			 * Find first item >= scankey, then back up one to arrive at last
 			 * item < scankey.  (Note: this positioning strategy is only used
 			 * for a backward scan, so that is always the correct starting
@@ -530,7 +531,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		 //selog(DEBUG1, "Page has no match, move to next page!"); 
+		 selog(DEBUG1, "Page has no match, move to next page!"); 
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
