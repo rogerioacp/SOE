@@ -118,6 +118,7 @@ btgettuple_s(IndexScanDesc scan)
     if (!BTScanPosIsValid_s(so->currPos))
     {
         res = _bt_first_s(scan); 
+        selog(DEBUG1, "Result of first iteration %d", res);
         ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
         so->currPos.buf = InvalidBuffer;
 
@@ -128,6 +129,7 @@ btgettuple_s(IndexScanDesc scan)
 		 * Now continue the scan.
 		 */
 		res = _bt_next_s(scan);
+        selog(DEBUG1, "Next result is %d", res);
     }
     
     // the result returned in res signals if any match was found
@@ -135,7 +137,9 @@ btgettuple_s(IndexScanDesc scan)
 #ifdef DUMMYS 
     /*I'm almost sure that when one condition is true so is the other. Validate
      * this assumption. No more results*/
-    if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
+    selog(DEBUG1, "what? %d %d %d", res, so->currPos.nextPage, so->currPos.moreRight);
+    //if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
+    if(res == false && so->currPos.nextPage == InvalidBlockNumber)
     {
         return false;
     }

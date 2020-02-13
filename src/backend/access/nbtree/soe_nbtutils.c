@@ -133,6 +133,8 @@ _bt_checkkeys_s(IndexScanDesc scan,
 	/* the prototype assumes string comparisons */
 	//test = (int32) strcmp(datum, keyValue);
     test = (int32) strncmp(datum, keyValue, strlen(datum)-1);
+
+    selog(DEBUG1, "test %s %s %d %d", datum, keyValue, test, scan->opoid);
 	/**
 	* Look at soe_nbtsearch.c function _bt_first_s to which operations the
 	* opoids correspond to.

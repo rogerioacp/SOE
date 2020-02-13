@@ -85,7 +85,8 @@ btgettuple_ost(IndexScanDesc scan)
 
 	if (!BTScanPosIsValid_OST(so->currPos))
 	{
-       	res = _bt_first_ost(scan); 
+       	res = _bt_first_ost(scan);
+        selog(DEBUG1, "ost - Result of first iteration %d", res);
         ReleaseBuffer_ost(scan->ost, so->currPos.buf);
        	so->currPos.buf = InvalidBuffer;
 
@@ -96,9 +97,12 @@ btgettuple_ost(IndexScanDesc scan)
 		 * Now continue the scan.
 		 */
 		res = _bt_next_ost(scan);
+        selog(DEBUG1, "ost - Next result is %d", res);
 	}
 #ifdef DUMMYS 
-    if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
+
+    selog(DEBUG1, "ost - what? %d %d %d", res, so->currPos.nextPage, so->currPos.moreRight);
+    if(res == false && so->currPos.nextPage == InvalidBlockNumber)
     {
 
     	//ReleaseBuffer_ost(scan->ost, so->currPos.buf);

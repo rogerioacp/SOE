@@ -604,7 +604,9 @@ _bt_next_s(IndexScanDesc scan)
 	if (++so->currPos.itemIndex > so->currPos.lastItem)
 	{
         bt_dummy_search_s(scan->indexRelation, scan->indexRelation->tHeight-1);
+        selog(DEBUG1, "No more items");
 		if (!_bt_steppage_s(scan)){
+            selog(DEBUG1, "No more pages to scan");
             /*
              * This case only happens when a scan has iterated over every
              * page that could statisfy a request and there are no more pages.
@@ -615,6 +617,7 @@ _bt_next_s(IndexScanDesc scan)
 			return false;
         }
 	}else{
+        selog(DEBUG1, "Iterate over items");
         bt_dummy_search_s(scan->indexRelation, scan->indexRelation->tHeight);
     }
 
@@ -844,8 +847,10 @@ _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno)
 		 * if we're at end of scan, give up and mark parallel scan as done, so
 		 * that all the workers can finish their scan
 		 */
+        selog(DEBUG1, "more pages? blkno %d, more right %d", blkno, so->currPos.moreRight);
 		if (blkno == P_NONE || !so->currPos.moreRight)
 		{
+            selog(DEBUG1, "No more pages");
 			/* _bt_parallel_done(scan); */
 			BTScanPosInvalidate_s(so->currPos);
 			return false;
@@ -863,6 +868,7 @@ _bt_readnextpage_s(IndexScanDesc scan, BlockNumber blkno)
 		/* check for deleted page */
 		if (!P_IGNORE_s(opaque))
 		{
+            selog(DEBUG1, "Going to read new page");
 
 			/* PredicateLockPage(rel, blkno, scan->xs_snapshot); */
 			/* see if there are any matches on this page */
