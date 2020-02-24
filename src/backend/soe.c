@@ -300,7 +300,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
     }
 
     if(scan == NULL){
-        selog(DEBUG1, "Starting Scan");
+        //selog(DEBUG1, "Starting Scan");
         /*Old request is complete. Start new input request*/
         if(mode == DYNAMIC){
             scan = btbeginscan_s(oIndex, trimedKey, scanKeySize + 1);
@@ -309,7 +309,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         }
         scan->opoid = opoid;
     }
-    selog(DEBUG1, "Mode is");
+    //selog(DEBUG1, "Mode is %d", mode);
     matchFound = mode == DYNAMIC? btgettuple_s(scan): btgettuple_ost(scan);
     #ifdef STASH_COUNT
         counter +=1;
@@ -318,7 +318,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         }
     #endif
     if(matchFound){
-        selog(DEBUG1, "Match Found");
+        //selog(DEBUG1, "Match Found");
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
@@ -341,7 +341,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 
         if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
 
-            selog(DEBUG1, "Dummy Accesses in weird corner case"); 
+            //selog(DEBUG1, "Dummy Accesses in weird corner case"); 
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
             ItemPointerSet_s(dtid, 0, 1);
             heap_gettuple_s(oTable, dtid, heapTuple);
@@ -350,7 +350,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
      #endif
 
     }else{
-        selog(DEBUG1, "Closing Scan");
+        //selog(DEBUG1, "Closing Scan");
         mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
         scan = NULL;
     

@@ -62,6 +62,7 @@ typedef struct BTPageOpaqueData
 	uint16		btpo_flags;		/* flag bits, see below */
 	BTCycleId   btpo_cycleid; /* vacuum cycle ID of latest split */
 	uint32		o_blkno; 		/* used to store original block number inside soe */
+    //uint32      counters[250];
 }			BTPageOpaqueData;
 
 typedef BTPageOpaqueData * BTPageOpaque;

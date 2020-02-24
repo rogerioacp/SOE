@@ -1,13 +1,13 @@
 /*-------------------------------------------------------------------------
  *
  * nbtsearch.c
- *	  Search code for postgres btrees.
+ *	  search code for postgres btrees.
  *
  *
- * Portions Copyright (c) 1996-2018, PostgreSQL Global Development Group
- * Portions Copyright (c) 1994, Regents of the University of California
+ * portions copyright (c) 1996-2018, postgresql global development group
+ * portions copyright (c) 1994, regents of the university of california
  *
- * IDENTIFICATION
+ * identification
  *	  src/backend/access/nbtree/nbtsearch.c
  *
  *-------------------------------------------------------------------------
@@ -15,6 +15,7 @@
 
 #include "access/soe_nbtree.h"
 #include "logger/logger.h"
+#include "common/soe_prf.h"
 
 static bool _bt_readpage_s(IndexScanDesc scan,
 						   OffsetNumber offnum);
@@ -78,6 +79,11 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 	//	return (BTStack) NULL;
 
 	/* Loop iterates once per level descended in the tree */
+    //unsigned int currentCounter = 0;
+    //unsigned int nextCounter = 0;
+    unsigned int currentNodeCounter = 0;
+    unsigned int nextNodeCounter = 0;
+    unsigned int nextNodeNCounter = 0;
 	for (;;)
 	{
       Page          page;
@@ -88,8 +94,11 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
       BlockNumber   blkno;
       BlockNumber   par_blkno;
       BTStack       new_stack;
+      //Current token is 4 integers long (128 bits AES BLOCK size);
+      int          token[4];
       
-		/*
+      char	   *datum;
+  		/*
 		 * Race -- the page we just grabbed may have split since we read its
 		 * pointer in the parent (or metapage).  If it has, we may need to
 		 * move right to its new sibling.  Do that.
@@ -110,7 +119,8 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		/* if this is a leaf page, we're done */
 		page = BufferGetPage_s(rel, *bufP);
 		opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
-		if (P_ISLEAF_s(opaque))
+
+        if (P_ISLEAF_s(opaque))
 		{ 
             #ifdef DUMMYS
                 while(doDummy && tHeight < rel->tHeight){
@@ -129,8 +139,25 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		offnum = _bt_binsrch_s(rel, *bufP, keysz, scankey, nextkey);
 		itemid = PageGetItemId_s(page, offnum);
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
+
+        datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
+
+        if(datum[0] == 0x30){
+            selog(DEBUG1, "First access to counter\n");
+            memset(datum, 0, sizeof(unsigned int));
+        }
+
+        //currentNodeNCounter = currentNodeCounter + 1;
+        memcpy(&nextNodeCounter, datum, sizeof(unsigned int));
+        nextNodeNCounter = nextNodeCounter + 1;
+        memcpy(datum, &nextNodeNCounter, sizeof(unsigned int));
+        
+
+        //selog(DEBUG1, "cycleid %d and counter is %d\n", opaque->btpo_cycleid, counter);
+        //memcpy(datum, &opaque->btpo_cycleid, sizeof(unsigned int));
+
 		blkno = BTreeInnerTupleGetDownLink_s(itup);
-		par_blkno = BufferGetBlockNumber_s(*bufP);
+   		par_blkno = BufferGetBlockNumber_s(*bufP);
 
 		/*
 		 * We need to save the location of the index entry we chose in the
@@ -147,12 +174,25 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		new_stack->bts_offset = offnum;
 		new_stack->bts_btentry = blkno;
 		new_stack->bts_parent = stack_in;
-
+        
+        //memset(datum, opaque->btpo_cycleid, sizeof(int));
+        //opaque->btpo_cycleid +=1;
+        //MarkBufferDirty_s(rel, *bufpP, currentNodeCounter +1);
+        MarkBufferDirty_s(rel, *bufP);
 		ReleaseBuffer_s(rel, *bufP);
+        selog(DEBUG1, "Access to offset %d has counters %d %d %d\n",blkno,  currentNodeCounter, nextNodeCounter, nextNodeNCounter);
+        currentNodeCounter = nextNodeCounter;
+
 
         tHeight++;
         rel->level = tHeight;
+        selog(DEBUG1, "Current Counter is %d\n", currentNodeCounter);
+        //currentNodeCounter+=1;
+        // *bufP = _bt_getbuf_level_s(rel, blkno);
 
+        prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
+        selog(DEBUG1, "prf results are %d %d\n", token[0], token[1]);
+        //*bufp = _bt_getbuf_level_s(rel, blkno);
 		*bufP = _bt_getbuf_level_s(rel, blkno);
 		/* drop the read lock on the parent page, acquire one on the child */
 		/* *bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ); */
@@ -213,7 +253,7 @@ _bt_binsrch_s(VRelation rel,
 
 	low = P_FIRSTDATAKEY_s(opaque);
 	high = PageGetMaxOffsetNumber_s(page);
-
+    selog(DEBUG1, "Max page offset %d\n", high);
 	/*
 	 * If there are no keys on the page, return the first available slot. Note
 	 * this covers two cases: the page is really empty (no keys), or it
@@ -312,7 +352,6 @@ _bt_compare_s(VRelation rel,
 	char	   *datum;
 	IndexTuple	itup;
 	int32		result;
-
 	result = 0;
 
 
@@ -332,14 +371,15 @@ _bt_compare_s(VRelation rel,
 	//datum = index_getattr_s(itup);
     datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
 
+
 	/* We assume we are comparing strings(varchars) */
 	//if (rel->foid == 1078)
 	//{
 	//	result = (int32) strcmp(scankey->sk_argument, datum);
 	//}
 
-    result = (int32) strncmp(scankey->sk_argument, datum, strlen(datum)-1);
-
+    result = (int32) strncmp(scankey->sk_argument, datum+4, strlen(datum)-1);
+    selog(DEBUG1, "Result comparision is %s, %s %d", scankey->sk_argument, datum+4, result);
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
 		return result;
