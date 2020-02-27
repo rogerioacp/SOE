@@ -337,8 +337,6 @@ typedef HashMetaPageData * HashMetaPage;
 
 extern bool hashinsert_s(VRelation rel, ItemPointer ht_ctid, const char *datum, unsigned int datumSize);
 
-extern void heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple);
-
 extern IndexScanDesc hashbeginscan_s(VRelation rel, const char *key, int keysize);
 extern bool hashgettuple_s(IndexScanDesc scan);
 

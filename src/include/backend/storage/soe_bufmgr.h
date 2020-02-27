@@ -51,7 +51,7 @@
 #define BUFFER_LOCK_SHARE		1
 #define BUFFER_LOCK_EXCLUSIVE	2
 
-typedef void (*pageinit_function) (Page page, int blockNum, Size blocksize);
+typedef void (*pageinit_function) (Page page, int blockNum, unsigned int location, Size blocksize);
 
 typedef struct VRelation
 {
@@ -90,6 +90,11 @@ typedef struct VRelation
      * baseline index 
      * */
     unsigned int level;
+
+    //current token to access a block
+    unsigned int* token;
+
+    unsigned int rCounter;
 
 }		   *VRelation;
 

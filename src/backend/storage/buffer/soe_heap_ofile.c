@@ -38,13 +38,16 @@
 
 
 void
-heap_pageInit(Page page, int blkno, Size blocksize)
+heap_pageInit(Page page, int blkno, unsigned int lsize, Size blocksize)
 {
 
     int*     pblkno; 
-	PageInit_s(page, blocksize, sizeof(int));
+	PageInit_s(page, blocksize, sizeof(int)*4);
     pblkno = (int*) PageGetSpecialPointer_s(page);
-    *pblkno = blkno;
+    pblkno[0] = blkno;
+    pblkno[1] = lsize;
+    pblkno[2] = 0;
+    pblkno[3] = 0;
 }
 
 /**
@@ -55,7 +58,8 @@ heap_pageInit(Page page, int blkno, Size blocksize)
  * exact number of blocks the relation must have, we can allocate the space once and never worry about this again.
  * */
 FileHandler
-heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void *appData)
+heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize,
+              unsigned int lsize, void *appData)
 {
 	sgx_status_t status;
 	char	   *blocks;
@@ -83,7 +87,7 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 		for (offset = 0; offset < allocBlocks; offset++)
 		{
 			destPage = blocks + (offset * BLCKSZ);
-			heap_pageInit(tmpPage, DUMMY_BLOCK, BLCKSZ);
+			heap_pageInit(tmpPage, DUMMY_BLOCK, lsize, BLCKSZ);
 			#ifndef CPAGES
 				page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
 			#else
@@ -138,9 +142,16 @@ heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const Bl
 	}
    
 	r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
-
-   	block->blkno = *r_blkno;
+    //lsize = r_blkno[1];
+    //block->lsize = lsize;
+   	block->blkno = r_blkno[0];
+    block->location[0] = r_blkno[2];
+    block->location[1] = r_blkno[3];
+    //block->location = (Location) malloc(block->lsize);
+    //memcpy(block->location, &r_blkno[2], lsize);
 	block->size = BLCKSZ;
+    selog(DEBUG1, "heap_fileRead %s rblkno %d and location %d %d", filename, block->blkno, r_blkno[2], r_blkno[3]);
+    //block->lsize = lsize;
 	free(ciphertexBlock);
     //selog(DEBUG1, "Requested read oblivious block %d that has real block %d", ob_blkno, block->blkno);
 
@@ -153,9 +164,16 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
 	sgx_status_t status = SGX_SUCCESS;
 	char	   *encPage = (char *) malloc(BLCKSZ);
     int        *r_blkno;
+    int        *c_blkno;
     
     r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
-    
+    //r_blkno[1] = block->lsize;
+    //lSize = block->lsize;
+
+    //logger(DEBUG, "heap_fileWrite %d %d",r_blkno[0], r_blkno[1]
+    //lSize = r_blkno[1];
+
+   //selog(DEBUG1, "heap_fileWrite %d block %d with lsize %d and location %d %d\n", block->blkno, r_blkno[0], r_blkno[1], r_blkno[2], r_blkno[3]);
     //selog(DEBUG1, "Requested write  oblivious block %d that has real block %d", ob_blkno, *r_blkno);
 
     if(block->blkno != *r_blkno){
@@ -172,16 +190,23 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
 		* remove this extra step by removing some verifications
 		* on the ocalls.
 		*/
-		heap_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
+		heap_pageInit((Page) block->block, DUMMY_BLOCK, 0, BLCKSZ);
 	}
 	#ifndef CPAGES
 		page_encryption((unsigned char *) block->block, (unsigned char *) encPage);
 	#else
 		memcpy(encPage, block->block, BLCKSZ);
  	#endif
-	
-	status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
+    c_blkno = (int*) PageGetSpecialPointer_s((Page) encPage);
+    c_blkno[2] = block->location[0];
+    c_blkno[3] = block->location[1];
+    //memcpy(&c_blkno[2], block->location, lSize);
+
+    status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
+
+    selog(DEBUG1, "heap_fileWrite %s block %d %d location %d %d", filename, block->blkno, c_blkno[0], c_blkno[2], c_blkno[3]);
+	
 	if (status != SGX_SUCCESS)
 	{
 		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);

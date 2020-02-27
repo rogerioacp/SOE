@@ -2,6 +2,7 @@
 /* #include "access/soe_genam.h" */
 #include "access/soe_heapam.h"
 #include "logger/logger.h"
+#include "common/soe_prf.h"
 
 void
 heap_insert_s(VRelation rel, Item tup, Size len, HeapTuple tuple)
@@ -115,11 +116,18 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
 {
 	Buffer		buffer;
     Page		page;
-    int* r_blkno;
-    int* p_blkno;
-	
+    int*        r_blkno;
+    int*        p_blkno;
+    unsigned int    token[4];
+    int level = rel->tHeight +1;
+    selog(DEBUG1, "Inserting heap block %d, level %d", blkno, level);
+    
     r_blkno = (int*) PageGetSpecialPointer_s(rpage);
-   
+    prf(level, blkno, 0, (unsigned char*) &token);
+    selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]); 
+    selog(DEBUG1, "size of oopaque lsize %d\n", r_blkno[1]);
+    
+    rel->token = token;
     if(*r_blkno != blkno){
         selog(ERROR, "Page block %d number does not match offset %d", *r_blkno, blkno);
     }
@@ -137,11 +145,17 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
 
 
     p_blkno = (int*) PageGetSpecialPointer_s(page);
+
     
+    selog(DEBUG1, "size of oopaque lsize %d and location is %d %d", p_blkno[1], p_blkno[2], p_blkno[3]);
+
     if(*r_blkno != *p_blkno){
         selog(ERROR, "Block numbers in heap page do not match %d %d", *r_blkno, *p_blkno);
     }
 
+    prf(level, blkno, 1, (unsigned char*) &token);
+
+    selog(DEBUG1, "Counters are %d %d %d %d", token[0], token[1], token[2], token[3]);
       
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);

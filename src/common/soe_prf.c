@@ -25,14 +25,26 @@ unsigned char *iv = (unsigned char *) "0123456789012345";
 
 void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigned char *token)
 {
-    int index;
 #ifdef CPAGES
-	/* If we are not encrypting anything just generate two random ints */
-    int r = 0;
-    for(index  = 0; index < 2; index++){
-        r = getRandomInt();
-        memcpy(token + index*sizeof(unsigned int), &r, sizeof(unsigned int));
-    }
+	/* If we are not encrypting anything just generate two random ints. Its all
+     * we need*/
+    int next = counter + 1;
+    //int r = 0;
+    //for(index  = 0; index < 2; index++){
+        //r = getRandomInt();
+    //Currently we only need 4 integer, 2 for the leaf and 2 for  a partition.
+    // 1 token for the current loction and a token for the next location.
+    memcpy(token, &counter, sizeof(unsigned int));
+    memcpy(token + sizeof(unsigned int), &next, sizeof(unsigned int));
+    memcpy(token + 2*sizeof(unsigned int), &counter, sizeof(unsigned int));
+    memcpy(token + 3*sizeof(unsigned int), &next, sizeof(unsigned int));
+    //}
+     
+    //token[0] = counter;
+    //token[1] = next;
+    //token[2] = counter;
+    //token[3] = next;
+
     
 
 #else
@@ -45,10 +57,10 @@ void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigne
 	int			ciphertext_len;
 	int			clen;
 
+    len[0] = level;
+    len[1] = offset;
+    len[2] = counter;
 
-    for(index = 0; index < 3; index++){
-        memcpy(input+ index*sizeof(unsigned int), offset, sizeof(unsigned int));
-    }
 
 	/* Create and initialise the context */
 	if (!(ctx = EVP_CIPHER_CTX_new()))

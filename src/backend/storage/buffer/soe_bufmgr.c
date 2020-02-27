@@ -1,6 +1,8 @@
 #include "storage/soe_bufmgr.h"
 #include "access/soe_skey.h"
 #include "logger/logger.h"
+#include "oram/coram.h"
+
 /* #include "storage/soe_heap_ofile.h" */
 
 #include <stdlib.h>
@@ -40,6 +42,9 @@ InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, pageinit_f
 
     vrel->tHeight = 0;
     vrel->level = 0;
+    vrel->token = NULL;
+    //memset(vrel->token, 0, sizeof(unsigned int)*32);
+    vrel->rCounter = 2; //counter starts at 2 as blocks do two oblivious operations at initialization
 	return vrel;
 }
 
@@ -71,7 +76,8 @@ ReadBuffer_s(VRelation relation, BlockNumber blockNum)
 	char	   *page = NULL;
     VBlock      block;	
 	int			result;
-
+    
+    setToken(relation->oram, relation->token);
     result = read_oram(&page, blockNum, relation->oram, NULL);
 	
 
@@ -146,7 +152,9 @@ MarkBufferDirty_s(VRelation relation, Buffer buffer)
 	}
 	if (found)
 	{	
+        setToken(relation->oram, relation->token);
 		result = write_oram(vblock->page, BLCKSZ, vblock->id, relation->oram, NULL);
+
 	}
 	else
 	{

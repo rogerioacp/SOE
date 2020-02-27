@@ -106,7 +106,8 @@ ost_pageInit(Page page, int blkno, Size blocksize)
  * multiple times, one for each ORAM.
  * */
 FileHandler
-ost_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void *appData)
+ost_fileInit(const char *filename, unsigned int nblocks, 
+             unsigned int blocksize, unsigned int lsize, void *appData)
 {
 	sgx_status_t status;
 	char	   *blocks;

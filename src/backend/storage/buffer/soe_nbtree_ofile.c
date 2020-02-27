@@ -37,7 +37,7 @@
 
 
 void
-nbtree_pageInit(Page page, int blkno, Size blocksize)
+nbtree_pageInit(Page page, int blkno, unsigned int locationSize, Size blocksize)
 {
 	BTPageOpaque ovflopaque;
 
@@ -50,6 +50,10 @@ nbtree_pageInit(Page page, int blkno, Size blocksize)
 	ovflopaque->btpo.level = 0;
 	ovflopaque->btpo_flags = 0;
     ovflopaque->o_blkno = blkno;
+    ovflopaque->lsize = locationSize;
+    
+    ovflopaque->location[0] = 0;
+    ovflopaque->location[1] = 0;
 }
 
 /**
@@ -58,7 +62,7 @@ nbtree_pageInit(Page page, int blkno, Size blocksize)
  * _hash_alloc_buckets in soe_hashpage.c.
  * */
 FileHandler
-nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, void *appData)
+nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize, unsigned int locationSize, void *appData)
 {
 	sgx_status_t status;
 	char	   *blocks;
@@ -83,7 +87,7 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 		for (offset = 0; offset < allocBlocks; offset++)
 		{
 			destPage = blocks + (offset * BLCKSZ);
-			nbtree_pageInit(tmpPage, DUMMY_BLOCK, BLCKSZ);
+			nbtree_pageInit(tmpPage, DUMMY_BLOCK, locationSize, BLCKSZ);
 			#ifndef CPAGES
 				page_encryption((unsigned char *) tmpPage, (unsigned char *) destPage);
 			#else
@@ -131,14 +135,28 @@ nbtree_fileRead(FileHandler handler, PLBlock block, const char *filename, const 
 
 	if (status != SGX_SUCCESS)
 	{
-		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
+		selog(ERROR, "Could not read %d from relation %s", ob_blkno, filename);
 	}
 
 	oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
+
+    //selog(DEBUG1, "nbtree_fileRead  blkno %d and lsize %d and location %d %d\n", oopaque->o_blkno, oopaque->lsize, oopaque->location[0], oopaque->location[1]);
+    //block->location = (Location) malloc(oopaque->lsize);
+    //block->lsize = oopaque->lsize;
+    //memcpy(block->location, oopaque->location, oopaque->lsize);
+    block->location[0] = oopaque->location[0];
+    block->location[1] = oopaque->location[1];
+    selog(DEBUG1, "nbtree_fileRead %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
+    /*Copy location*/
+    //block->lsize = oopaque->lsize;
+   /* block->location->leaf = oopaque->o_lleaf;
+    if(oopaque->lsize > sizeof(int)){
+        block->location->leaf = oopaque->o_lpartition;
+    }*/
+    
 	block->size = BLCKSZ;
 	free(ciphertextBlock);
-
 }
 
 
@@ -164,11 +182,28 @@ nbtree_fileWrite(FileHandler handler, const PLBlock block, const char *filename,
 		* on the ocalls.
 		*/
 		//selog(DEBUG1, "Going to write DUMMY_BLOCK");
-		nbtree_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
+		nbtree_pageInit((Page) block->block, DUMMY_BLOCK, 0, BLCKSZ);
 	}
 
     oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page)block->block);
     oopaque->o_blkno = block->blkno;
+    oopaque->location[0] = block->location[0];
+    oopaque->location[1] = block->location[1];
+    //memset(oopaque->location, 0, block->lsize);
+    //memcpy(oopaque->location, block->location, block->lsize);
+    selog(DEBUG1, "nbtree_fileWrite %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
+    //memcpy(block->location, &oopaque->location, block->lsize); 
+    //location = (int*) malloc(block->lsize);
+    //Copy location
+    //memcpy(location, block->location, block->lsize);
+
+    //oopaque->lsize = block->lsize;
+    /*oopaque->o_lleaf = block->location->leaf;
+    
+    if(block->lsize > sizeof(int)){
+        opaque->o_lpartition = block->location->partition;
+    }*/
+
      
 	#ifndef CPAGES
 		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);

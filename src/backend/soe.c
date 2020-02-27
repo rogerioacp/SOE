@@ -11,15 +11,19 @@
 #include "access/soe_heapam.h"
 #include "storage/soe_bufmgr.h"
 #include "storage/soe_ost_bufmgr.h"
-#include "access/soe_hash.h"
+
+//#include "access/soe_hash.h"
 #include "access/soe_nbtree.h"
 #include "access/soe_ost.h"
-#include "storage/soe_hash_ofile.h"
+#include "access/soe_heapam.h"
+//#include "storage/soe_hash_ofile.h"
 #include "storage/soe_heap_ofile.h"
 #include "storage/soe_nbtree_ofile.h"
 #include "storage/soe_ost_ofile.h"
 #include "storage/soe_itemptr.h"
 #include "logger/logger.h"
+#include "common/soe_prf.h"
+#include "access/soe_heapam.h"
 
 #include <oram/oram.h>
 #include <oram/plblock.h>
@@ -214,7 +218,8 @@ insert(const char *heapTuple, unsigned int tupleSize, char *datum,
        unsigned int datumSize)
 {
 
-	HeapTuple	hTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
+    selog(ERROR, "tuple insertion is not supported");
+	/*HeapTuple	hTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
 	int			trimmedSize = (datumSize + 1) * sizeof(char);
 	char	   *trimedDatum = (char *) malloc(trimmedSize);
 
@@ -242,7 +247,7 @@ insert(const char *heapTuple, unsigned int tupleSize, char *datum,
 	}
 
 	free(hTuple);
-	free(trimedDatum);
+	free(trimedDatum);*/
 }
 
 
@@ -252,7 +257,7 @@ addIndexBlock(char *block, unsigned int blocksize, unsigned int offset,
               unsigned int level)
 {
 
-	//selog(DEBUG1, "Going to add index block %d at level %d", offset, level);
+	selog(DEBUG1, "Going to add index block %d at level %d with size %d\n", offset, level, blocksize);
     
     if(mode == DYNAMIC){
         btree_load_s(oIndex, block, level, offset);
@@ -264,7 +269,15 @@ addIndexBlock(char *block, unsigned int blocksize, unsigned int offset,
 void
 addHeapBlock(char *block, unsigned int blockSize, unsigned int blkno)
 {
-	heap_insert_block_s(oTable, block, blkno);
+    selog(DEBUG1, "Insert heap block %d out of %d", blkno, oTable->totalBlocks);
+
+    heap_insert_block_s(oTable, block, blkno);
+	if(blkno == 0){
+       int *r_blkno; 
+        r_blkno = (int*) PageGetSpecialPointer_s((Page) block);
+        r_blkno[0] = oTable->totalBlocks-1;
+        heap_insert_block_s(oTable, block, oTable->totalBlocks-1);
+    }
 }
 
 int
@@ -280,6 +293,8 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 	int			hasNext;
 	char	   *trimedKey;
     bool        matchFound  = false;
+    unsigned int token[4];
+    int level = oTable->tHeight +1;
 
     heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
 	hasNext = 0;
@@ -318,7 +333,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         }
     #endif
     if(matchFound){
-        //selog(DEBUG1, "Match Found");
+        selog(DEBUG1, "Match Found");
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
@@ -341,11 +356,17 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 
         if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
 
-            //selog(DEBUG1, "Dummy Accesses in weird corner case"); 
+            selog(DEBUG1, "Dummy Accesses in weird corner case"); 
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
-            ItemPointerSet_s(dtid, 0, 1);
+
+            prf(level, oTable->totalBlocks-1, oTable->rCounter, (unsigned char*) &token);
+            oTable->token = token;
+
+            ItemPointerSet_s(dtid, oTable->totalBlocks-1, 1);
             heap_gettuple_s(oTable, dtid, heapTuple);
+
             free(dtid);
+            oTable->rCounter +=2;
         }
      #endif
 
@@ -355,10 +376,17 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         scan = NULL;
     
         #ifdef DUMMYS
+            selog(DEBUG1, "Dummy access when no match is found");
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
-            ItemPointerSet_s(dtid, 0, 1);
+
+            prf(level, oTable->totalBlocks-1, oTable->rCounter, (unsigned char*) &token);
+            oTable->token = token;
+
+            ItemPointerSet_s(dtid, oTable->totalBlocks-1, 1);
             heap_gettuple_s(oTable, dtid, heapTuple);
             free(dtid);
+
+            oTable->rCounter +=2;
         #else
             free(heapTuple);
             free(trimedKey);

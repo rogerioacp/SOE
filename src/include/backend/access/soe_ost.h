@@ -63,6 +63,8 @@ typedef struct BTPageOpaqueDataOST
 	uint16		btpo_flags;		/* flag bits, see below */
 	BTCycleId_OST btpo_cycleid; /* vacuum cycle ID of latest split */
 	uint32		o_blkno; 		/* used to store original block number inside soe */
+    uint32      o_lleaf; // we need to store the current leaf of a block (pathoram)
+    uint32      o_lpartition; // we need to store the current partition of a block(forestoram);
 }			BTPageOpaqueDataOST;
 
 typedef BTPageOpaqueDataOST * BTPageOpaqueOST;

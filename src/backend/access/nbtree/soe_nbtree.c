@@ -42,6 +42,8 @@
 #include <stdlib.h>
 
 
+#include "common/soe_prf.h"
+
 /*
  * BTPARALLEL_NOT_INITIALIZED indicates that the scan has not started.
  *
@@ -58,20 +60,43 @@
 
 void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned int offset)
 {
+
     Buffer buffer;
     Page    page;
+    BTPageOpaque oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
+    unsigned int    token[4];
+   // unsigned int*         token = (unsigned int*) malloc(sizeof(unsigned int)*32);
+    
+    memset(&token, 0, sizeof(unsigned int)*4);
+    prf(level, offset, 0, (unsigned char*) &token);
 
+    selog(DEBUG1, "size of btree opaque data is %d\n", sizeof(BTPageOpaqueData));
+    selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
+    selog(DEBUG1, "btree block at level %d and offset %d has o_blkno %d and lsize %d\n", level, offset, oopaque->o_blkno, oopaque->lsize);
 
     indexRel->level = level;
-   
+    indexRel->token = token;
+
     buffer = _bt_getbuf_level_s(indexRel, offset); 
 
     page = BufferGetPage_s(indexRel, buffer);
 
     memcpy(page, block, BLCKSZ);
 
+    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
+
+    selog(DEBUG1, "btree block after initialization at level %d and offset %d has o_blkno %d and lsize %d\n", level, offset, oopaque->o_blkno, oopaque->lsize);
+    
+    prf(level, offset, 1, (unsigned char*) &token);
+
+    selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
+    //indexRel->token = token;
+
     MarkBufferDirty_s(indexRel, buffer);
     ReleaseBuffer_s(indexRel, buffer);
+    //indexRel->rCounter +=2;
+    //free(token);
+
 }
 
 /*

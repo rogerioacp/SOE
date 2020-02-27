@@ -31,7 +31,9 @@ bt_dummy_search_s(VRelation rel, int maxHeight){
     #ifdef DUMMYS
     int height = 0;
     while(height < maxHeight){
-        ReadDummyBuffer(rel, 0);
+        selog(DEBUG1, "tree Dummy Accesses %d %d", height, rel->totalBlocks+1);
+        rel->level = height;
+        ReadDummyBuffer(rel, rel->totalBlocks+1);
         height++;
     }
     #endif
@@ -67,12 +69,18 @@ BTStack
 _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 			 Buffer* bufP, int access,  bool doDummy)
 {
-    BTStack		stack_in = NULL;
-    int         tHeight = 0;
+    BTStack	    	      stack_in = NULL;
+    int                   tHeight = 0;
+    unsigned int          token[4];
 
+    prf(rel->level, 0, rel->rCounter, (unsigned char*) &token);
+   
+    rel->token = token;
     rel->level = tHeight;
+    selog(DEBUG1, "Getting tree root with counter %d at height %d", rel->rCounter, rel->level);
 	/* Get the root page to start with */
     *bufP = _bt_getbuf_level_s(rel, 0);
+    rel->rCounter +=1;
 
 	/* If index is empty and access = BT_READ, no root page is created. */
 	//if (!BufferIsValid_s(rel, *bufP))
@@ -81,9 +89,11 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 	/* Loop iterates once per level descended in the tree */
     //unsigned int currentCounter = 0;
     //unsigned int nextCounter = 0;
-    unsigned int currentNodeCounter = 0;
+    unsigned int currentNodeCounter = rel->rCounter+1;
     unsigned int nextNodeCounter = 0;
     unsigned int nextNodeNCounter = 0;
+
+    currentNodeCounter = rel->rCounter;
 	for (;;)
 	{
       Page          page;
@@ -94,8 +104,7 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
       BlockNumber   blkno;
       BlockNumber   par_blkno;
       BTStack       new_stack;
-      //Current token is 4 integers long (128 bits AES BLOCK size);
-      int          token[4];
+      //Current token is 32 integers long (128 bits AES BLOCK size);
       
       char	   *datum;
   		/*
@@ -141,15 +150,18 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
 
         datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
-
-        if(datum[0] == 0x30){
-            selog(DEBUG1, "First access to counter\n");
-            memset(datum, 0, sizeof(unsigned int));
+        selog(DEBUG1, "DATUM is %d", datum);
+        selog(DEBUG1, "First char is %x",datum[0]);
+        if(datum[0] == 0x0){
+            selog(DEBUG1, "First access to counter");
+            int init = 2;
+            memcpy(datum, &init, sizeof(unsigned int));
+            //memset(datum, 0, sizeof(unsigned int));
         }
 
         //currentNodeNCounter = currentNodeCounter + 1;
         memcpy(&nextNodeCounter, datum, sizeof(unsigned int));
-        nextNodeNCounter = nextNodeCounter + 1;
+        nextNodeNCounter = nextNodeCounter + 2;
         memcpy(datum, &nextNodeNCounter, sizeof(unsigned int));
         
 
@@ -178,22 +190,33 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
         //memset(datum, opaque->btpo_cycleid, sizeof(int));
         //opaque->btpo_cycleid +=1;
         //MarkBufferDirty_s(rel, *bufpP, currentNodeCounter +1);
+        //currentNodeCounter +=1;
+        
+        prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
+        //rel->token = token;
+
         MarkBufferDirty_s(rel, *bufP);
 		ReleaseBuffer_s(rel, *bufP);
-        selog(DEBUG1, "Access to offset %d has counters %d %d %d\n",blkno,  currentNodeCounter, nextNodeCounter, nextNodeNCounter);
+
         currentNodeCounter = nextNodeCounter;
 
+        selog(DEBUG1, "Access to offset %d at level %d has counters %d %d %d",blkno, rel->level,  currentNodeCounter, nextNodeCounter, nextNodeNCounter);
 
         tHeight++;
         rel->level = tHeight;
-        selog(DEBUG1, "Current Counter is %d\n", currentNodeCounter);
+        //selog(DEBUG1, "Current Counter is %d", currentNodeCounter);
         //currentNodeCounter+=1;
         // *bufP = _bt_getbuf_level_s(rel, blkno);
 
         prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
-        selog(DEBUG1, "prf results are %d %d\n", token[0], token[1]);
+        //rel->token = token;
+        selog(DEBUG1, "block access %d at level %d with prf results are %d %d",blkno, rel->level, token[0], token[1]);
+
         //*bufp = _bt_getbuf_level_s(rel, blkno);
+        
 		*bufP = _bt_getbuf_level_s(rel, blkno);
+        currentNodeCounter +=1;
+
 		/* drop the read lock on the parent page, acquire one on the child */
 		/* *bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ); */
 
@@ -201,7 +224,7 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
         
 		stack_in = new_stack;
 	}
-
+    rel->rCounter +=1;
 	return stack_in;
 }
 
@@ -253,7 +276,7 @@ _bt_binsrch_s(VRelation rel,
 
 	low = P_FIRSTDATAKEY_s(opaque);
 	high = PageGetMaxOffsetNumber_s(page);
-    selog(DEBUG1, "Max page offset %d\n", high);
+    //selog(DEBUG1, "Max page offset %d\n", high);
 	/*
 	 * If there are no keys on the page, return the first available slot. Note
 	 * this covers two cases: the page is really empty (no keys), or it
@@ -378,7 +401,8 @@ _bt_compare_s(VRelation rel,
 	//	result = (int32) strcmp(scankey->sk_argument, datum);
 	//}
 
-    result = (int32) strncmp(scankey->sk_argument, datum+4, strlen(datum)-1);
+    selog(DEBUG1, "cmp strings %s %s and size %d", scankey->sk_argument, datum+4, strlen(scankey->sk_argument));
+    result = (int32) strncmp(scankey->sk_argument, datum+4, strlen(scankey->sk_argument));
     selog(DEBUG1, "Result comparision is %s, %s %d", scankey->sk_argument, datum+4, result);
 	/* if the keys are unequal, return the difference */
 	if (result != 0)

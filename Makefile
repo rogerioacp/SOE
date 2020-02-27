@@ -166,7 +166,8 @@ endif
 
 ifeq ($(ORAM_LIB), PATHORAM)
 		Enclave_C_Flags += -DPATHORAM
-		ORAM_LADD := -lpathoram
+		#ORAM_LADD := -lpathoram
+		ORAM_LADD := -ltpathoram
 else ifeq ($(ORAM_LIB), FORESTORAM)
 		Enclave_C_Flags += -DFORESTORAM
 		ORAM_LADD := -lforestoram
@@ -331,29 +332,29 @@ soe_prf.o: src/common/soe_prf.c
 
 #hash files
 
-soe_hash.o: src/backend/access/hash/soe_hash.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hash.o: src/backend/access/hash/soe_hash.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hashinsert.o: src/backend/access/hash/soe_hashinsert.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hashinsert.o: src/backend/access/hash/soe_hashinsert.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hashovfl.o: src/backend/access/hash/soe_hashovfl.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hashovfl.o: src/backend/access/hash/soe_hashovfl.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hashpage.o: src/backend/access/hash/soe_hashpage.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hashpage.o: src/backend/access/hash/soe_hashpage.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hashutil.o: src/backend/access/hash/soe_hashutil.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hashutil.o: src/backend/access/hash/soe_hashutil.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hashsearch.o: src/backend/access/hash/soe_hashsearch.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hashsearch.o: src/backend/access/hash/soe_hashsearch.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hash_ofile.o: src/backend/storage/buffer/soe_hash_ofile.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hash_ofile.o: src/backend/storage/buffer/soe_hash_ofile.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
-soe_hashfunc.o: src/backend/access/hash/soe_hashfunc.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
+#soe_hashfunc.o: src/backend/access/hash/soe_hashfunc.c
+#	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 # nbtree files
 soe_nbtutils.o: src/backend/access/nbtree/soe_nbtutils.c
@@ -398,7 +399,7 @@ soe_ost.o:src/backend/access/ostree/soe_ost.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 
-$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_hash_ofile.o soe_heaptuple.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_hash.o soe_orandom.o soe_hashfunc.o soe_indextuple.o  soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe_nbtree_ofile.o soe_ost_bufmgr.o soe_ost_ofile.o soe_ost_utils.o soe_ost_page.o soe_ost_search.o soe_ost_utils.o soe_ost.o soe_spe.o soe.o soe_prf.o
+$(Enclave_Lib): enclave_t.o logger.o soe_heap_ofile.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_heapam.o soe_orandom.o soe_indextuple.o  soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe_nbtree_ofile.o soe_ost_bufmgr.o soe_ost_ofile.o soe_ost_utils.o soe_ost_page.o soe_ost_search.o soe_ost_utils.o soe_ost.o soe_spe.o soe.o soe_prf.o
 	$(CC) $(SGX_COMMON_CFLAGS)  $^ -o $@ -static $(SOE_LADD)  $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -409,7 +410,7 @@ $(Signed_Enclave_Lib): $(Enclave_Lib)
 $(Untrusted_Lib): enclave_u.o
 	$(CC) -shared  $^ -o $@ 
 
-$(Unsafe_Lib):  soe.o logger.o soe_heapam.o soe_hashfunc.o soe_heaptuple.o soe_indextuple.o soe_heap_ofile.o soe_hash_ofile.o soe_hashsearch.o soe_hashutil.o soe_hashpage.o soe_hashovfl.o soe_hashinsert.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_hash.o soe_orandom.o soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe_nbtree_ofile.o soe_ost_bufmgr.o soe_ost_ofile.o soe_ost_utils.o soe_ost_page.o soe_ost_search.o soe_ost_utils.o soe_ost.o soe_upe.o soe_prf.o
+$(Unsafe_Lib):  soe.o logger.o soe_heapam.o soe_heaptuple.o soe_indextuple.o soe_heap_ofile.o soe_bufmgr.o soe_qsort.o soe_bufpage.o soe_orandom.o soe_nbtree.o soe_nbtinsert.o soe_nbtsearch.o soe_nbtpage.o soe_nbtutils.o soe_nbtree_ofile.o soe_ost_bufmgr.o soe_ost_ofile.o soe_ost_utils.o soe_ost_page.o soe_ost_search.o soe_ost_utils.o soe_ost.o soe_upe.o soe_prf.o
 	$(CC) $(Utrust_Flags) $(SGX_COMMON_CFLAGS)  $^ -o $@  $(SOE_LADD) 
 
 .PHONY: install
