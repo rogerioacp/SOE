@@ -65,11 +65,11 @@ bt_dummy_search_s(VRelation rel, int maxHeight){
  * will result in *bufP being set to InvalidBuffer.  Also, in BT_WRITE mode,
  * any incomplete splits encountered during the search will be finished.
  */
-BTStack
-_bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
+
+BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 			 Buffer* bufP, int access,  bool doDummy)
 {
-    BTStack	    	      stack_in = NULL;
+    //BTStack	    	      stack_in = NULL;
     int                   tHeight = 0;
     unsigned int          token[4];
 
@@ -77,7 +77,7 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
    
     rel->token = token;
     rel->level = tHeight;
-    selog(DEBUG1, "Getting tree root with counter %d at height %d", rel->rCounter, rel->level);
+    selog(DEBUG1, "---- Getting tree root with counter %d at height %d with counters  %d %d %d %d", rel->rCounter, rel->level, token[0], token[1], token[2], token[3]);
 	/* Get the root page to start with */
     *bufP = _bt_getbuf_level_s(rel, 0);
     rel->rCounter +=1;
@@ -91,9 +91,9 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
     //unsigned int nextCounter = 0;
     unsigned int currentNodeCounter = rel->rCounter+1;
     unsigned int nextNodeCounter = 0;
-    unsigned int nextNodeNCounter = 0;
-
+    unsigned int oldBlkno = 0;
     currentNodeCounter = rel->rCounter;
+    oldBlkno = 0;
 	for (;;)
 	{
       Page          page;
@@ -103,10 +103,10 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
       IndexTuple    itup;
       BlockNumber   blkno;
       BlockNumber   par_blkno;
-      BTStack       new_stack;
+      //BTStack       new_stack;
       //Current token is 32 integers long (128 bits AES BLOCK size);
       
-      char	   *datum;
+      //char	   *datum;
   		/*
 		 * Race -- the page we just grabbed may have split since we read its
 		 * pointer in the parent (or metapage).  If it has, we may need to
@@ -130,10 +130,16 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
 
         if (P_ISLEAF_s(opaque))
-		{ 
+		{
+             
+            selog(DEBUG1, " ---- Found leaf at level %d", tHeight);
+            //rel->leafBlkno = oldBlkno;
+            //oldBlkno = blkno;
+            rel->leafCurrentCounter = currentNodeCounter;
+		//ReleaseBuffer_s(rel, *bufP);
             #ifdef DUMMYS
                 while(doDummy && tHeight < rel->tHeight){
-                    ReadDummyBuffer(rel, 0);
+                    ReadDummyBuffer(rel, rel->totalBlocks+1);
                     tHeight +=1;
                 }
             #endif
@@ -144,30 +150,52 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * Find the appropriate item on the internal page, and get the child
 		 * page that it points to.
 		 */
-
+        selog(DEBUG1, "oopaque %d keys are %d %d", opaque->o_blkno, opaque->btpo_prev, opaque->btpo_next);
+        
 		offnum = _bt_binsrch_s(rel, *bufP, keysz, scankey, nextkey);
+        selog(DEBUG1, "Offset number is %d", offnum);
 		itemid = PageGetItemId_s(page, offnum);
+        if(!ItemIdIsNormal_s(itemid)){
+            selog(DEBUG1, "item is not normal tree search");
+        }
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
 
-        datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
-        selog(DEBUG1, "DATUM is %d", datum);
-        selog(DEBUG1, "First char is %x",datum[0]);
-        if(datum[0] == 0x0){
+        //selog(DEBUG1, "DATUM is %s", datum+4);
+        //selog(DEBUG1, "First char is %x",datum[0]);
+        /*if(datum[0] == 0x0 || datum[0] == 0x30){
             selog(DEBUG1, "First access to counter");
             int init = 2;
             memcpy(datum, &init, sizeof(unsigned int));
             //memset(datum, 0, sizeof(unsigned int));
-        }
+        }*/
 
         //currentNodeNCounter = currentNodeCounter + 1;
-        memcpy(&nextNodeCounter, datum, sizeof(unsigned int));
-        nextNodeNCounter = nextNodeCounter + 2;
-        memcpy(datum, &nextNodeNCounter, sizeof(unsigned int));
         
+        //nextNodeCounter = opaque->counters[offnum];
+        //nextNodeNCounter = nextNodecounter+2;
+        
+        if(offnum > 300){
+            selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
+        }
+        if(opaque->counters[offnum] == 0){
+            selog(DEBUG1, "First Access");
+            opaque->counters[offnum] = 2;
+        }
+        nextNodeCounter = opaque->counters[offnum],
 
+        opaque->counters[offnum] += 2;
+
+        //memcpy(&nextNodeCounter, datum, sizeof(unsigned int));
+        //nextNodeNCounter = nextNodeCounter + 2;
+        //memcpy(datum, &nextNodeNCounter, sizeof(unsigned int));
+        //int temp;
+        //memcpy(&temp, datum, sizeof(unsigned int));
+        //selog(DEBUG1, "temp is %d", temp);
+
+        selog(DEBUG1, "oopaque %d keys are %d %d", opaque->o_blkno, opaque->btpo_prev, opaque->btpo_next);
         //selog(DEBUG1, "cycleid %d and counter is %d\n", opaque->btpo_cycleid, counter);
         //memcpy(datum, &opaque->btpo_cycleid, sizeof(unsigned int));
-
+        
 		blkno = BTreeInnerTupleGetDownLink_s(itup);
    		par_blkno = BufferGetBlockNumber_s(*bufP);
 
@@ -180,19 +208,20 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * by Lehman and Yao for how this is detected and handled. (We use the
 		 * child link to disambiguate duplicate keys in the index -- Lehman
 		 * and Yao disallow duplicate keys.)
-		 */
-		new_stack = (BTStack) malloc(sizeof(BTStackData));
-		new_stack->bts_blkno = par_blkno;
-		new_stack->bts_offset = offnum;
-		new_stack->bts_btentry = blkno;
-		new_stack->bts_parent = stack_in;
+    		 */
+		//new_stack = (BTStack) malloc(sizeof(BTStackData));
+		//new_stack->bts_blkno = par_blkno;
+		//new_stack->bts_offset = offnum;
+		//new_stack->bts_btentry = blkno;
+		//new_stack->bts_parent = stack_in;
         
         //memset(datum, opaque->btpo_cycleid, sizeof(int));
         //opaque->btpo_cycleid +=1;
         //MarkBufferDirty_s(rel, *bufpP, currentNodeCounter +1);
         //currentNodeCounter +=1;
-        
-        prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
+
+        prf(rel->level, oldBlkno, currentNodeCounter, (unsigned char*) &token);
+        selog(DEBUG1, "Going to evict block %d at level %d with counters %d %d %d %d", oldBlkno, rel->level, token[0], token[1], token[2], token[3]);
         //rel->token = token;
 
         MarkBufferDirty_s(rel, *bufP);
@@ -200,7 +229,7 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 
         currentNodeCounter = nextNodeCounter;
 
-        selog(DEBUG1, "Access to offset %d at level %d has counters %d %d %d",blkno, rel->level,  currentNodeCounter, nextNodeCounter, nextNodeNCounter);
+       // selog(DEBUG1, "Access to offset %d at level %d has counters %d %d %d",blkno, rel->level,  currentNodeCounter, nextNodeCounter, nextNodeNCounter);
 
         tHeight++;
         rel->level = tHeight;
@@ -216,16 +245,18 @@ _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
         
 		*bufP = _bt_getbuf_level_s(rel, blkno);
         currentNodeCounter +=1;
-
+        oldBlkno = blkno;
+    
 		/* drop the read lock on the parent page, acquire one on the child */
 		/* *bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ); */
 
 		/* okay, all set to move down a level */
         
-		stack_in = new_stack;
+		//stack_in = new_stack;
 	}
     rel->rCounter +=1;
-	return stack_in;
+    selog(DEBUG1, "Found leaf at level %d", rel->level);
+	return oldBlkno;
 }
 
 
@@ -276,6 +307,7 @@ _bt_binsrch_s(VRelation rel,
 
 	low = P_FIRSTDATAKEY_s(opaque);
 	high = PageGetMaxOffsetNumber_s(page);
+    selog(DEBUG1, "bin search high %d low %d", high, low);
     //selog(DEBUG1, "Max page offset %d\n", high);
 	/*
 	 * If there are no keys on the page, return the first available slot. Note
@@ -286,7 +318,7 @@ _bt_binsrch_s(VRelation rel,
 	 */
 	if (high < low)
 	{
-		/* selog(DEBUG1, "No keys on page, returing first slot"); */
+		selog(DEBUG1, "No keys on page, returing first slot");
 		return low;
 	}
 
@@ -305,7 +337,7 @@ _bt_binsrch_s(VRelation rel,
 	high++;						/* establish the loop invariant for high */
 
 	cmpval = nextkey ? 0 : 1;	/* select comparison value */
-
+    selog(DEBUG1, "Going to compare %d %d %s", high, low, scankey->sk_argument);
 	while (high > low)
 	{
 		OffsetNumber mid = low + ((high - low) / 2);
@@ -379,7 +411,7 @@ _bt_compare_s(VRelation rel,
 
 
 	BTPageOpaque opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
-
+    selog(DEBUG1, "compare offset %d", offnum);
 	/*
 	 * Force result ">" if target item is first data item on an internal page
 	 * --- see NOTE above.
@@ -401,9 +433,9 @@ _bt_compare_s(VRelation rel,
 	//	result = (int32) strcmp(scankey->sk_argument, datum);
 	//}
 
-    selog(DEBUG1, "cmp strings %s %s and size %d", scankey->sk_argument, datum+4, strlen(scankey->sk_argument));
-    result = (int32) strncmp(scankey->sk_argument, datum+4, strlen(scankey->sk_argument));
-    selog(DEBUG1, "Result comparision is %s, %s %d", scankey->sk_argument, datum+4, result);
+    selog(DEBUG1, "cmp strings %s %s and size %d", scankey->sk_argument, datum, strlen(scankey->sk_argument));
+    result = (int32) strncmp(scankey->sk_argument, datum, strlen(scankey->sk_argument));
+    selog(DEBUG1, "Result comparision is %s, %s %d", scankey->sk_argument, datum, result);
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
 		return result;
@@ -438,7 +470,7 @@ _bt_first_s(IndexScanDesc scan)
 	VRelation	rel = scan->indexRelation;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	Buffer		buf;
-	BTStack		stack;
+	//BTStack		stack;
 	OffsetNumber offnum;
 
 	/* StrategyNumber strat; */
@@ -459,7 +491,10 @@ _bt_first_s(IndexScanDesc scan)
 
 
 	ScanKey		cur = scan->keyData;
-
+    Page         page;
+    BlockNumber  leafBlkno;
+    BTPageOpaque  opaque;
+    unsigned int  token[4];
 	/**
 	 * By debugging postgres, a search on a btree with a single leaf and no
 	 * nodes had always the strat_total = BTEqualStrategyNumber despite the
@@ -560,10 +595,10 @@ _bt_first_s(IndexScanDesc scan)
 	 * position ourselves on the target leaf page.
 	 */
 	/* selog(DEBUG1, "Going to search for page"); */
-	stack = _bt_search_s(rel, 1, cur, nextkey, &buf, BT_READ, true);
+	leafBlkno = _bt_search_s(rel, 1, cur, nextkey, &buf, BT_READ, true);
 	/* selog(DEBUG1, "Going to free search stack"); */
 	/* don't need to keep the stack around... */
-	_bt_freestack_s(stack);
+	//_bt_freestack_s(stack);
 	/* selog(DEBUG1, "GOING to initialize more data"); */
 
 	_bt_initialize_more_data_s(so);
@@ -595,6 +630,25 @@ _bt_first_s(IndexScanDesc scan)
 		offnum = OffsetNumberPrev_s(offnum);
 		/* selog(DEBUG1, "Found match on offset prev %d", offnum); */
 	}
+    
+    selog(DEBUG1, "Found leaf match at offset %d", offnum);
+    if(offnum > 300){
+        selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
+    }
+	    
+    page = BufferGetPage_s(rel, buf);
+	opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
+    if(opaque->counters[offnum] == 0){
+        selog(DEBUG1, "First Access");
+        opaque->counters[offnum] = 2;
+    }
+    selog(DEBUG1, "heap block counter of block %d is at %d", offnum, opaque->counters[offnum]);
+    rel->heapBlockCounter = opaque->counters[offnum];
+    opaque->counters[offnum] +=1;
+    prf(rel->level, leafBlkno, rel->leafCurrentCounter, (unsigned char*) &token);
+    selog(DEBUG1, "Going to evict block %d at level %d with counters %d %d %d %d", leafBlkno, rel->level, token[0], token[1], token[2], token[3]);
+    rel->token = token;
+    MarkBufferDirty_s(rel, buf);
 
 
 	/* remember which buffer we have pinned, if any */

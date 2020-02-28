@@ -45,6 +45,7 @@ InitVRelation(ORAMState relstate, unsigned int oid, int total_blocks, pageinit_f
     vrel->token = NULL;
     //memset(vrel->token, 0, sizeof(unsigned int)*32);
     vrel->rCounter = 2; //counter starts at 2 as blocks do two oblivious operations at initialization
+    vrel->leafCurrentCounter=0;
 	return vrel;
 }
 

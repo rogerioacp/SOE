@@ -176,11 +176,15 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	Page		page;
 	OffsetNumber offnum;
 	ItemId		lp;
-
+    uint32      token[4];
 	blkno = ItemPointerGetBlockNumber_s(tid);
-	//selog(DEBUG1, "Going to get block %d from heap", blkno);
-	buffer = ReadBuffer_s(rel, blkno);
+	selog(DEBUG1, "Going to get heap block %d", blkno);
 
+    prf(rel->tHeight, blkno, rel->heapBlockCounter, (unsigned char*) &token);
+    selog(DEBUG1, "counter of block %d are %d %d %d %d", blkno, token[0], token[1], token[2], token[3]);
+
+    rel->token = token;
+	buffer = ReadBuffer_s(rel, blkno);
 	if (ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer))
 	{
 		selog(ERROR, "Requested Pointer does not match block number. %d != %d", ItemPointerGetBlockNumber_s(tid), BufferGetBlockNumber_s(buffer));
@@ -203,6 +207,6 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	tuple->t_data = (HeapTupleHeader) malloc(tuple->t_len);
 	memcpy(tuple->t_data, PageGetItem_s(page, lp), tuple->t_len);
 	ItemPointerSetOffsetNumber_s(&tuple->t_self, offnum);
-
+    //MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
 }

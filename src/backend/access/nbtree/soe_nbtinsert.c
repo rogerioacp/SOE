@@ -129,7 +129,7 @@ _bt_doinsert_s(VRelation rel, IndexTuple itup, char *datum, int size, VRelation 
 	offset = InvalidOffsetNumber;
 
 	/* find the first page containing this key */
-	stack = _bt_search_s(rel, indnkeyatts, itup_scankey, false, &buf, BT_WRITE, false);
+	//stack = _bt_search_s(rel, indnkeyatts, itup_scankey, false, &buf, BT_WRITE, false);
 
 	/*
 	 * If the page was split between the time that we surrendered our read

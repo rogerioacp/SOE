@@ -62,8 +62,9 @@ typedef struct BTPageOpaqueData
 	uint16		btpo_flags;		/* flag bits, see below */
 	BTCycleId   btpo_cycleid; /* vacuum cycle ID of latest split */
 	uint32		o_blkno; 		/* used to store original block number inside soe*/
-    uint32      lsize;        // the size of the locations
+    //uint32      lsize;        // the size of the locations
     uint32      location[2];    //we will store up to 2 integer of relevant location
+    uint32      counters[300];   //We assume each block can have at most 300 child nodes. We store in this variable the counters of each one.
     //uint32      o_lleaf;      // we need to store the current leaf of a block (pathoram)
     //uint32      o_lpartition; // we need to store the current partition of a block(forestoram);
 }			BTPageOpaqueData;
@@ -417,7 +418,7 @@ extern Buffer _bt_getbuf_level_s(VRelation rel, BlockNumber blkno);
 /*
  * prototypes for functions in nbtsearch.c
  */
-extern BTStack _bt_search_s(VRelation rel,
+extern BlockNumber _bt_search_s(VRelation rel,
 							int keysz, ScanKey scankey, bool nextkey,
 							Buffer * bufP, int access, bool isDummy);
 extern OffsetNumber _bt_binsrch_s(VRelation rel, Buffer buf, int keysz,

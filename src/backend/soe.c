@@ -293,8 +293,6 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 	int			hasNext;
 	char	   *trimedKey;
     bool        matchFound  = false;
-    unsigned int token[4];
-    int level = oTable->tHeight +1;
 
     heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
 	hasNext = 0;
@@ -337,7 +335,9 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
+             oTable->heapBlockCounter = scan->indexRelation->heapBlockCounter;
              heap_gettuple_s(oTable, &tid, heapTuple);
+
         }
          
      #ifdef DUMMYS
@@ -357,16 +357,13 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
 
             selog(DEBUG1, "Dummy Accesses in weird corner case"); 
+            oTable->heapBlockCounter = oTable->rCounter;
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
-
-            prf(level, oTable->totalBlocks-1, oTable->rCounter, (unsigned char*) &token);
-            oTable->token = token;
-
             ItemPointerSet_s(dtid, oTable->totalBlocks-1, 1);
             heap_gettuple_s(oTable, dtid, heapTuple);
 
             free(dtid);
-            oTable->rCounter +=2;
+            oTable->rCounter +=1;
         }
      #endif
 
@@ -377,16 +374,12 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
     
         #ifdef DUMMYS
             selog(DEBUG1, "Dummy access when no match is found");
+            oTable->heapBlockCounter = oTable->rCounter;
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
-
-            prf(level, oTable->totalBlocks-1, oTable->rCounter, (unsigned char*) &token);
-            oTable->token = token;
-
             ItemPointerSet_s(dtid, oTable->totalBlocks-1, 1);
             heap_gettuple_s(oTable, dtid, heapTuple);
             free(dtid);
-
-            oTable->rCounter +=2;
+            oTable->rCounter +=1;
         #else
             free(heapTuple);
             free(trimedKey);

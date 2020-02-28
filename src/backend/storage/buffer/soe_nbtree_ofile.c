@@ -50,10 +50,11 @@ nbtree_pageInit(Page page, int blkno, unsigned int locationSize, Size blocksize)
 	ovflopaque->btpo.level = 0;
 	ovflopaque->btpo_flags = 0;
     ovflopaque->o_blkno = blkno;
-    ovflopaque->lsize = locationSize;
+   // ovflopaque->lsize = locationSize;
     
     ovflopaque->location[0] = 0;
     ovflopaque->location[1] = 0;
+    memset(ovflopaque->counters,0, sizeof(uint32)*300);
 }
 
 /**
@@ -147,7 +148,7 @@ nbtree_fileRead(FileHandler handler, PLBlock block, const char *filename, const 
     //memcpy(block->location, oopaque->location, oopaque->lsize);
     block->location[0] = oopaque->location[0];
     block->location[1] = oopaque->location[1];
-    selog(DEBUG1, "nbtree_fileRead %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
+    //selog(DEBUG1, "nbtree_fileRead %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
     /*Copy location*/
     //block->lsize = oopaque->lsize;
    /* block->location->leaf = oopaque->o_lleaf;
@@ -191,7 +192,7 @@ nbtree_fileWrite(FileHandler handler, const PLBlock block, const char *filename,
     oopaque->location[1] = block->location[1];
     //memset(oopaque->location, 0, block->lsize);
     //memcpy(oopaque->location, block->location, block->lsize);
-    selog(DEBUG1, "nbtree_fileWrite %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
+    //selog(DEBUG1, "nbtree_fileWrite %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
     //memcpy(block->location, &oopaque->location, block->lsize); 
     //location = (int*) malloc(block->lsize);
     //Copy location

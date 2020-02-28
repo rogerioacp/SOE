@@ -95,6 +95,9 @@ typedef struct VRelation
     unsigned int* token;
 
     unsigned int rCounter;
+    unsigned int leafBlkno;
+    unsigned int leafCurrentCounter;
+    unsigned int heapBlockCounter;
 
 }		   *VRelation;
 

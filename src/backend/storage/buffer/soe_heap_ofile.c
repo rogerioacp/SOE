@@ -150,7 +150,7 @@ heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const Bl
     //block->location = (Location) malloc(block->lsize);
     //memcpy(block->location, &r_blkno[2], lsize);
 	block->size = BLCKSZ;
-    selog(DEBUG1, "heap_fileRead %s rblkno %d and location %d %d", filename, block->blkno, r_blkno[2], r_blkno[3]);
+    //selog(DEBUG1, "heap_fileRead %s rblkno %d and location %d %d", filename, block->blkno, r_blkno[2], r_blkno[3]);
     //block->lsize = lsize;
 	free(ciphertexBlock);
     //selog(DEBUG1, "Requested read oblivious block %d that has real block %d", ob_blkno, block->blkno);
@@ -205,7 +205,7 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
 
     status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
-    selog(DEBUG1, "heap_fileWrite %s block %d %d location %d %d", filename, block->blkno, c_blkno[0], c_blkno[2], c_blkno[3]);
+    //selog(DEBUG1, "heap_fileWrite %s block %d %d location %d %d", filename, block->blkno, c_blkno[0], c_blkno[2], c_blkno[3]);
 	
 	if (status != SGX_SUCCESS)
 	{
