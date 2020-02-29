@@ -40,7 +40,7 @@
 #endif
 
 /* Predefined max tuple size for sgx to copy the real tuple to*/
-#define MAX_TUPLE_SIZE 1400
+#define MAX_TUPLE_SIZE 8070
 
 ORAMState	stateTable = NULL;
 ORAMState	stateIndex = NULL;
@@ -340,7 +340,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 
         }
          
-     #ifdef DUMMYS
+     //#ifdef DUMMYS
         /*
          * When DUMMY accesses are being made and the first (e.g.:_bt_first_ost)
          * scan of a search did not find a valid result in a tree page but there
@@ -354,7 +354,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
          *
          */
 
-        if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
+       /* if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
 
             selog(DEBUG1, "Dummy Accesses in weird corner case"); 
             oTable->heapBlockCounter = oTable->rCounter;
@@ -364,13 +364,14 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 
             free(dtid);
             oTable->rCounter +=1;
-        }
-     #endif
-
+        }*/
+     //#endif
+        //mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
+        //scan = NULL;
     }else{
         //selog(DEBUG1, "Closing Scan");
-        mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
-        scan = NULL;
+       // mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
+        //scan = NULL;
     
         #ifdef DUMMYS
             selog(DEBUG1, "Dummy access when no match is found");
@@ -386,7 +387,8 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
             return 1;
         #endif
     }
-
+    mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
+    scan = NULL;
 
     if (heapTuple->t_len > MAX_TUPLE_SIZE){
 		    selog(ERROR, "Tuple len does not match %d != %d", tupleDataLen, heapTuple->t_len);

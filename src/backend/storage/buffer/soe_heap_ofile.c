@@ -74,9 +74,7 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 	int			boffset = 0;
 	
     do
-	{
-		//selog(DEBUG1, "Going for boffset %d on heap init with tnblocks %d",boffset, tnblocks);
-	
+	{	
 
 		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 
@@ -142,18 +140,12 @@ heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const Bl
 	}
    
 	r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
-    //lsize = r_blkno[1];
-    //block->lsize = lsize;
-   	block->blkno = r_blkno[0];
+
+    block->blkno = r_blkno[0];
     block->location[0] = r_blkno[2];
     block->location[1] = r_blkno[3];
-    //block->location = (Location) malloc(block->lsize);
-    //memcpy(block->location, &r_blkno[2], lsize);
 	block->size = BLCKSZ;
-    //selog(DEBUG1, "heap_fileRead %s rblkno %d and location %d %d", filename, block->blkno, r_blkno[2], r_blkno[3]);
-    //block->lsize = lsize;
 	free(ciphertexBlock);
-    //selog(DEBUG1, "Requested read oblivious block %d that has real block %d", ob_blkno, block->blkno);
 
 }
 
@@ -167,17 +159,10 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
     int        *c_blkno;
     
     r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
-    //r_blkno[1] = block->lsize;
-    //lSize = block->lsize;
-
-    //logger(DEBUG, "heap_fileWrite %d %d",r_blkno[0], r_blkno[1]
-    //lSize = r_blkno[1];
-
-   //selog(DEBUG1, "heap_fileWrite %d block %d with lsize %d and location %d %d\n", block->blkno, r_blkno[0], r_blkno[1], r_blkno[2], r_blkno[3]);
-    //selog(DEBUG1, "Requested write  oblivious block %d that has real block %d", ob_blkno, *r_blkno);
 
     if(block->blkno != *r_blkno){
         selog(ERROR, "Block blkno %d and page blkno %d do not match", block->blkno, *r_blkno);
+        exit(1);
     }
     
 	if (block->blkno == DUMMY_BLOCK)
@@ -201,11 +186,9 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
     c_blkno = (int*) PageGetSpecialPointer_s((Page) encPage);
     c_blkno[2] = block->location[0];
     c_blkno[3] = block->location[1];
-    //memcpy(&c_blkno[2], block->location, lSize);
 
     status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
 
-    //selog(DEBUG1, "heap_fileWrite %s block %d %d location %d %d", filename, block->blkno, c_blkno[0], c_blkno[2], c_blkno[3]);
 	
 	if (status != SGX_SUCCESS)
 	{

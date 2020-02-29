@@ -71,9 +71,9 @@ void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned 
     prf(level, offset, 0, (unsigned char*) &token);
     
     memset(oopaque->counters, 0, sizeof(uint32)*300);
-    selog(DEBUG1, "size of btree opaque data is %d\n", sizeof(BTPageOpaqueData));
-    selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
-    selog(DEBUG1, "btree block at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
+    //selog(DEBUG1, "size of btree opaque data is %d\n", sizeof(BTPageOpaqueData));
+    //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
+    //selog(DEBUG1, "btree block at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
 
     indexRel->level = level;
     indexRel->token = token;
@@ -86,11 +86,11 @@ void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned 
 
     oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
 
-    selog(DEBUG1, "btree block after initialization at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
+    //selog(DEBUG1, "btree block after initialization at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
     
     prf(level, offset, 1, (unsigned char*) &token);
 
-    selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
+    //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
     //indexRel->token = token;
 
     MarkBufferDirty_s(indexRel, buffer);
@@ -140,40 +140,10 @@ btgettuple_s(IndexScanDesc scan)
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	bool		res;
 
-
-    if (!BTScanPosIsValid_s(so->currPos))
-    {
-        res = _bt_first_s(scan); 
-        selog(DEBUG1, "Result of first iteration %d", res);
-        ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
-        so->currPos.buf = InvalidBuffer;
-
-    }
-    else
-    {
-		/*
-		 * Now continue the scan.
-		 */
-		res = _bt_next_s(scan);
-        selog(DEBUG1, "Next result is %d", res);
-    }
-    
-    // the result returned in res signals if any match was found
-    
-#ifdef DUMMYS 
-    /*I'm almost sure that when one condition is true so is the other. Validate
-     * this assumption. No more results*/
-    selog(DEBUG1, "what? %d %d %d", res, so->currPos.nextPage, so->currPos.moreRight);
-    //if(res == false && (so->currPos.nextPage == P_NONE || !so->currPos.moreRight))
-    if(res == false && so->currPos.nextPage == InvalidBlockNumber)
-    {
-        return false;
-    }
-
-    return true;
-#else
+    res = _bt_first_s(scan); 
+    ReleaseBuffer_s(scan->indexRelation, so->currPos.buf);
+    so->currPos.buf = InvalidBuffer;
     return res;
-#endif
 
 }
 

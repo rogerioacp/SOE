@@ -141,22 +141,9 @@ nbtree_fileRead(FileHandler handler, PLBlock block, const char *filename, const 
 
 	oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
-
-    //selog(DEBUG1, "nbtree_fileRead  blkno %d and lsize %d and location %d %d\n", oopaque->o_blkno, oopaque->lsize, oopaque->location[0], oopaque->location[1]);
-    //block->location = (Location) malloc(oopaque->lsize);
-    //block->lsize = oopaque->lsize;
-    //memcpy(block->location, oopaque->location, oopaque->lsize);
+	block->size = BLCKSZ;
     block->location[0] = oopaque->location[0];
     block->location[1] = oopaque->location[1];
-    //selog(DEBUG1, "nbtree_fileRead %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
-    /*Copy location*/
-    //block->lsize = oopaque->lsize;
-   /* block->location->leaf = oopaque->o_lleaf;
-    if(oopaque->lsize > sizeof(int)){
-        block->location->leaf = oopaque->o_lpartition;
-    }*/
-    
-	block->size = BLCKSZ;
 	free(ciphertextBlock);
 }
 
@@ -167,7 +154,6 @@ nbtree_fileWrite(FileHandler handler, const PLBlock block, const char *filename,
 	sgx_status_t status = SGX_SUCCESS;
     BTPageOpaque oopaque;
 
-	/* BTPageOpaque oopaque = NULL; */
 	char	   *encpage;
 
 	encpage = (char *) malloc(BLCKSZ);
@@ -190,20 +176,6 @@ nbtree_fileWrite(FileHandler handler, const PLBlock block, const char *filename,
     oopaque->o_blkno = block->blkno;
     oopaque->location[0] = block->location[0];
     oopaque->location[1] = block->location[1];
-    //memset(oopaque->location, 0, block->lsize);
-    //memcpy(oopaque->location, block->location, block->lsize);
-    //selog(DEBUG1, "nbtree_fileWrite %s block %d has %d %d", filename, block->blkno, oopaque->location[0], oopaque->location[1]);
-    //memcpy(block->location, &oopaque->location, block->lsize); 
-    //location = (int*) malloc(block->lsize);
-    //Copy location
-    //memcpy(location, block->location, block->lsize);
-
-    //oopaque->lsize = block->lsize;
-    /*oopaque->o_lleaf = block->location->leaf;
-    
-    if(block->lsize > sizeof(int)){
-        opaque->o_lpartition = block->location->partition;
-    }*/
 
      
 	#ifndef CPAGES

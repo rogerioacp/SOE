@@ -120,13 +120,13 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     int*        p_blkno;
     unsigned int    token[4];
     int level = rel->tHeight +1;
-    selog(DEBUG1, "Inserting heap block %d, level %d", blkno, level);
+    //selog(DEBUG1, "Inserting heap block %d, level %d", blkno, level);
     
     r_blkno = (int*) PageGetSpecialPointer_s(rpage);
     prf(level, blkno, 0, (unsigned char*) &token);
-    selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]); 
-    selog(DEBUG1, "size of oopaque lsize %d\n", r_blkno[1]);
-    
+    //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]); 
+    //selog(DEBUG1, "size of oopaque lsize %d\n", r_blkno[1]);
+    selog(DEBUG1, "Page has %d tuples",PageGetMaxOffsetNumber_s(rpage));  
     rel->token = token;
     if(*r_blkno != blkno){
         selog(ERROR, "Page block %d number does not match offset %d", *r_blkno, blkno);
@@ -147,7 +147,7 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     p_blkno = (int*) PageGetSpecialPointer_s(page);
 
     
-    selog(DEBUG1, "size of oopaque lsize %d and location is %d %d", p_blkno[1], p_blkno[2], p_blkno[3]);
+    //selog(DEBUG1, "size of oopaque lsize %d and location is %d %d", p_blkno[1], p_blkno[2], p_blkno[3]);
 
     if(*r_blkno != *p_blkno){
         selog(ERROR, "Block numbers in heap page do not match %d %d", *r_blkno, *p_blkno);
@@ -155,7 +155,7 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
 
     prf(level, blkno, 1, (unsigned char*) &token);
 
-    selog(DEBUG1, "Counters are %d %d %d %d", token[0], token[1], token[2], token[3]);
+    //selog(DEBUG1, "Counters are %d %d %d %d", token[0], token[1], token[2], token[3]);
       
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
@@ -178,16 +178,17 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	ItemId		lp;
     uint32      token[4];
 	blkno = ItemPointerGetBlockNumber_s(tid);
-	selog(DEBUG1, "Going to get heap block %d", blkno);
+	//selog(DEBUG1, "Going to get heap block %d", blkno);
 
     prf(rel->tHeight, blkno, rel->heapBlockCounter, (unsigned char*) &token);
-    selog(DEBUG1, "counter of block %d are %d %d %d %d", blkno, token[0], token[1], token[2], token[3]);
+    //selog(DEBUG1, "counter of block %d are %d %d %d %d", blkno, token[0], token[1], token[2], token[3]);
 
     rel->token = token;
 	buffer = ReadBuffer_s(rel, blkno);
 	if (ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer))
 	{
 		selog(ERROR, "Requested Pointer does not match block number. %d != %d", ItemPointerGetBlockNumber_s(tid), BufferGetBlockNumber_s(buffer));
+        exit(1);
 	}
     //selog(DEBUG1, "Heap read buffer %d", buffer);
 	page = BufferGetPage_s(rel, buffer);
@@ -197,16 +198,19 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	tuple->t_self = *tid;
 
 	lp = PageGetItemId_s(page, offnum);
-	 //selog(DEBUG1, "Item id has offset %zu ", ItemIdGetOffset_s(lp));
+	//selog(DEBUG1, "Item id has offset %zu ", ItemIdGetOffset_s(lp));
 	if (!ItemIdIsNormal_s(lp))
 	{
 		selog(ERROR, "Item ID is not normal");
+        exit(1);
 	}
+
 	tuple->t_len = ItemIdGetLength_s(lp);
 	tuple->t_tableOid = RelationGetRelid_s(rel);
 	tuple->t_data = (HeapTupleHeader) malloc(tuple->t_len);
-	memcpy(tuple->t_data, PageGetItem_s(page, lp), tuple->t_len);
+    memcpy(tuple->t_data, PageGetItem_s(page, lp), tuple->t_len);
 	ItemPointerSetOffsetNumber_s(&tuple->t_self, offnum);
+    
     //MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
 }
