@@ -126,7 +126,7 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     prf(level, blkno, 0, (unsigned char*) &token);
     //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]); 
     //selog(DEBUG1, "size of oopaque lsize %d\n", r_blkno[1]);
-    selog(DEBUG1, "Page has %d tuples",PageGetMaxOffsetNumber_s(rpage));  
+    //selog(DEBUG1, "Page has %d tuples",PageGetMaxOffsetNumber_s(rpage));  
     rel->token = token;
     if(*r_blkno != blkno){
         selog(ERROR, "Page block %d number does not match offset %d", *r_blkno, blkno);
@@ -188,7 +188,7 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	if (ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer))
 	{
 		selog(ERROR, "Requested Pointer does not match block number. %d != %d", ItemPointerGetBlockNumber_s(tid), BufferGetBlockNumber_s(buffer));
-        exit(1);
+        abort();
 	}
     //selog(DEBUG1, "Heap read buffer %d", buffer);
 	page = BufferGetPage_s(rel, buffer);
@@ -202,7 +202,8 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	if (!ItemIdIsNormal_s(lp))
 	{
 		selog(ERROR, "Item ID is not normal");
-        exit(1);
+        abort();
+        //exit(1);
 	}
 
 	tuple->t_len = ItemIdGetLength_s(lp);

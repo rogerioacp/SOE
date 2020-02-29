@@ -162,7 +162,7 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
 
     if(block->blkno != *r_blkno){
         selog(ERROR, "Block blkno %d and page blkno %d do not match", block->blkno, *r_blkno);
-        exit(1);
+        abort();
     }
     
 	if (block->blkno == DUMMY_BLOCK)

@@ -35,6 +35,10 @@ extern void btree_fanout_setup(int* fanouts,unsigned int fanout_size,
     snlevels = nlevels;
 }
 
+extern void free_btree_fanout(){
+    free(sfanouts);    
+}
+
 
 
 /*

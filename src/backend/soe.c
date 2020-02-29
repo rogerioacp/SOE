@@ -290,12 +290,12 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 	HeapTuple	heapTuple;
 	ItemPointerData tid;
     ItemPointer dtid;
-	int			hasNext;
+	//int			hasNext;
 	char	   *trimedKey;
     bool        matchFound  = false;
 
     heapTuple = (HeapTuple) malloc(sizeof(HeapTupleData));
-	hasNext = 0;
+	//hasNext = 0;
     
      /* FOREST_ORAM MODE: Table strings in the index do not have
       * the \0 terminator*/
@@ -331,7 +331,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         }
     #endif
     if(matchFound){
-        selog(DEBUG1, "Match Found");
+        //selog(DEBUG1, "Match Found");
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
@@ -340,41 +340,10 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
 
         }
          
-     //#ifdef DUMMYS
-        /*
-         * When DUMMY accesses are being made and the first (e.g.:_bt_first_ost)
-         * scan of a search did not find a valid result in a tree page but there
-         * are still right leafs to access.
-         * 
-         * In these cases, the postgres codes moves on to the next leaf page
-         * (soe_ost_search.c:532. However, in our solution this can not happen
-         * as it leaks information. Thus, a dummy access is made to the table
-         * heap and the next tree scan goes to the next leaf page and searches
-         * for the correct result.
-         *
-         */
-
-       /* if(!ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
-
-            selog(DEBUG1, "Dummy Accesses in weird corner case"); 
-            oTable->heapBlockCounter = oTable->rCounter;
-            dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
-            ItemPointerSet_s(dtid, oTable->totalBlocks-1, 1);
-            heap_gettuple_s(oTable, dtid, heapTuple);
-
-            free(dtid);
-            oTable->rCounter +=1;
-        }*/
-     //#endif
-        //mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
-        //scan = NULL;
     }else{
-        //selog(DEBUG1, "Closing Scan");
-       // mode == DYNAMIC ? btendscan_s(scan) : btendscan_ost(scan);
-        //scan = NULL;
     
         #ifdef DUMMYS
-            selog(DEBUG1, "Dummy access when no match is found");
+            //selog(DEBUG1, "Dummy access when no match is found");
             oTable->heapBlockCounter = oTable->rCounter;
             dtid = (ItemPointer) malloc(sizeof(struct ItemPointerData));
             ItemPointerSet_s(dtid, oTable->totalBlocks-1, 1);
@@ -432,6 +401,7 @@ void
 closeSoe()
 {
 	selog(DEBUG1, "Going to close soe");
+    free_btree_fanout();
 	closeVRelation(oTable);
     if(mode == DYNAMIC){
     	if(scan != NULL){
