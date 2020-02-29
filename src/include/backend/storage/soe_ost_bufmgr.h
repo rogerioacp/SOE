@@ -56,6 +56,12 @@ typedef struct OSTRelation
 
 	/* Current level being usd on the hierarchical trees */
 	unsigned int level;
+    
+    //current token to access a block
+    unsigned int* token;
+
+    unsigned int leafCurrentCounter;
+    unsigned int heapBlockCounter;
 
 }		   *OSTRelation;
 

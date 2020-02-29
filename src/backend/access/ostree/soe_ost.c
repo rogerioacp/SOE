@@ -31,6 +31,8 @@
 #include "storage/soe_bufpage.h"
 #include "storage/soe_ost_bufmgr.h"
 #include "storage/soe_bufmgr.h"
+#include "common/soe_prf.h"
+
 #include <oram/plblock.h>
 #include <string.h>
 #include <stdlib.h>
@@ -60,14 +62,25 @@ insert_ost(OSTRelation rel, char *block, unsigned int level, unsigned int offset
 {
 	Buffer		buffer;
 	Page		page;
+    BTPageOpaqueOST oopaque;
+    unsigned int    token[4];
+	
+    oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block);
 
-	rel->level = level;
+    memset(&token, 0, sizeof(unsigned int)*4);
+    memset(oopaque->counters, 0, sizeof(uint32)*300);
 
+    prf(level, offset, 0, (unsigned char*) &token);
+    
+    rel->level = level;
+    rel->token = token;
+    
 	buffer = ReadBuffer_ost(rel, offset);
 	page = BufferGetPage_ost(rel, buffer);
 
 	memcpy(page, block, BLCKSZ);
 
+    prf(level, offset, 1, (unsigned char*) &token);
 	MarkBufferDirty_ost(rel, buffer);
 	ReleaseBuffer_ost(rel, buffer);
 
@@ -83,36 +96,12 @@ btgettuple_ost(IndexScanDesc scan)
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	bool		res;
 
-	if (!BTScanPosIsValid_OST(so->currPos))
-	{
-       	res = _bt_first_ost(scan);
-        //selog(DEBUG1, "ost - Result of first iteration %d", res);
-        ReleaseBuffer_ost(scan->ost, so->currPos.buf);
-       	so->currPos.buf = InvalidBuffer;
+    res = _bt_first_ost(scan);
+    //selog(DEBUG1, "ost - Result of first iteration %d", res);
+    ReleaseBuffer_ost(scan->ost, so->currPos.buf);
+    so->currPos.buf = InvalidBuffer;
 
-	}
-	else
-	{
-       	/*
-		 * Now continue the scan.
-		 */
-		res = _bt_next_ost(scan);
-       // selog(DEBUG1, "ost - Next result is %d", res);
-	}
-#ifdef DUMMYS 
-
-   // selog(DEBUG1, "ost - what? %d %d %d", res, so->currPos.nextPage, so->currPos.moreRight);
-    if(res == false && so->currPos.nextPage == InvalidBlockNumber)
-    {
-
-    	//ReleaseBuffer_ost(scan->ost, so->currPos.buf);
-        //selog(DEBUG1, "No more results on the tree");
-        return false;
-    }
-    return true;
-#else
     return res;
-#endif
 
 }
 

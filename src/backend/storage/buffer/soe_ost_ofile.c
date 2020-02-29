@@ -96,9 +96,13 @@ ost_pageInit(Page page, int blkno, Size blocksize)
 
 	ovflopaque->btpo_prev = InvalidBlockNumber;
 	ovflopaque->btpo_next = InvalidBlockNumber;
-	ovflopaque->btpo_flags = 0;
-	ovflopaque->o_blkno = blkno;
+	ovflopaque->btpo.level = 0;
+    ovflopaque->btpo_flags = 0;
+    ovflopaque->o_blkno = blkno;
 
+    ovflopaque->location[0] = 0;
+    ovflopaque->location[1] = 0;
+    memset(ovflopaque->counters, 0, sizeof(uint32)*300);
 }
 
 /**
@@ -181,6 +185,8 @@ ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const Blo
 	unsigned int l_index;
 	unsigned int l_ob_blkno = 0;
 
+    //We calculate an offset of where each level start as all of the levels
+    //are stored in a single file, even tough they are indepedent ORAMS.
 	if (clevel > 0)
 	{
 		l_offset = 1;
@@ -212,6 +218,8 @@ ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const Blo
 	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
 	block->blkno = oopaque->o_blkno;
 	block->size = BLCKSZ;
+    block->location[0] = oopaque->location[0];
+    block->location[1] = oopaque->location[1];
 	free(ciphertextBlock);
 
 }
@@ -258,6 +266,8 @@ ost_fileWrite(FileHandler handler, const PLBlock block, const char *filename, co
 	}
 	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
 	oopaque->o_blkno = block->blkno;
+    oopaque->location[0] = block->location[0];
+    oopaque->location[1] = block->location[1];
 
 	#ifndef CPAGES
 		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);

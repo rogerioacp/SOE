@@ -4,6 +4,7 @@
 #include "logger/logger.h"
 #include "storage/soe_heap_ofile.h"
 #include "storage/soe_ost_ofile.h"
+#include "oram/coram.h"
 
 #include <stdlib.h>
 
@@ -36,6 +37,10 @@ InitOSTRelation(OSTreeState relstate, unsigned int oid, char *attrDesc, unsigned
 	rel->tDesc->natts = 1;
 	rel->tDesc->attrs = (FormData_pg_attribute *) malloc(sizeof(struct FormData_pg_attribute));
 	memcpy(rel->tDesc->attrs, attrDesc, attrDescLength);
+    
+    rel->token = NULL;
+    rel->leafCurrentCounter = 0;
+    rel->heapBlockCounter = 0;
 
 	return rel;
 }
@@ -80,6 +85,7 @@ ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 	char	   *page = NULL;
 	int			clevel = relation->level;
 	PLBlock		plblock = NULL;
+    ORAMState   oram = NULL;
 
 	/*
 	 * This code assumes that there are no consecutive accesses to read the
@@ -102,8 +108,11 @@ ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 	}
 	else
 	{
+        oram = relation->osts->orams[clevel-1];
+
+        setToken(oram, relation->token);
         //selog(DEBUG1, "Read oram ost block %d at level %d", blockNum, clevel);
-		result = read_oram(&page, blockNum, relation->osts->orams[clevel - 1], &clevel);
+		result = read_oram(&page, blockNum, oram, &clevel);
 
 		/**
          *  When the read returns a DUMMY_BLOCK page  it means its the
@@ -163,7 +172,7 @@ MarkBufferDirty_ost(OSTRelation relation, Buffer buffer)
 
 	result = 0;
 	int			clevel = relation->level;
-
+    ORAMState   oram = NULL;
 	/* OblivPageOpaque oopaque; */
 
 	list_iter_init(&iter, relation->buffers[clevel]);
@@ -194,7 +203,9 @@ MarkBufferDirty_ost(OSTRelation relation, Buffer buffer)
 		}
 		else
 		{
-			result = write_oram(vblock->page, BLCKSZ, vblock->id, relation->osts->orams[clevel - 1], &clevel);
+            oram = relation->osts->orams[clevel - 1];
+            setToken(oram, relation->token);
+			result = write_oram(vblock->page, BLCKSZ, vblock->id, oram ,&clevel);
 		}
 	}
 	else

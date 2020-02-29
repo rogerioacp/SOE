@@ -170,7 +170,9 @@ ifeq ($(ORAM_LIB), PATHORAM)
 		ORAM_LADD := -ltpathoram
 else ifeq ($(ORAM_LIB), FORESTORAM)
 		Enclave_C_Flags += -DFORESTORAM
-		ORAM_LADD := -lforestoram
+		#ORAM_LADD := -lforestoram
+		ORAM_LADD := -ltforestoram
+
 endif
 
 ifeq ($(SMALL_BKCAP), 1)

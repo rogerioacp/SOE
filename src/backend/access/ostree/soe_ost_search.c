@@ -16,6 +16,7 @@
 #include "access/soe_ost.h"
 #include "storage/soe_ost_ofile.h"
 #include "logger/logger.h"
+#include "common/soe_prf.h"
 
 static bool _bt_readpage_ost(IndexScanDesc scan,
 							 OffsetNumber offnum);
@@ -63,19 +64,23 @@ void bt_dummy_search_ost(OSTRelation rel, int maxHeight){
  * will result in *bufP being set to InvalidBuffer.  Also, in BT_WRITE mode,
  * any incomplete splits encountered during the search will be finished.
  */
-BTStackOST
+BlockNumber
 _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 			   Buffer * bufP, int access, bool doDummy)
 {
-	BTStackOST	stack_in = NULL;
-	unsigned int height = 0;
-    Buffer dummy;
+	
+    unsigned int height = 0;
+    unsigned int token[4];
+    unsigned int currentNodeCounter = 0;
+    unsigned int nextNodeCounter = 0;
+    unsigned int oldBlkno = 0;
+    unsigned int maxFanout;
 
+    rel->token = token;
 	rel->level = height;
 
 	/* Get the root page to start with */
 	*bufP = _bt_getroot_ost(rel, access);
-
 
 	/* Loop iterates once per level descended in the tree */
 	for (;;)
@@ -87,25 +92,6 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		IndexTuple	itup;
 		BlockNumber blkno;
 		BlockNumber par_blkno;
-		BTStackOST	new_stack;
-
-		/*
-		 * Race -- the page we just grabbed may have split since we read its
-		 * pointer in the parent (or metapage).  If it has, we may need to
-		 * move right to its new sibling.  Do that.
-		 *
-		 * In write-mode, allow _bt_moveright to finish any incomplete splits
-		 * along the way.  Strictly speaking, we'd only need to finish an
-		 * incomplete split on the leaf page we're about to insert to, not on
-		 * any of the upper levels (they are taken care of in _bt_getstackbuf,
-		 * if the leaf page is split and we insert to the parent page).  But
-		 * this is a good opportunity to finish splits of internal pages too.
-		 */
-		/* Concurrent splits are not supported on the prototype. */
-		/**bufP = _bt_moveright(rel, *bufP, keysz, scankey, nextkey,
-							  (access == BT_WRITE), stack_in,
-							  BT_READ, snapshot);*/
-
 
 		/* if this is a leaf page, we're done */
 		page = BufferGetPage_ost(rel, *bufP);
@@ -113,9 +99,11 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 
 		if (P_ISLEAF_OST(opaque))
 		{
+            rel->leafCurrentCounter = currentNodeCounter;
             #ifdef DUMMYS
+            maxFanout = rel->osts->fanouts[height];
             while(doDummy && height < rel->osts->nlevels){
-                dummy = ReadDummyBuffer_ost(rel, height, 0);
+                ReadDummyBuffer_ost(rel, height, maxFanout+1);
                 height += 1;
                 rel->level = height;
             }
@@ -131,37 +119,45 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		offnum = _bt_binsrch_ost(rel, *bufP, keysz, scankey, nextkey);
 		itemid = PageGetItemId_s(page, offnum);
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
-		blkno = BTreeInnerTupleGetDownLink_OST(itup);
+		
+        //Test if offnum is in a valid state
+        if(offnum > 300){
+            selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
+            abort();
+        }
+        if(opaque->counters[offnum] == 0){
+            opaque->counters[offnum] = 2;
+        }
+        nextNodeCounter = opaque->counters[offnum],
 
+        opaque->counters[offnum] += 2;
+
+
+        //get child node
+        blkno = BTreeInnerTupleGetDownLink_OST(itup);
 		par_blkno = BufferGetBlockNumber_ost(*bufP);
 
-		/*
-		 * We need to save the location of the index entry we chose in the
-		 * parent page on a stack. In case we split the tree, we'll use the
-		 * stack to work back up to the parent page.  We also save the actual
-		 * downlink (block) to uniquely identify the index entry, in case it
-		 * moves right while we're working lower in the tree.  See the paper
-		 * by Lehman and Yao for how this is detected and handled. (We use the
-		 * child link to disambiguate duplicate keys in the index -- Lehman
-		 * and Yao disallow duplicate keys.)
-		 */
-		new_stack = (BTStackOST) malloc(sizeof(BTStackDataOST));
-		new_stack->bts_blkno = par_blkno;
-		new_stack->bts_offset = offnum;
-		new_stack->bts_btentry = blkno;
-		new_stack->bts_parent = stack_in;
-
+        //The root write ignores the token
+        prf(rel->level, oldBlkno, currentNodeCounter, (unsigned char*) &token);
+        MarkBufferDirty_ost(rel, *bufP);
 		ReleaseBuffer_ost(rel, *bufP);
-		height += 1;
-		rel->level = height;
 
+        //Prepare state for child access
+    
+        currentNodeCounter = nextNodeCounter;
+		height++;
+		rel->level = height;
+        prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
+        
 		*bufP = ReadBuffer_ost(rel, blkno);
+        currentNodeCounter +=1;
+        oldBlkno = blkno;
 
 		/* okay, all set to move down a level */
-		stack_in = new_stack;
+
 	}
 
-	return stack_in;
+	return oldBlkno;
 }
 
 /*
@@ -366,27 +362,25 @@ _bt_first_ost(IndexScanDesc scan)
 	OSTRelation rel = scan->ost;
 	BTScanOpaqueOST so = (BTScanOpaqueOST) scan->opaque;
 	Buffer		buf;
-	BTStackOST	stack;
 	OffsetNumber offnum;
 
 	/* StrategyNumber strat; */
 	bool		nextkey;
 	bool		goback;
 
-/* 	ScanKey		startKeys[INDEX_MAX_KEYS]; */
-/* 	ScanKeyData scankeys[INDEX_MAX_KEYS]; */
-/* 	ScanKeyData notnullkeys[INDEX_MAX_KEYS]; */
+
 	int			keysCount = 0;
 
-/* 	int			i; */
-/* 	bool		status = true; */
-	/* StrategyNumber strat_total; */
+
 	BTScanPosItemOST *currItem;
 
-/* 	BlockNumber blkno; */
 
 
 	ScanKey		cur = scan->keyData;
+    Page         page;
+    BlockNumber  leafBlkno;
+    BTPageOpaqueOST  opaque;
+    unsigned int  token[4];
 
 	/**
 	 * By debugging postgres, a search on a btree with a single leaf and no
@@ -488,12 +482,10 @@ _bt_first_ost(IndexScanDesc scan)
 	 * Use the manufactured insertion scan key to descend the tree and
 	 * position ourselves on the target leaf page.
 	 */
-	stack = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST, true);
-	/* don't need to keep the stack around... */
-	_bt_freestack_ost(stack);
-	/* selog(DEBUG1, "GOING to initialize more data"); */
+	leafBlkno = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST, true);
 
-	_bt_initialize_more_data_ost(so);
+    _bt_initialize_more_data_ost(so);
+    
 	/* position to the precise item on the page */
 	offnum = _bt_binsrch_ost(rel, buf, keysCount, cur, nextkey);
 	
@@ -520,7 +512,29 @@ _bt_first_ost(IndexScanDesc scan)
 		offnum = OffsetNumberPrev_s(offnum);
 		/* selog(DEBUG1, "Found match on offset prev %d", offnum); */
 	}
+	
+    
+    if(offnum > 300){
+        selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
+    }
+	    
 
+    page = BufferGetPage_ost(rel, buf);
+    opaque = (BTPageOpaqueOST) PageGetSpecialPointer_s(page);
+    
+    if(opaque->counters[offnum] == 0){
+        //selog(DEBUG1, "First Access");
+        opaque->counters[offnum] = 2;
+    }
+
+    rel->heapBlockCounter = opaque->counters[offnum];
+    opaque->counters[offnum] +=1;
+    prf(rel->level, leafBlkno, rel->leafCurrentCounter, (unsigned char*) &token);
+
+    rel->token = token;
+    MarkBufferDirty_ost(rel, buf);
+
+    //selog(DEBUG1, "Found leaf match at offset %d", offnum);
 
 	/* remember which buffer we have pinned, if any */
 	/* Assert(!BTScanPosIsValid(so->currPos)); */

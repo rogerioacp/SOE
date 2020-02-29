@@ -15,13 +15,12 @@
 extern "C" {
 #endif
 
-void initSOE(const char* tName, const char* iName, int tNBlocks, int nBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char* pg_attr_desc, unsigned int pgDescSize);
-void initFSOE(const char* tName, const char* iName, int tNBlocks, int* fanout, int nlevels, unsigned int tOid, unsigned int iOid, char* pg_attr_desc, unsigned int pgDescSize);
+void initSOE(const char* tName, const char* iName, int tNBlocks, int* fanout, unsigned int fanout_size, unsigned int nlevels, int inBlocks, unsigned int tOid, unsigned int iOid, unsigned int functionOid, unsigned int indexHandler, char* pg_attr_desc, unsigned int pgDescSize);
+void initFSOE(const char* tName, const char* iName, int tNBlocks, int* fanout, unsigned int fanout_size, unsigned int nlevels, unsigned int tOid, unsigned int iOid, char* pg_attr_desc, unsigned int pgDescSize);
 void addIndexBlock(char* block, unsigned int blockSize, unsigned int offset, unsigned int level);
 void addHeapBlock(char* block, unsigned int blockSize, unsigned int blkno);
 void insert(const char* heapTuple, unsigned int tupleSize, char* datum, unsigned int datumSize);
 int getTuple(unsigned int opmode, unsigned int opoid, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
-int getTupleOST(unsigned int opmode, unsigned int opoid, const char* scanKey, int scanKeySize, char* tuple, unsigned int tupleLen, char* tupleData, unsigned int tupleDataLen);
 void insertHeap(const char* heapTuple, unsigned int tupleSize);
 
 sgx_status_t SGX_CDECL oc_logger(const char* str);

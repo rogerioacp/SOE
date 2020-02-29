@@ -69,7 +69,6 @@ bt_dummy_search_s(VRelation rel, int maxHeight){
 BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey,
 			 Buffer* bufP, int access,  bool doDummy)
 {
-    //BTStack	    	      stack_in = NULL;
     int                   tHeight = 0;
     unsigned int          token[4];
 
@@ -82,13 +81,6 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
     *bufP = _bt_getbuf_level_s(rel, 0);
     rel->rCounter +=1;
 
-	/* If index is empty and access = BT_READ, no root page is created. */
-	//if (!BufferIsValid_s(rel, *bufP))
-	//	return (BTStack) NULL;
-
-	/* Loop iterates once per level descended in the tree */
-    //unsigned int currentCounter = 0;
-    //unsigned int nextCounter = 0;
     unsigned int currentNodeCounter = rel->rCounter+1;
     unsigned int nextNodeCounter = 0;
     unsigned int oldBlkno = 0;
@@ -103,27 +95,6 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
       IndexTuple    itup;
       BlockNumber   blkno;
       BlockNumber   par_blkno;
-      //BTStack       new_stack;
-      //Current token is 32 integers long (128 bits AES BLOCK size);
-      
-      //char	   *datum;
-  		/*
-		 * Race -- the page we just grabbed may have split since we read its
-		 * pointer in the parent (or metapage).  If it has, we may need to
-		 * move right to its new sibling.  Do that.
-		 *
-		 * In write-mode, allow _bt_moveright to finish any incomplete splits
-		 * along the way.  Strictly speaking, we'd only need to finish an
-		 * incomplete split on the leaf page we're about to insert to, not on
-		 * any of the upper levels (they are taken care of in _bt_getstackbuf,
-		 * if the leaf page is split and we insert to the parent page).  But
-		 * this is a good opportunity to finishnish splits of internal pages too.
-		 */ 
-		/* Concurrent splits are not supported on the prototype. */
-		/**bufP = _bt_moveright(rel, *bufP, keysz, scankey, nextkey,
-							  (access == BT_WRITE), stack_in,
-							  BT_READ, snapshot);*/
-
 
 		/* if this is a leaf page, we're done */
 		page = BufferGetPage_s(rel, *bufP);
@@ -153,17 +124,13 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
         //selog(DEBUG1, "oopaque %d keys are %d %d", opaque->o_blkno, opaque->btpo_prev, opaque->btpo_next);
         
 		offnum = _bt_binsrch_s(rel, *bufP, keysz, scankey, nextkey);
-        //selog(DEBUG1, "Offset number is %d", offnum);
 		itemid = PageGetItemId_s(page, offnum);
-        /*if(!ItemIdIsNormal_s(itemid)){
-            exit();
-            selog(DEBUG1, "item is not normal tree search");
-        }*/
-
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
         
+        //selog(DEBUG1, "Offset number is %d", offnum);
         if(offnum > 300){
             selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
+            abort();
         }
         if(opaque->counters[offnum] == 0){
             //selog(DEBUG1, "First Access");
@@ -193,22 +160,16 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
         rel->level = tHeight;
 
         prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
-        //rel->token = token;
         //selog(DEBUG1, "block access %d at level %d with prf results are %d %d",blkno, rel->level, token[0], token[1]);
-
-        //*bufp = _bt_getbuf_level_s(rel, blkno);
-        
+ 
 		*bufP = _bt_getbuf_level_s(rel, blkno);
         currentNodeCounter +=1;
         oldBlkno = blkno;
     
-		/* drop the read lock on the parent page, acquire one on the child */
-		/* *bufP = _bt_relandgetbuf(rel, *bufP, blkno, BT_READ); */
-
 		/* okay, all set to move down a level */
-        
-		//stack_in = new_stack;
+
 	}
+
     rel->rCounter +=1;
     //selog(DEBUG1, "Found leaf at level %d", rel->level);
 	return oldBlkno;
@@ -419,7 +380,6 @@ _bt_first_s(IndexScanDesc scan)
 	VRelation	rel = scan->indexRelation;
 	BTScanOpaque so = (BTScanOpaque) scan->opaque;
 	Buffer		buf;
-	//BTStack		stack;
 	OffsetNumber offnum;
 
 	/* StrategyNumber strat; */
@@ -540,14 +500,11 @@ _bt_first_s(IndexScanDesc scan)
 	 */
 	/* selog(DEBUG1, "Going to search for page"); */
 	leafBlkno = _bt_search_s(rel, 1, cur, nextkey, &buf, BT_READ, true);
-	/* selog(DEBUG1, "Going to free search stack"); */
-	/* don't need to keep the stack around... */
-	//_bt_freestack_s(stack);
-	/* selog(DEBUG1, "GOING to initialize more data"); */
+
 
 	_bt_initialize_more_data_s(so);
-	/* selog(DEBUG1, "Going to search for tuple"); */
-	/* position to the precise item on the page */
+	
+    /* position to the precise item on the page */
 	offnum = _bt_binsrch_s(rel, buf, keysCount, cur, nextkey);
 	/* selog(DEBUG1, "Found match on offset %d", offnum); */
 
@@ -582,6 +539,7 @@ _bt_first_s(IndexScanDesc scan)
 	    
     page = BufferGetPage_s(rel, buf);
 	opaque = (BTPageOpaque) PageGetSpecialPointer_s(page);
+    
     if(opaque->counters[offnum] == 0){
         //selog(DEBUG1, "First Access");
         opaque->counters[offnum] = 2;

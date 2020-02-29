@@ -140,7 +140,7 @@ heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const Bl
 	}
    
 	r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
-
+    //selog(DEBUG1, "Read real block %d", r_blkno[0]);
     block->blkno = r_blkno[0];
     block->location[0] = r_blkno[2];
     block->location[1] = r_blkno[3];
@@ -160,7 +160,9 @@ heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, c
     
     r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
 
-    if(block->blkno != *r_blkno){
+    //selog(DEBUG1, "heap_filewrite block %d and page blkno %d", block->blkno, *r_blkno);
+    // TODO: test if block->blkno == *r_blkno even when blkno is dummy
+    if(block->blkno != DUMMY_BLOCK && block->blkno != *r_blkno){
         selog(ERROR, "Block blkno %d and page blkno %d do not match", block->blkno, *r_blkno);
         abort();
     }

@@ -132,7 +132,6 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
         selog(ERROR, "Page block %d number does not match offset %d", *r_blkno, blkno);
     }
 
-
     buffer = ReadBuffer_s(rel, *r_blkno);
 	page = BufferGetPage_s(rel, buffer);
 
@@ -149,14 +148,14 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     
     //selog(DEBUG1, "size of oopaque lsize %d and location is %d %d", p_blkno[1], p_blkno[2], p_blkno[3]);
 
-    if(*r_blkno != *p_blkno){
-        selog(ERROR, "Block numbers in heap page do not match %d %d", *r_blkno, *p_blkno);
+    if(r_blkno[0] != p_blkno[0]){
+        selog(ERROR, "Block numbers in heap page do not match %d %d", r_blkno[0], p_blkno[0]);
     }
 
     prf(level, blkno, 1, (unsigned char*) &token);
 
     //selog(DEBUG1, "Counters are %d %d %d %d", token[0], token[1], token[2], token[3]);
-      
+    //selog(DEBUG1, "Flush block %d", *r_blkno);
 	MarkBufferDirty_s(rel, buffer);
 	ReleaseBuffer_s(rel, buffer);
 }
@@ -188,7 +187,7 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	if (ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer))
 	{
 		selog(ERROR, "Requested Pointer does not match block number. %d != %d", ItemPointerGetBlockNumber_s(tid), BufferGetBlockNumber_s(buffer));
-        abort();
+        //abort();
 	}
     //selog(DEBUG1, "Heap read buffer %d", buffer);
 	page = BufferGetPage_s(rel, buffer);

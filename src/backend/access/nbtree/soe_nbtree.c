@@ -29,14 +29,7 @@
 #include "logger/logger.h"
 #include "storage/soe_nbtree_ofile.h"
 #include "storage/soe_bufpage.h"
-/*
-#include "storage/soe_bufpage.h"
-#include "access/soe_nbtree.h"
-#include "access/soe_itup.h"
-#include "access/soe_genam.h"
-#include "access/soe_itup.h"
-#include "logger/logger.h"
-*/
+
 #include <oram/plblock.h>
 #include <string.h>
 #include <stdlib.h>
@@ -61,16 +54,19 @@
 void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned int offset)
 {
 
-    Buffer buffer;
-    Page    page;
-    BTPageOpaque oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
+    Buffer          buffer;
+    Page            page;
+    BTPageOpaque    oopaque;
     unsigned int    token[4];
-   // unsigned int*         token = (unsigned int*) malloc(sizeof(unsigned int)*32);
-    
+   
+
+
     memset(&token, 0, sizeof(unsigned int)*4);
+    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
+    memset(oopaque->counters, 0, sizeof(uint32)*300);
+
     prf(level, offset, 0, (unsigned char*) &token);
     
-    memset(oopaque->counters, 0, sizeof(uint32)*300);
     //selog(DEBUG1, "size of btree opaque data is %d\n", sizeof(BTPageOpaqueData));
     //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
     //selog(DEBUG1, "btree block at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
@@ -84,7 +80,7 @@ void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned 
 
     memcpy(page, block, BLCKSZ);
 
-    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
+   // oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
 
     //selog(DEBUG1, "btree block after initialization at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
     

@@ -62,11 +62,11 @@ typedef struct BTPageOpaqueData
 	uint16		btpo_flags;		/* flag bits, see below */
 	BTCycleId   btpo_cycleid; /* vacuum cycle ID of latest split */
 	uint32		o_blkno; 		/* used to store original block number inside soe*/
-    //uint32      lsize;        // the size of the locations
     uint32      location[2];    //we will store up to 2 integer of relevant location
-    uint32      counters[300];   //We assume each block can have at most 300 child nodes. We store in this variable the counters of each one.
-    //uint32      o_lleaf;      // we need to store the current leaf of a block (pathoram)
-    //uint32      o_lpartition; // we need to store the current partition of a block(forestoram);
+    /* Stores the counters of the child nodes
+     * currently limited to 300 child nodes pers parent.
+     * */
+    uint32      counters[300];  
 }			BTPageOpaqueData;
 
 typedef BTPageOpaqueData * BTPageOpaque;
@@ -395,6 +395,8 @@ extern void btree_load_s(VRelation indexRel, char* block, unsigned int level, un
 extern void btree_fanout_setup(int* fanouts, 
                                unsigned int fanout_size,
                                unsigned int nlevels);
+
+extern void free_btree_fanout();
 
 
 /*
