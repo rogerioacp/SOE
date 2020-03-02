@@ -18,14 +18,18 @@
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <openssl/hmac.h>
+
 
 unsigned char *key = (unsigned char *) "01234567890123456789012345678901";
-unsigned char *iv = (unsigned char *) "0123456789012345";
+unsigned int keylen = 34*sizeof(char);
 #endif
 
+
+//Example from https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html
 void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigned char *token)
 {
-#ifdef CPAGES
+#ifdef NPRF
 	/* If we are not encrypting anything just generate two random ints. Its all
      * we need*/
     int next = counter + 1;
@@ -46,62 +50,60 @@ void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigne
     //token[3] = next;
 
     
-
 #else
-    /*Use an AES CBC to generate the cryptographic token*/
-    int len = 3 * sizeof(unsigned int);
-    char input[len];
+    /*Use an HMAC-SHA256 to generate the cryptographic token*/
+    
+    const int msg[3];
+    int result = -1;
+    int md_len;
+    
+
+    msg[0] = level;
+    msg[1] = offset;
+    msg[2] = counter;
+
+    EVP_MD_CTX* ctx = NULL;
+
+	if (!(ctx = EVP_MD_CTX_new())){
+		selog(ERROR, "could not inittialize hmac context");
+        abort();
+    }
 
 
-    EVP_CIPHER_CTX *ctx;
-	int			ciphertext_len;
-	int			clen;
+    if(1 != EVP_DigestInit_ex(md,EVP_sha256(), NULL)){
+        selog(ERROR, "Could not initalize SHA256");
+        abort();
+    }
 
-    len[0] = level;
-    len[1] = offset;
-    len[2] = counter;
+    if(1 != EVP_DigestUpdate(md,(const unsigned char*) msg, sizeof(int)*3)){
+        selog(ERROR, "Could not update digest");
+        abort();
+    }
+
+    if(1 != EVP_DigestFinal_ex(md, token, &md_len)){
+        selog(ERROR, "Could not finalize md");
+        abort();
+
+    }
+
+    selog(DEBUG, "digest size is %d", md_len);
+
+    EVP_MD_CTX_free(md);
+
+    /*printf("Digest is: ");
+    for (i = 0; i < md_len; i++)
+         printf("%02x", md_value[i]);
+    printf("\n");
+*/
+   
 
 
-	/* Create and initialise the context */
-	if (!(ctx = EVP_CIPHER_CTX_new()))
-		selog(ERROR, "could not create openssl context for encryption");
+    /*HMAC_CTX *ctx;
 
-	/*
-	 * Initialise the encryption operation. IMPORTANT - ensure you use a key
-	 * and IV size appropriate for your cipher In this example we are using
-	 * 256 bit AES (i.e. a 256 bit key). The IV size for *most* modes is the
-	 * same as the block size. For AES this is 128 bits
-	 */
-	if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv))
-		selog(ERROR, "could not init encryption context");
 
-	EVP_CIPHER_CTX_set_padding(ctx, 1);
-
-	/*
-	 * Provide the message to be encrypted, and obtain the encrypted output.
-	 * EVP_EncryptUpdate can be called multiple times if necessary
-	 */
-	if (1 != EVP_EncryptUpdate(ctx, token, &clen, &input, len))
-		selog(ERROR, "could not encrypt update");
-
-	ciphertext_len = clen;
-
-	/*
-	 * Finalize the encryption. Further ciphertext bytes may be written at
-	 * this stage.
-	 */
-	if (1 != EVP_EncryptFinal_ex(ctx, token + clen, &clen))
-		selog(ERROR, "could not finalize encrypt");
-
-	ciphertext_len += clen;
-
-	if (ciphertext_len != len)
-	{
-		selog(ERROR, "Decription plaintex length does not match");
-	}
-
-	/* Clean up */
-	EVP_CIPHER_CTX_free(ctx);
-#endif    
+   
+    
+      
+#endif
 
 }
