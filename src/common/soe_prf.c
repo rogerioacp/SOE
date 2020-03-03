@@ -74,7 +74,7 @@ void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigne
     memcpy(token + 2*sizeof(unsigned int), &counter, sizeof(unsigned int));
     memcpy(token + 3*sizeof(unsigned int), &next, sizeof(unsigned int));
     
-#else
+#endif
 
 
 }

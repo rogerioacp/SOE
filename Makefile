@@ -164,6 +164,11 @@ ifeq ($(SINGLE_ORAM), 1)
 	Enclave_C_Flags += -DSINGLE_ORAM
 endif
 
+ifeq ($(PRF), 1)
+	Enclave_C_Flags += -DPRF
+endif
+
+
 ifeq ($(ORAM_LIB), PATHORAM)
 		Enclave_C_Flags += -DPATHORAM
 		ORAM_LADD := -lpathoram
@@ -183,7 +188,11 @@ ifeq ($(SMALL_BKCAP), 1)
 	Enclave_C_Flags += -DSMALL_BKCAP
 endif
 
-SOE_LADD = -L/usr/local/lib -lssl -lcrypto $(ORAM_LADD) $(COLLECTC_LADD) 
+SOE_LADD =$(ORAM_LADD) $(COLLECTC_LADD)
+
+ifeq ($(PRF), 1)
+  	SOE_LADD += -L/usr/local/lib -lssl -lcrypto 
+endif
 #SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/opt/intel/sgxssl//lib64/ -lssl -lcrypto
 Enclave_C_Flags += $(Soe_Include_Path)
 
