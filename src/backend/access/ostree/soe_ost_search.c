@@ -70,7 +70,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 {
 	
     unsigned int height = 0;
-    unsigned int token[4];
+    unsigned int token[8];
     unsigned int currentNodeCounter = 0;
     unsigned int nextNodeCounter = 0;
     unsigned int oldBlkno = 0;
@@ -380,7 +380,7 @@ _bt_first_ost(IndexScanDesc scan)
     Page         page;
     BlockNumber  leafBlkno;
     BTPageOpaqueOST  opaque;
-    unsigned int  token[4];
+    unsigned int  token[8];
 
 	/**
 	 * By debugging postgres, a search on a btree with a single leaf and no

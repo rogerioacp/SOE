@@ -50,8 +50,12 @@ The makefile has the following options to confugre the make process:
 - ORAM_LIB:
     - FORESTORAM - Compile binary with Forest ORAM lib. 
     - PATHORAM - Compile binary with Path ORAM lib.
+    - TFORESTORAM - Compile binary with Forest ORAM and Token PMAP lib.
+    - TPATHORAM - Compile binary with Path ORAM and Token PMAP lib.
 - SMALL_BKCAP (0,1): If defines sets the number of of blocks per Path ORAM node (Z) to 1. The default is 4 blocks per node (Z=4).
 - STASH_COUNT: Logs the number of elements in a stash on a ORAM construction.
+- PRF: Generates the tokens for a cascade construction with a PRF (HMAC-SHA256
+  OpenSSL).
 
 To compile PathORAM for production, use the following flags:
 

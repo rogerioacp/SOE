@@ -70,7 +70,7 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
 			 Buffer* bufP, int access,  bool doDummy)
 {
     int                   tHeight = 0;
-    unsigned int          token[4];
+    unsigned int          token[8];
 
     prf(rel->level, 0, rel->rCounter, (unsigned char*) &token);
    
@@ -398,7 +398,7 @@ _bt_first_s(IndexScanDesc scan)
     Page         page;
     BlockNumber  leafBlkno;
     BTPageOpaque  opaque;
-    unsigned int  token[4];
+    unsigned int  token[8];
 	/**
 	 * By debugging postgres, a search on a btree with a single leaf and no
 	 * nodes had always the strat_total = BTEqualStrategyNumber despite the

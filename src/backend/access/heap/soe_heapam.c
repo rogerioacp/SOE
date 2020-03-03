@@ -118,7 +118,7 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     Page		page;
     int*        r_blkno;
     int*        p_blkno;
-    unsigned int    token[4];
+    unsigned int    token[8];
     int level = rel->tHeight +1;
     //selog(DEBUG1, "Inserting heap block %d, level %d", blkno, level);
     

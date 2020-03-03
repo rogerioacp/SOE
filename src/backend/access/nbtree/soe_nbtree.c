@@ -57,7 +57,7 @@ void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned 
     Buffer          buffer;
     Page            page;
     BTPageOpaque    oopaque;
-    unsigned int    token[4];
+    unsigned int    token[8];
    
 
 

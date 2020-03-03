@@ -125,7 +125,7 @@ Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Include_Paths := -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
 
-Soe_Include_Path :=  -I/usr/local/include -Isrc/include/ -Isrc/include/backend -Isrc/include/backend/enclave -I/opt/intel/sgxssl/lib64/ -I/opt/intel/sgxssl/include/ #-I/usr/local/opt/openssl/include/
+Soe_Include_Path :=  -I/usr/local/include -Isrc/include/ -Isrc/include/backend -Isrc/include/backend/enclave -I/opt/intel/sgxssl/lib64/  -I/opt/intel/sgxssl/include/ #-I/usr/local/opt/openssl/include/
 
 COLLECTC_LADD :=  -lcollectc
 
@@ -166,20 +166,25 @@ endif
 
 ifeq ($(ORAM_LIB), PATHORAM)
 		Enclave_C_Flags += -DPATHORAM
-		#ORAM_LADD := -lpathoram
-		ORAM_LADD := -ltpathoram
+		ORAM_LADD := -lpathoram
 else ifeq ($(ORAM_LIB), FORESTORAM)
 		Enclave_C_Flags += -DFORESTORAM
-		#ORAM_LADD := -lforestoram
+		ORAM_LADD := -lforestoram
+else ifeq($(ORAM_LIB), TPATHORAM)
+		Enclave_C_Flags += -DPATHORAM
+		ORAM_LADD := -ltpathoram
+else ifeq($(ORAM_LIB), TFORESTORAM)
+		Enclave_C_Flags += -DFORESTORAM
 		ORAM_LADD := -ltforestoram
-
 endif
+
 
 ifeq ($(SMALL_BKCAP), 1)
 	Enclave_C_Flags += -DSMALL_BKCAP
 endif
 
-SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/usr/local/opt/openssl/lib -lssl -lcrypto
+SOE_LADD = -L/usr/local/lib -lssl -lcrypto $(ORAM_LADD) $(COLLECTC_LADD) 
+#SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/opt/intel/sgxssl//lib64/ -lssl -lcrypto
 Enclave_C_Flags += $(Soe_Include_Path)
 
 
@@ -328,7 +333,7 @@ soe_spe.o: src/common/soe_spe.c
 	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) $(IPPCP_Include) -c $< -o $@
 
 soe_prf.o: src/common/soe_prf.c
-	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) $(IPPCP_Include) -c $< -o $@
+	$(CC) $(Enclave_C_Flags) $(Pgsql_C_Flags) -c $< -o $@
 
 
 
