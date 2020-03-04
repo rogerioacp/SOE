@@ -175,11 +175,11 @@ ifeq ($(ORAM_LIB), PATHORAM)
 else ifeq ($(ORAM_LIB), FORESTORAM)
 		Enclave_C_Flags += -DFORESTORAM
 		ORAM_LADD := -lforestoram
-else ifeq($(ORAM_LIB), TPATHORAM)
-		Enclave_C_Flags += -DPATHORAM
+else ifeq ($(ORAM_LIB), TPATHORAM)
+		Enclave_C_Flags += -DTPATHORAM
 		ORAM_LADD := -ltpathoram
-else ifeq($(ORAM_LIB), TFORESTORAM)
-		Enclave_C_Flags += -DFORESTORAM
+else ifeq ($(ORAM_LIB), TFORESTORAM)
+		Enclave_C_Flags += -DTFORESTORAM
 		ORAM_LADD := -ltforestoram
 endif
 

@@ -336,7 +336,7 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
              #ifdef TPATHORAM
-             otTable->heapBlockCounter = scan->indexRelation->heapBlockCounter;
+             oTable->heapBlockCounter = scan->indexRelation->heapBlockCounter;
              #endif
              #ifdef TFORESTORAM
              oTable->heapBlockCounter = scan->ost->heapBlockCounter;
