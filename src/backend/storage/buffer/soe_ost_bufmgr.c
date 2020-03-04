@@ -286,7 +286,7 @@ closeOSTRelation(OSTRelation rel)
 	free(rel->osts->iname);
 
 
-	for (l = 0; l < rel->osts->nlevels; l++)
+	for (l = 0; l < rel->osts->nlevels + 1; l++)
 	{
 
 		list_remove_all_cb(rel->buffers[l], &destroyOSTVBlock);

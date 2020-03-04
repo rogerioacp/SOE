@@ -257,7 +257,7 @@ addIndexBlock(char *block, unsigned int blocksize, unsigned int offset,
               unsigned int level)
 {
 
-	selog(DEBUG1, "Going to add index block %d at level %d with size %d\n", offset, level, blocksize);
+	//selog(DEBUG1, "Going to add index block %d at level %d with size %d\n", offset, level, blocksize);
     
     if(mode == DYNAMIC){
         btree_load_s(oIndex, block, level, offset);
@@ -269,7 +269,7 @@ addIndexBlock(char *block, unsigned int blocksize, unsigned int offset,
 void
 addHeapBlock(char *block, unsigned int blockSize, unsigned int blkno)
 {
-    selog(DEBUG1, "Insert heap block %d out of %d", blkno, oTable->totalBlocks);
+    //selog(DEBUG1, "Insert heap block %d out of %d", blkno, oTable->totalBlocks);
 
     heap_insert_block_s(oTable, block, blkno);
 	if(blkno == 0){
@@ -335,7 +335,12 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
-             oTable->heapBlockCounter = scan->indexRelation->heapBlockCounter;
+             #ifdef TPATHORAM
+             otTable->heapBlockCounter = scan->indexRelation->heapBlockCounter;
+             #endif
+             #ifdef TFORESTORAM
+             oTable->heapBlockCounter = scan->ost->heapBlockCounter;
+             #endif
              heap_gettuple_s(oTable, &tid, heapTuple);
 
         }

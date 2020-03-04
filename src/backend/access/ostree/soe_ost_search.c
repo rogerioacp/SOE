@@ -101,8 +101,11 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		{
             rel->leafCurrentCounter = currentNodeCounter;
             #ifdef DUMMYS
-            maxFanout = rel->osts->fanouts[height];
+
             while(doDummy && height < rel->osts->nlevels){
+                selog(DEBUG1, "Dummy nlevels %d", rel->osts->nlevels);
+                maxFanout = rel->osts->fanouts[rel->osts->nlevels-1];
+                selog(DEBUG1, "Max fanout is %d", maxFanout);
                 ReadDummyBuffer_ost(rel, height, maxFanout+1);
                 height += 1;
                 rel->level = height;
@@ -136,10 +139,11 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
         //get child node
         blkno = BTreeInnerTupleGetDownLink_OST(itup);
 		par_blkno = BufferGetBlockNumber_ost(*bufP);
-
+        #ifdef TFORESTORAM
         //The root write ignores the token
         prf(rel->level, oldBlkno, currentNodeCounter, (unsigned char*) &token);
         MarkBufferDirty_ost(rel, *bufP);
+        #endif
 		ReleaseBuffer_ost(rel, *bufP);
 
         //Prepare state for child access
@@ -512,8 +516,8 @@ _bt_first_ost(IndexScanDesc scan)
 		offnum = OffsetNumberPrev_s(offnum);
 		/* selog(DEBUG1, "Found match on offset prev %d", offnum); */
 	}
-	
-    
+    	
+    #ifdef TFORESTORAM
     if(offnum > 300){
         selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
     }
@@ -533,7 +537,7 @@ _bt_first_ost(IndexScanDesc scan)
 
     rel->token = token;
     MarkBufferDirty_ost(rel, buf);
-
+    #endif
     //selog(DEBUG1, "Found leaf match at offset %d", offnum);
 
 	/* remember which buffer we have pinned, if any */

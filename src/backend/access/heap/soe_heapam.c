@@ -175,14 +175,17 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	Page		page;
 	OffsetNumber offnum;
 	ItemId		lp;
-    uint32      token[4];
+    uint32      token[8];
 	blkno = ItemPointerGetBlockNumber_s(tid);
 	//selog(DEBUG1, "Going to get heap block %d", blkno);
 
+    #if defined TFORESTORAM || defined TPATHORAM    
     prf(rel->tHeight, blkno, rel->heapBlockCounter, (unsigned char*) &token);
+
     //selog(DEBUG1, "counter of block %d are %d %d %d %d", blkno, token[0], token[1], token[2], token[3]);
 
     rel->token = token;
+    #endif
 	buffer = ReadBuffer_s(rel, blkno);
 	if (ItemPointerGetBlockNumber_s(tid) != BufferGetBlockNumber_s(buffer))
 	{

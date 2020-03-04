@@ -43,25 +43,26 @@ typedef struct OSTreeState
 typedef struct OSTRelation
 {
 
+    unsigned int leafCurrentCounter;
+    unsigned int heapBlockCounter;
+
 	/* Original Relation Oid */
 	unsigned int rd_id;
 	OSTreeState osts;
 
-	/* used to cache metapages, I do not think it will be used. */
-	void	   *rd_amcache;
+	/* Current level being usd on the hierarchical trees */
+	unsigned int level;
+   
+
+    //current token to access a block
+    unsigned int* token;
 
 	/* Array of list of buffers. One list of buffer per level. */
 	List	  **buffers;
 	TupleDesc	tDesc;
 
-	/* Current level being usd on the hierarchical trees */
-	unsigned int level;
-    
-    //current token to access a block
-    unsigned int* token;
-
-    unsigned int leafCurrentCounter;
-    unsigned int heapBlockCounter;
+	/* used to cache metapages, I do not think it will be used. */
+	void	   *rd_amcache;
 
 }		   *OSTRelation;
 

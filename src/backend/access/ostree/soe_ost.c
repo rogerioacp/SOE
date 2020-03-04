@@ -139,6 +139,7 @@ btbeginscan_ost(OSTRelation rel, const char *key, int keysize)
 
 	/* get the scan */
 	scan = (IndexScanDesc) malloc(sizeof(IndexScanDescData));
+    scan->indexRelation = NULL;
 	scan->ost = rel;
 	scan->keyData = scanKey;
 	scan->opaque = so;

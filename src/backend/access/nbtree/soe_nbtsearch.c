@@ -146,12 +146,13 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
 		blkno = BTreeInnerTupleGetDownLink_s(itup);
    		par_blkno = BufferGetBlockNumber_s(*bufP);
 
-
+        #ifdef TPATHORAM
         prf(rel->level, oldBlkno, currentNodeCounter, (unsigned char*) &token);
         //selog(DEBUG1, "Going to evict block %d at level %d with counters %d %d %d %d", oldBlkno, rel->level, token[0], token[1], token[2], token[3]);
         //rel->token = token;
 
         MarkBufferDirty_s(rel, *bufP);
+        #endif
 		ReleaseBuffer_s(rel, *bufP);
 
         currentNodeCounter = nextNodeCounter;
@@ -531,7 +532,7 @@ _bt_first_s(IndexScanDesc scan)
 		offnum = OffsetNumberPrev_s(offnum);
 		/* selog(DEBUG1, "Found match on offset prev %d", offnum); */
 	}
-    
+    #ifdef TPATHORAM 
     //selog(DEBUG1, "Found leaf match at offset %d", offnum);
     if(offnum > 300){
         selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
@@ -552,7 +553,7 @@ _bt_first_s(IndexScanDesc scan)
     //selog(DEBUG1, "Going to evict block %d at level %d with counters %d %d %d %d", leafBlkno, rel->level, token[0], token[1], token[2], token[3]);
     rel->token = token;
     MarkBufferDirty_s(rel, buf);
-
+    #endif
 
 	/* remember which buffer we have pinned, if any */
 	/* Assert(!BTScanPosIsValid(so->currPos)); */
