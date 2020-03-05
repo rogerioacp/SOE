@@ -257,7 +257,7 @@ addIndexBlock(char *block, unsigned int blocksize, unsigned int offset,
               unsigned int level)
 {
 
-	//selog(DEBUG1, "Going to add index block %d at level %d with size %d\n", offset, level, blocksize);
+	selog(DEBUG1, "Going to add index block %d at level %d with size %d\n", offset, level, blocksize);
     
     if(mode == DYNAMIC){
         btree_load_s(oIndex, block, level, offset);

@@ -176,11 +176,13 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	OffsetNumber offnum;
 	ItemId		lp;
     uint32      token[8];
+    int tlevel = rel->tHeight+1;
 	blkno = ItemPointerGetBlockNumber_s(tid);
+    
 	//selog(DEBUG1, "Going to get heap block %d", blkno);
 
     #if defined TFORESTORAM || defined TPATHORAM    
-    prf(rel->tHeight, blkno, rel->heapBlockCounter, (unsigned char*) &token);
+    prf(tlevel, blkno, rel->heapBlockCounter, (unsigned char*) &token);
 
     //selog(DEBUG1, "counter of block %d are %d %d %d %d", blkno, token[0], token[1], token[2], token[3]);
 

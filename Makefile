@@ -191,7 +191,7 @@ endif
 SOE_LADD =$(ORAM_LADD) $(COLLECTC_LADD)
 
 ifeq ($(PRF), 1)
-  	SOE_LADD += -L/usr/local/lib -lssl -lcrypto 
+  	SOE_LADD += -L/usr/local/lib -lsodium #-L/usr/local/lib -lssl -lcrypto 
 endif
 #SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/opt/intel/sgxssl//lib64/ -lssl -lcrypto
 Enclave_C_Flags += $(Soe_Include_Path)
