@@ -544,7 +544,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 */
 	if (!_bt_readpage_ost(scan, offnum))
 	{
-		 selog(DEBUG1, "Page has no match, move to next page!"); 
+		 //selog(DEBUG1, "Page has no match, move to next page!"); 
 		/*
 		 * There's no actually-matching data on this page.  Try to advance to
 		 * the next page.  Return false if there's no matching data at all.
