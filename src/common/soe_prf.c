@@ -24,7 +24,6 @@ unsigned int keylen = 34*sizeof(char);
 void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigned char *token)
 {
 
-    selog(DEBUG1, "prf for level %d offset %d  counter %d", level, offset, counter);
 #ifdef PRF
     /*Use an HMAC-SHA256 to generate the cryptographic token
      * Example from https://www.openssl.org/docs/manmaster/man3/EVP_DigestInit.html

@@ -79,7 +79,6 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
     rel->token = token;
 	rel->level = height;
 
-    selog(DEBUG1, "Get root");
 	/* Get the root page to start with */
 	*bufP = _bt_getroot_ost(rel, access);
 
@@ -100,13 +99,10 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 
 		if (P_ISLEAF_OST(opaque))
 		{
-            selog(DEBUG1, "Found leaf");
             rel->leafCurrentCounter = currentNodeCounter;
             #ifdef DUMMYS
             while(doDummy && height < rel->osts->nlevels){
-                selog(DEBUG1, "Dummy nlevels %d", rel->osts->nlevels);
                 maxFanout = rel->osts->fanouts[rel->osts->nlevels-1];
-                selog(DEBUG1, "Max fanout is %d", maxFanout);
                 ReadDummyBuffer_ost(rel, height, maxFanout+1);
                 height += 1;
                 rel->level = height;
@@ -119,8 +115,8 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		 * Find the appropriate item on the internal page, and get the child
 		 * page that it points to.
 		 */
-        selog(DEBUG1, "Going for bin search");
 		offnum = _bt_binsrch_ost(rel, *bufP, keysz, scankey, nextkey);
+        //selog(DEBUG1, "binsearch result is %d",offnum);
 		itemid = PageGetItemId_s(page, offnum);
 		itup = (IndexTuple) PageGetItem_s(page, itemid);
 		
@@ -153,8 +149,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		height++;
 		rel->level = height;
         prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
-        selog(DEBUG1, "read buffer for level %d  and blkno %d", rel->level, blkno);
-        selog(DEBUG1, "tokens are %d %d %d %d", token[0], token[1], token[2], token[3]); 
+        //selog(DEBUG1, "Buffre block %d", blkno);
 		*bufP = ReadBuffer_ost(rel, blkno);
         currentNodeCounter +=1;
         oldBlkno = blkno;
@@ -212,7 +207,6 @@ _bt_binsrch_ost(OSTRelation rel,
 
 	low = P_FIRSTDATAKEY_OST(opaque);
 	high = PageGetMaxOffsetNumber_s(page);
-
 	/*
 	 * If there are no keys on the page, return the first available slot. Note
 	 * this covers two cases: the page is really empty (no keys), or it
@@ -269,7 +263,6 @@ _bt_binsrch_ost(OSTRelation rel,
 	 * On a non-leaf page, return the last key < scan key (resp. <= scan key).
 	 * There must be one if _bt_compare() is playing by the rules.
 	 */
-
 	return OffsetNumberPrev_s(low);
 }
 
@@ -330,11 +323,10 @@ _bt_compare_ost(OSTRelation rel,
 
 	/* datum = NameStr_s(*DatumGetName_s(index_getattr_s(itup))); */
 	datum = VARDATA_ANY_S(DatumGetBpCharPP_S(index_getattr_s(itup)));
-
-    selog(DEBUG1, "Comparing %s %s result %d", scankey->sk_argument, datum);
+    //selog(DEBUG1, "Comparing %s %s", scankey->sk_argument, datum);
 	/* We assume we are comparing strings(varchars) */
     result = (int32) strncmp(scankey->sk_argument, datum, strlen(scankey->sk_argument));
-    selog(DEBUG1, "Res is %d", result);
+    //selog(DEBUG1, "Result is %d", result);
 	/* if the keys are unequal, return the difference */
 	if (result != 0)
 		return result;
@@ -490,7 +482,7 @@ _bt_first_ost(IndexScanDesc scan)
 	 * position ourselves on the target leaf page.
 	 */
 	leafBlkno = _bt_search_ost(rel, 1, cur, nextkey, &buf, BT_READ_OST, true);
-
+    //selog(DEBUG1, "Completed tree transversal");
     _bt_initialize_more_data_ost(so);
     
 	/* position to the precise item on the page */

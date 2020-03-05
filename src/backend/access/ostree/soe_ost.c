@@ -79,7 +79,6 @@ insert_ost(OSTRelation rel, char *block, unsigned int level, unsigned int offset
 	page = BufferGetPage_ost(rel, buffer);
 
 	memcpy(page, block, BLCKSZ);
-    selog(DEBUG1, "Insert index block at level %d offset %d", level, offset);
     prf(level, offset, 1, (unsigned char*) &token);
 	MarkBufferDirty_ost(rel, buffer);
 	ReleaseBuffer_ost(rel, buffer);

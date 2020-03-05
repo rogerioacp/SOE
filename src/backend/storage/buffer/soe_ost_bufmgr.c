@@ -109,7 +109,7 @@ ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 	else
 	{
         oram = relation->osts->orams[clevel-1];
-
+        
         setToken(oram, relation->token);
         //selog(DEBUG1, "Read oram ost block %d at level %d", blockNum, clevel);
 		result = read_oram(&page, blockNum, oram, &clevel);
@@ -200,6 +200,7 @@ MarkBufferDirty_ost(OSTRelation relation, Buffer buffer)
 			block->size = BLCKSZ;
 			ost_fileWrite(NULL, block, relation->osts->iname, vblock->id, &clevel);
 			free(block);
+            result = BLCKSZ;
 		}
 		else
 		{

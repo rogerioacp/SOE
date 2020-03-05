@@ -256,9 +256,7 @@ void
 addIndexBlock(char *block, unsigned int blocksize, unsigned int offset, 
               unsigned int level)
 {
-
-	selog(DEBUG1, "Going to add index block %d at level %d with size %d\n", offset, level, blocksize);
-    
+ 
     if(mode == DYNAMIC){
         btree_load_s(oIndex, block, level, offset);
     }else{
@@ -331,7 +329,6 @@ getTuple(unsigned int opmode, unsigned int opoid, const char *key,
         }
     #endif
     if(matchFound){
-        //selog(DEBUG1, "Match Found");
         //Normal case
         if(ItemPointerIsValid_s(&scan->xs_ctup.t_self)){
              tid = scan->xs_ctup.t_self;
