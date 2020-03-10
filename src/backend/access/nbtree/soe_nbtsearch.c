@@ -532,7 +532,7 @@ _bt_first_s(IndexScanDesc scan)
 		offnum = OffsetNumberPrev_s(offnum);
 		/* selog(DEBUG1, "Found match on offset prev %d", offnum); */
 	}
-    #ifdef TPATHORAM 
+    #ifdef TPATHORAM
     //selog(DEBUG1, "Found leaf match at offset %d", offnum);
     if(offnum > 300){
         selog(DEBUG1, "Too many keys for countes in opaque data %d", offnum);
