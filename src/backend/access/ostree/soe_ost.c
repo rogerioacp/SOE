@@ -63,23 +63,32 @@ insert_ost(OSTRelation rel, char *block, unsigned int level, unsigned int offset
 	Buffer		buffer;
 	Page		page;
     BTPageOpaqueOST oopaque;
-    unsigned int    token[8];
 	
     oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block);
-
-    memset(&token, 0, sizeof(unsigned int)*4);
+    
     memset(oopaque->counters, 0, sizeof(uint32)*300);
+    
+    #ifdef TFORESTORAM
+    
+    unsigned int    token[8];
+    memset(&token, 0, sizeof(unsigned int)*4);
 
     prf(level, offset, 0, (unsigned char*) &token);
-    
-    rel->level = level;
+
     rel->token = token;
-    
+    #endif
+    rel->level = level;
+    selog(DEBUG1, "going to get buffer %d at level %d", offset, level);
+
 	buffer = ReadBuffer_ost(rel, offset);
 	page = BufferGetPage_ost(rel, buffer);
 
 	memcpy(page, block, BLCKSZ);
+
+    #ifdef TFORESTORAM
     prf(level, offset, 1, (unsigned char*) &token);
+    #endif
+    selog(DEBUG1, "Going to write buffer");
 	MarkBufferDirty_ost(rel, buffer);
 	ReleaseBuffer_ost(rel, buffer);
 

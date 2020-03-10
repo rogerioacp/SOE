@@ -44,10 +44,8 @@ extern sgx_status_t outFileInit(const char *filename, const char *pages,
                                 unsigned int nblocks, unsigned int blocksize,
                                 int pagesSize, int boffset);
 
-extern sgx_status_t outFileRead(char *page, const char *filename, int blkno, 
-                                int pageSize);
-extern sgx_status_t outFileWrite(const char *block, const char *filename, 
-                                 int oblkno, int pageSize);
+extern sgx_status_t outFileRead(const char *filename, const char* pages, int pagesSize, int* possitions, int posSize); 
+extern sgx_status_t outFileWrite(const char *filename, const char* pages,  int pagesSize, int* positions, int posSize);
 extern sgx_status_t outFileClose(const char *filename);
 
 #endif          /*ENCLAVE_DT_H*/

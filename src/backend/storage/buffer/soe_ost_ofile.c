@@ -130,7 +130,7 @@ ost_fileInit(const char *filename, unsigned int nblocks,
 	int			clevel = *((int *) appData);
     
 
-    selog(DEBUG1, "request ost_fileInit of %d nblocks\n", nblocks);
+    //selog(DEBUG1, "request ost_fileInit of %d nblocks\n", nblocks);
 
     do
     {
@@ -172,21 +172,44 @@ ost_fileInit(const char *filename, unsigned int nblocks,
 }
 
 
-void
-ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+/*void
+ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)*/
+void ost_fileRead(FileHandler handler, 
+				  const char *filename, 
+				  PLBList blocks,
+				  BNArray blkns, 
+				  unsigned int nblocks, void *appData)
 {
-	sgx_status_t status;
-	BTPageOpaqueOST oopaque;
-	int			clevel = *((int *) appData);
+	sgx_status_t 		status;
+	BTPageOpaqueOST 	oopaque;
+	PLBlock         	block;
+    unsigned char       *cblock;
+	char                *encBlocks;
+    int             	offset, ciphSize, posSizes, clevel;
+	unsigned int 		l_offset =0;
+    unsigned int        l_index = 0;
+	int 				*l_ob_blknos;
 
 	status = SGX_SUCCESS;
-	char	   *ciphertextBlock;
-	unsigned int l_offset = 0;
-	unsigned int l_index;
-	unsigned int l_ob_blkno = 0;
+	clevel = *((int *) appData);
 
-    //We calculate an offset of where each level start as all of the levels
-    //are stored in a single file, even tough they are indepedent ORAMS.
+    ciphSize = BLCKSZ*nblocks;
+    posSizes = sizeof(unsigned int)*nblocks;
+    //selog(DEBUG1, "ost_fileRead %d blocks", nblocks);
+	l_ob_blknos = (int*) malloc(sizeof(int)*nblocks);
+	encBlocks = (char *) malloc(ciphSize);
+    memset(l_ob_blknos, 0, sizeof(int)*nblocks);
+    
+    /**
+     * We calculate an offset of where each level start as all of the levels
+     * are stored in a single file, even tough they are independent ORAMS.
+     **/
+
+    /**
+     * TODO: Can this loop be optimized to be computed once during 
+     * initialization?
+     * 
+     */
 	if (clevel > 0)
 	{
 		l_offset = 1;
@@ -197,45 +220,69 @@ ost_fileRead(FileHandler handler, PLBlock block, const char *filename, const Blo
 		}
 	}
 
-	l_ob_blkno = ob_blkno + l_offset;
-
-	block->block = (void *) malloc(BLCKSZ);
-	ciphertextBlock = (char *) malloc(BLCKSZ);
-
-	status = outFileRead(ciphertextBlock, filename, l_ob_blkno, BLCKSZ);
-
-	#ifndef CPAGES
-		page_decryption((unsigned char *) ciphertextBlock, (unsigned char *) block->block);
-	#else
-    	memcpy(block->block, ciphertextBlock, BLCKSZ);
-	#endif
+	for(offset = 0; offset < nblocks; offset++){
+        //selog(DEBUG1, "%d blkns %d and loffset %d", offset, blkns[offset], l_offset);
+		l_ob_blknos[offset] = blkns[offset] + l_offset;
+	}
+    //selog(DEBUG1, "l_ob_blknos %d", offset);
+	status = outFileRead(filename, encBlocks, ciphSize, l_ob_blknos, posSizes);
     
 	if (status != SGX_SUCCESS)
 	{
-		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
+		selog(ERROR, "Could not read blocks from relation %s\n", filename);
 	}
 
-	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
-	block->blkno = oopaque->o_blkno;
-	block->size = BLCKSZ;
-    block->location[0] = oopaque->location[0];
-    block->location[1] = oopaque->location[1];
-	free(ciphertextBlock);
+	for(offset = 0; offset < nblocks; offset++){
+		block = blocks[offset];
+		block->block = (void *) malloc(BLCKSZ);
+
+		cblock = (unsigned char*) &encBlocks[offset*BLCKSZ];
+
+		#ifndef CPAGES
+			page_decryption(cblock, (unsigned char *) block->block);
+		#else
+	    	memcpy(block->block, cblock, BLCKSZ);
+		#endif
+
+		oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
+		block->blkno = oopaque->o_blkno;
+		block->size = BLCKSZ;
+	    block->location[0] = oopaque->location[0];
+	    block->location[1] = oopaque->location[1];
+	}
+
+	free(encBlocks);
+	free(l_ob_blknos);
 
 }
 
 
 void
-ost_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+ost_fileWrite(FileHandler handler,
+			 const char *filename, 
+			 PLBList blocks, 
+			 BNArray blkns,
+			 unsigned int nblocks,
+			 void *appData)
 {
 
-	sgx_status_t status = SGX_SUCCESS;
-	BTPageOpaqueOST oopaque = NULL;
-	char	   *encpage;
-	unsigned int l_offset = 0;
-	unsigned int l_index;
-	unsigned int l_ob_blkno = 0;
-	int			clevel = *((int *) appData);
+	sgx_status_t 		status = SGX_SUCCESS;
+	BTPageOpaqueOST 	oopaque = NULL;
+	char                *encPages;    
+	unsigned char	   	*encpage;
+	PLBlock         	block;
+    int             	offset, pagesSize, posSize;
+	unsigned int 		l_offset = 0;
+    unsigned int        l_index = 0;
+	int					clevel = *((int *) appData);
+	int 				*l_ob_blknos;
+    //selog(DEBUG1, "ost_fileWrite %d blocks", nblocks);
+    pagesSize = BLCKSZ*nblocks;
+    posSize = sizeof(unsigned int)*nblocks;
+    encPages = (char *) malloc(pagesSize);
+    l_ob_blknos = (int*) malloc(sizeof(int)*nblocks);
+    memset(l_ob_blknos, 0, sizeof(int)*nblocks);
+
 
 	if (clevel > 0)
 	{
@@ -248,40 +295,49 @@ ost_fileWrite(FileHandler handler, const PLBlock block, const char *filename, co
 		}
 	}
 
-	l_ob_blkno = ob_blkno + l_offset;
+	for(offset = 0; offset < nblocks; offset++){
 
-	encpage = (char *) malloc(BLCKSZ);
-
-	if (block->blkno == DUMMY_BLOCK)
-	{
-		/**
-		* When the blocks to write to the file are dummy, they have to be
-		* initialized to keep a consistent state for next reads. We might
-		* be able to optimize and
-		* remove this extra step by removing some verifications
-		* on the ocalls.
-		*/
-		/* selog(DEBUG1, "Going to write DUMMY_BLOCK"); */
-		ost_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
+		l_ob_blknos[offset] = blkns[offset] + l_offset;
 	}
-	oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
-	oopaque->o_blkno = block->blkno;
-    oopaque->location[0] = block->location[0];
-    oopaque->location[1] = block->location[1];
 
-	#ifndef CPAGES
-		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
-	#else
- 		memcpy(encpage, block->block, BLCKSZ);
-	#endif
+	for(offset = 0; offset < nblocks; offset++){
+		block = blocks[offset];
+		encpage = (unsigned char*) &encPages[offset*BLCKSZ];
 
-    status = outFileWrite(encpage, filename, l_ob_blkno, BLCKSZ);
+		if (block->blkno == DUMMY_BLOCK)
+		{
+			/**
+			* When the blocks to write to the file are dummy, they have to be
+			* initialized to keep a consistent state for next reads. We might
+			* be able to optimize and
+			* remove this extra step by removing some verifications
+			* on the ocalls.
+			*/
+			/* selog(DEBUG1, "Going to write DUMMY_BLOCK"); */
+			ost_pageInit((Page) block->block, DUMMY_BLOCK, BLCKSZ);
+		}
+
+		oopaque = (BTPageOpaqueOST) PageGetSpecialPointer_s((Page) block->block);
+		oopaque->o_blkno = block->blkno;
+	    oopaque->location[0] = block->location[0];
+	    oopaque->location[1] = block->location[1];
+
+		#ifndef CPAGES
+			page_encryption((unsigned char *) block->block, encpage);
+		#else
+	 		memcpy(encpage, block->block, BLCKSZ);
+		#endif
+	}
+
+    status = outFileWrite(filename, encPages, pagesSize, l_ob_blknos, posSize);
 
 	if (status != SGX_SUCCESS)
 	{
-		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
+		selog(ERROR, "Could not write blocks to relation %s\n", filename);
 	}
-	free(encpage);
+
+	free(encPages);
+	free(l_ob_blknos);
 }
 
 

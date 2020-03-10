@@ -57,12 +57,17 @@ Buffer ReadDummyBuffer_ost(OSTRelation relation, int treeLevel,
 
     if(clevel == 0){
         plblock = createEmptyBlock();
+        /*PLBList list = (PLBList) malloc(sizeof(PLBlock)); 
+        list[0] = plblock;
+        BNArray bnarray = (BNArray) malloc(sizeof(int));
+        bnarray[0] = blkno*/
 
 		/*
 		 * The OST fileRead always allocates and writes the content of the
 		 * file page, even if the content is a dummy page.
 		 */
-		ost_fileRead(NULL, plblock, relation->osts->iname, blkno, &clevel);
+		ost_fileRead(NULL, relation->osts->iname, (PLBList) &plblock,
+                    (BNArray) &blkno, 1, &clevel);
 	    free(plblock);
         result = plblock->size;
     }else{
@@ -102,7 +107,8 @@ ReadBuffer_ost(OSTRelation relation, BlockNumber blockNum)
 		 * The OST fileRead always allocates and writes the content of the
 		 * file page, even if the content is a dummy page.
 		 */
-		ost_fileRead(NULL, plblock, relation->osts->iname, blockNum, &clevel);
+		ost_fileRead(NULL, relation->osts->iname, (PLBList) &plblock, 
+                     (BNArray) &blockNum, 1, &clevel);
 		page = plblock->block;
 		free(plblock);
 	}
@@ -198,7 +204,8 @@ MarkBufferDirty_ost(OSTRelation relation, Buffer buffer)
 			block->blkno = vblock->id;
 			block->block = vblock->page;
 			block->size = BLCKSZ;
-			ost_fileWrite(NULL, block, relation->osts->iname, vblock->id, &clevel);
+			ost_fileWrite(NULL, relation->osts->iname,(PLBList) &block, 
+                          (BNArray) &vblock->id, 1, &clevel);
 			free(block);
             result = BLCKSZ;
 		}

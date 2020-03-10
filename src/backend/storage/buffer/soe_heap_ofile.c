@@ -112,92 +112,131 @@ heap_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksize
 
 
 
+/*void
+heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)*/
 void
-heap_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+heap_fileRead(FileHandler handler, const char *filename,  PLBList blocks,
+              BNArray blkns, unsigned int nblocks, void *appData)
 {
 
-	sgx_status_t status;
-	char	   *ciphertexBlock;
-	int*    r_blkno;
+	sgx_status_t    status;
+	char            *encBlocks;
+	int*            r_blkno;
+    PLBlock         block;
+    unsigned char   *cblock;
+    int             offset, ciphertextsSize, posSizes;
+
+    //selog(DEBUG1, "heap_fileRead %d blocks", nblocks);
+    ciphertextsSize = BLCKSZ*nblocks;
+    posSizes = sizeof(unsigned int)*nblocks;
+
 
 	status = SGX_SUCCESS;
 
-	block->block = (void *) malloc(BLCKSZ);
-	ciphertexBlock = (char *) malloc(BLCKSZ);
+	encBlocks = (char *) malloc(ciphertextsSize);
 
-	
-    status = outFileRead(ciphertexBlock, filename, ob_blkno, BLCKSZ);
-
-	#ifndef CPAGES
-		page_decryption((unsigned char *) ciphertexBlock, (unsigned char *) block->block);
-	#else
-    	memcpy(block->block, ciphertexBlock, BLCKSZ);
-	#endif
-
-	if (status != SGX_SUCCESS)
-	{
-		selog(ERROR, "Could not read %d from relation %s\n", ob_blkno, filename);
+    //encrypted blocks
+    status = outFileRead(filename, encBlocks, ciphertextsSize, blkns, posSizes);
+    
+    if (status != SGX_SUCCESS){
+		selog(ERROR, "Could not read blocks from relation %s\n", filename);
 	}
-   
-	r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
-    //selog(DEBUG1, "Read real block %d", r_blkno[0]);
-    block->blkno = r_blkno[0];
-    block->location[0] = r_blkno[2];
-    block->location[1] = r_blkno[3];
-	block->size = BLCKSZ;
-	free(ciphertexBlock);
+
+
+    for(offset = 0; offset < nblocks; offset++){
+        block = blocks[offset];
+        block->block = (void*) malloc(BLCKSZ);
+
+        cblock = (unsigned char*) &(encBlocks[offset*BLCKSZ]);
+
+	    #ifndef CPAGES
+		    page_decryption(cblock, (unsigned char *) block->block);
+	    #else
+    	    memcpy(block->block, cblock, BLCKSZ);
+	    #endif
+
+	    r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
+        block->blkno = r_blkno[0];
+        block->location[0] = r_blkno[2];
+        block->location[1] = r_blkno[3];
+	    block->size = BLCKSZ;
+
+    }
+
+	free(encBlocks);
 
 }
 
 
 void
-heap_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+heap_fileWrite(FileHandler handler, const char *filename, PLBList blocks, 
+          BNArray blkns, unsigned int nblocks,  void *appData)
 {
-	sgx_status_t status = SGX_SUCCESS;
-	char	   *encPage = (char *) malloc(BLCKSZ);
-    int        *r_blkno;
-    int        *c_blkno;
-    
-    r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
+	sgx_status_t    status = SGX_SUCCESS;
+	char            *encPages;
+    int             *r_blkno, *c_blkno;
+    PLBlock         block;
+    unsigned char   *cblock;
+    int             offset, pagesSize, posSize;
 
-    //selog(DEBUG1, "heap_filewrite block %d and page blkno %d", block->blkno, *r_blkno);
-    // TODO: test if block->blkno == *r_blkno even when blkno is dummy
-    if(block->blkno != DUMMY_BLOCK && block->blkno != *r_blkno){
-        selog(ERROR, "Block blkno %d and page blkno %d do not match", block->blkno, *r_blkno);
-        abort();
+    pagesSize = BLCKSZ*nblocks;
+    posSize = sizeof(unsigned int)*nblocks;
+    encPages = (char *) malloc(pagesSize);
+    //selog(DEBUG1, "heap_fileWrite %d blocks", nblocks);
+    for(offset = 0; offset < nblocks; offset++){
+
+        block = blocks[offset];
+        cblock = (unsigned char*) &encPages[offset*BLCKSZ];
+        
+        r_blkno = (int*) PageGetSpecialPointer_s((Page) block->block);
+        /*
+         *
+         * selog(DEBUG1, "heap_filewrite block %d and page blkno %d",
+         * block->blkno, *r_blkno);
+         *
+         */
+
+        // TODO: test if block->blkno == *r_blkno even when blkno is dummy
+        if(block->blkno != DUMMY_BLOCK && block->blkno != *r_blkno){
+            selog(ERROR, "Block blkno %d and page blkno %d do not match",
+                  block->blkno, *r_blkno);
+            abort();
+        }
+    
+	    if (block->blkno == DUMMY_BLOCK)
+	    {
+		    //selog(DEBUG1, "Requested write of DUMMY_BLOCK"); 
+		    /**
+		    * When the blocks to write to the file are dummy, they have to be
+		    * initialized to keep a consistent state for next reads. We might
+		    * be able to optimize and
+		    * remove this extra step by removing some verifications
+		    * on the ocalls.
+		    */
+		    heap_pageInit((Page) block->block, DUMMY_BLOCK, 0, BLCKSZ);
+    	}
+
+   	    #ifndef CPAGES
+		    page_encryption((unsigned char *) block->block, cblock);
+	    #else
+		    memcpy(cblock, block->block, BLCKSZ);
+ 	    #endif
+        
+        c_blkno = (int*) PageGetSpecialPointer_s((Page) cblock);
+        c_blkno[2] = block->location[0];
+        c_blkno[3] = block->location[1];
     }
     
-	if (block->blkno == DUMMY_BLOCK)
-	{
-		//selog(DEBUG1, "Requested write of DUMMY_BLOCK"); 
-		/**
-		* When the blocks to write to the file are dummy, they have to be
-		* initialized to keep a consistent state for next reads. We might
-		* be able to optimize and
-		* remove this extra step by removing some verifications
-		* on the ocalls.
-		*/
-		heap_pageInit((Page) block->block, DUMMY_BLOCK, 0, BLCKSZ);
-	}
-	#ifndef CPAGES
-		page_encryption((unsigned char *) block->block, (unsigned char *) encPage);
-	#else
-		memcpy(encPage, block->block, BLCKSZ);
- 	#endif
 
-    c_blkno = (int*) PageGetSpecialPointer_s((Page) encPage);
-    c_blkno[2] = block->location[0];
-    c_blkno[3] = block->location[1];
-
-    status = outFileWrite(encPage, filename, ob_blkno, BLCKSZ);
+    status = outFileWrite(filename, encPages, pagesSize, blkns, posSize);
 
 	
 	if (status != SGX_SUCCESS)
 	{
-		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
+		selog(ERROR, "Could not write blocks to relation %s\n", filename);
 	}
 
-	free(encPage);
+	free(encPages);
 }
 
 

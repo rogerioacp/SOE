@@ -115,81 +115,112 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 
 
 void
-nbtree_fileRead(FileHandler handler, PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+nbtree_fileRead(FileHandler handler, const char *filename,  PLBList blocks,
+              BNArray blkns, unsigned int nblocks, void *appData)
 {
-	sgx_status_t status;
-	BTPageOpaque oopaque;
+	sgx_status_t    status;
+	BTPageOpaque    oopaque;
+    PLBlock         block;
+	char            *cipherBlocks;
+    unsigned char   *cblock;
+    int             offset, cipherbSize, posSize;
 
-	/* selog(DEBUG1, "nbtree_fileRead %d", ob_blkno); */
-	status = SGX_SUCCESS;
-	char	   *ciphertextBlock;
+	//selog(DEBUG1, "nbtree_fileRead %d nblocks", nblocks);
+    status = SGX_SUCCESS;
+    
+    cipherbSize = BLCKSZ*nblocks;
+    posSize = sizeof(unsigned int)*nblocks;
 
-	block->block = (void *) malloc(BLCKSZ);
-	ciphertextBlock = (char *) malloc(BLCKSZ);
+	cipherBlocks = (char *) malloc(cipherbSize);
 
-	status = outFileRead(ciphertextBlock, filename, ob_blkno, BLCKSZ);
-	#ifndef CPAGES
-		page_decryption((unsigned char *) ciphertextBlock, (unsigned char *) block->block);
-	#else
-    	memcpy(block->block, ciphertextBlock, BLCKSZ);
-	#endif
 
-	if (status != SGX_SUCCESS)
+	status = outFileRead(filename, cipherBlocks, cipherbSize, blkns, posSize);
+	
+    if (status != SGX_SUCCESS)
 	{
-		selog(ERROR, "Could not read %d from relation %s", ob_blkno, filename);
+		selog(ERROR, "Could not read blocks from relation %s", filename);
 	}
 
-	oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block->block);
-	block->blkno = oopaque->o_blkno;
-	block->size = BLCKSZ;
-    block->location[0] = oopaque->location[0];
-    block->location[1] = oopaque->location[1];
-	free(ciphertextBlock);
+    for(offset = 0; offset < nblocks; offset++){
+    	block = blocks[offset];
+		block->block = (void *) malloc(BLCKSZ);
+        
+        cblock = (unsigned char*) &cipherBlocks[offset*BLCKSZ];
+
+		#ifndef CPAGES
+			page_decryption(cBlock, (unsigned char *) block->block);
+		#else
+	    	memcpy(block->block, cblock, BLCKSZ);
+		#endif
+
+		oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block->block);
+		block->blkno = oopaque->o_blkno;
+		block->size = BLCKSZ;
+	    block->location[0] = oopaque->location[0];
+	    block->location[1] = oopaque->location[1];
+    }
+    
+	free(cipherBlocks);
 }
 
 
 void
-nbtree_fileWrite(FileHandler handler, const PLBlock block, const char *filename, const BlockNumber ob_blkno, void *appData)
+nbtree_fileWrite(FileHandler handler, const char *filename, PLBList blocks, 
+          BNArray blkns, unsigned int nblocks, void *appData)
 {
-	sgx_status_t status = SGX_SUCCESS;
-    BTPageOpaque oopaque;
+	sgx_status_t 	status = SGX_SUCCESS;
+    BTPageOpaque 	oopaque;
+    PLBlock         block;
+    unsigned char   *encpage;
+    int             offset, pagesSize, posSize;
+	char	        *encPages;
+    //selog(DEBUG1, "nbtree_fileWrite %d blocks", nblocks);
+    
+    pagesSize = BLCKSZ*nblocks;
+    posSize = sizeof(unsigned int)*nblocks;
 
-	char	   *encpage;
+    encPages = (char *) malloc(pagesSize);
 
-	encpage = (char *) malloc(BLCKSZ);
+    for(offset = 0; offset < nblocks; offset++){
 
-	if (block->blkno == DUMMY_BLOCK)
-	{
-		/* selog(DEBUG1, "Requested write of DUMMY_BLOCK"); */
-		/**
-		* When the blocks to write to the file are dummy, they have to be
-		* initialized to keep a consistent state for next reads. We might
-		* be able to optimize and
-		* remove this extra step by removing some verifications
-		* on the ocalls.
-		*/
-		//selog(DEBUG1, "Going to write DUMMY_BLOCK");
-		nbtree_pageInit((Page) block->block, DUMMY_BLOCK, 0, BLCKSZ);
-	}
+    	block 	=  	blocks[offset];
+    	encpage = (unsigned char*)	&encPages[offset*BLCKSZ];
 
-    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page)block->block);
-    oopaque->o_blkno = block->blkno;
-    oopaque->location[0] = block->location[0];
-    oopaque->location[1] = block->location[1];
+		if (block->blkno == DUMMY_BLOCK){
+			/* selog(DEBUG1, "Requested write of DUMMY_BLOCK"); */
+			/**
+			* When the blocks to write to the file are dummy, they have to be
+			* initialized to keep a consistent state for next reads. We might
+			* be able to optimize and
+			* remove this extra step by removing some verifications
+			* on the ocalls.
+			*/
+			//selog(DEBUG1, "Going to write DUMMY_BLOCK");
+			nbtree_pageInit((Page) block->block, DUMMY_BLOCK, 0, BLCKSZ);
+		}
 
-     
-	#ifndef CPAGES
-		page_encryption((unsigned char *) block->block, (unsigned char *) encpage);
-	#else
-		 memcpy(encpage, block->block, BLCKSZ);
-	#endif
-	status = outFileWrite(encpage, filename, ob_blkno, BLCKSZ);
+	    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page)block->block);
+	    oopaque->o_blkno = block->blkno;
+	    oopaque->location[0] = block->location[0];
+	    oopaque->location[1] = block->location[1];
+
+	     
+		#ifndef CPAGES
+			page_encryption((unsigned char *) block->block, encpage);
+		#else
+			 memcpy(encpage, block->block, BLCKSZ);
+		#endif
+
+    }
+
+    status = outFileWrite(filename, encPages, pagesSize, blkns, posSize);
 
 	if (status != SGX_SUCCESS)
 	{
-		selog(ERROR, "Could not write %d on relation %s\n", ob_blkno, filename);
+		selog(ERROR, "Could not write blocks to relation %s\n", filename);
 	}
-	free(encpage);
+	
+	free(encPages);
 }
 
 

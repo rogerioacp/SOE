@@ -35,9 +35,13 @@ enclave{
 
 		void outFileInit([in, string] const char *filename, [in, size=pagesSize] const char* pages, unsigned int nblocks, unsigned int blocksize, int pagesSize, int initOffset);
 
-		void outFileRead([out, size=pageSize] char* page, [in, string] const char* filename, int blkno, int pageSize);
+		void outFileRead([in, string] const char* filename, [out, size=pagesSize]
+        char* page, int pagesSize, [out, size=posSize] int* positions, int
+        posSize);
 
-		void outFileWrite([in, size=pageSize] const char* block, [in, string] const char* filename, int oblkno, int pageSize);
+		void outFileWrite( [in, string] const char* filename,  [in,
+        size=pagesSize] const char* pages, int pagesSize, [out, size=posSize] int* positions, int
+        posSize));
 
 		void outFileClose([in, string] const char* filename);
 
