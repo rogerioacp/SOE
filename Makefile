@@ -181,6 +181,12 @@ else ifeq ($(ORAM_LIB), TPATHORAM)
 else ifeq ($(ORAM_LIB), TFORESTORAM)
 		Enclave_C_Flags += -DTFORESTORAM
 		ORAM_LADD := -ltforestoram
+else ifeq ($(ORAM_LIB), DTPATHORAM)
+		Enclave_C_Flags += -DTPATHORAM
+		ORAM_LADD := -ldtpathoram
+else ifeq ($(ORAM_LIB), DTFORESTORAM)
+		Enclave_C_Flags += -DTFORESTORAM
+		ORAM_LADD := -ldtforestoram
 endif
 
 
@@ -193,9 +199,9 @@ SOE_LADD =$(ORAM_LADD) $(COLLECTC_LADD)
 ifeq ($(PRF), 1)
 	
 ifneq ($(SGX_MODE), HW)
-		SOE_LADD += -L/usr/local/lib -lsodium #-L/usr/local/lib -lssl -lcrypto 
+		SOE_LADD += -L/usr/local/lib -lsodium  
 else
-		SOE_LADD += -L/usr/local/lib -lsodium-sgx #-L/usr/local/lib -lssl -lcrypto 
+		SOE_LADD += -L/usr/local/lib -lsodium-sgx  
 endif
 endif
 #SOE_LADD = $(ORAM_LADD) $(COLLECTC_LADD) -L/opt/intel/sgxssl//lib64/ -lssl -lcrypto
