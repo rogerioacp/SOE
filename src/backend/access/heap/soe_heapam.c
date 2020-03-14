@@ -121,13 +121,17 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
     unsigned int    token[8];
     int level = rel->tHeight +1;
     //selog(DEBUG1, "Inserting heap block %d, level %d", blkno, level);
-    
+
     r_blkno = (int*) PageGetSpecialPointer_s(rpage);
-    prf(level, blkno, 0, (unsigned char*) &token);
+    #if defined TFORESTORAM || defined TPATHORAM 
+    //selog(DEBUG1, "FIRST heap_block_insert prf");
+    prf(level, blkno, 0, (unsigned int*) &token);
+
     //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]); 
     //selog(DEBUG1, "size of oopaque lsize %d\n", r_blkno[1]);
     //selog(DEBUG1, "Page has %d tuples",PageGetMaxOffsetNumber_s(rpage));  
     rel->token = token;
+    #endif
     if(*r_blkno != blkno){
         selog(ERROR, "Page block %d number does not match offset %d", *r_blkno, blkno);
     }
@@ -139,8 +143,11 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
         selog(ERROR, "Page accessed on block loading %d is null", *r_blkno);
     }
 
-	memcpy(page, rpage, BLCKSZ);
+    //selog(DEBUG1, "Going to copy");
+    
+    memcpy(page, rpage, BLCKSZ);
 
+    //selog(DEBUG1, "After copy");
 
 
     p_blkno = (int*) PageGetSpecialPointer_s(page);
@@ -152,8 +159,11 @@ heap_insert_block_s(VRelation rel, char *rpage, int blkno)
         selog(ERROR, "Block numbers in heap page do not match %d %d", r_blkno[0], p_blkno[0]);
     }
 
-    prf(level, blkno, 1, (unsigned char*) &token);
+    #if defined TFORESTORAM || defined TPATHORAM
+    //selog(DEBUG1, "second heap_block_insert prf");
 
+    prf(level, blkno, 1, (unsigned int*) &token);
+    #endif
     //selog(DEBUG1, "Counters are %d %d %d %d", token[0], token[1], token[2], token[3]);
     //selog(DEBUG1, "Flush block %d", *r_blkno);
 	MarkBufferDirty_s(rel, buffer);
@@ -182,7 +192,7 @@ heap_gettuple_s(VRelation rel, ItemPointer tid, HeapTuple tuple)
 	//selog(DEBUG1, "Going to get heap block %d", blkno);
 
     #if defined TFORESTORAM || defined TPATHORAM    
-    prf(tlevel, blkno, rel->heapBlockCounter, (unsigned char*) &token);
+    prf(tlevel, blkno, rel->heapBlockCounter, (unsigned int*) &token);
 
     //selog(DEBUG1, "counter of block %d are %d %d %d %d", blkno, token[0], token[1], token[2], token[3]);
 

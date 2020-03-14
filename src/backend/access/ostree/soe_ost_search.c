@@ -138,7 +138,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
 		par_blkno = BufferGetBlockNumber_ost(*bufP);
         #ifdef TFORESTORAM
         //The root write ignores the token
-        prf(rel->level, oldBlkno, currentNodeCounter, (unsigned char*) &token);
+        prf(rel->level, oldBlkno, currentNodeCounter, (unsigned int*) &token);
         MarkBufferDirty_ost(rel, *bufP);
         #endif
 		ReleaseBuffer_ost(rel, *bufP);
@@ -148,7 +148,7 @@ _bt_search_ost(OSTRelation rel, int keysz, ScanKey scankey, bool nextkey,
         currentNodeCounter = nextNodeCounter;
 		height++;
 		rel->level = height;
-        prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
+        prf(rel->level, blkno, currentNodeCounter, (unsigned int*) &token);
         //selog(DEBUG1, "Buffre block %d", blkno);
 		*bufP = ReadBuffer_ost(rel, blkno);
         currentNodeCounter +=1;

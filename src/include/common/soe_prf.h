@@ -15,7 +15,7 @@
 #define SOE_PE_H
 
 
-void        prf(unsigned int level, unsigned int offset, unsigned int counter, unsigned char *token);
+void        prf(unsigned int level, unsigned int offset, unsigned int counter, unsigned int *token);
 
 unsigned int   getRandomInt();
 #endif          /*SOE_PE_H*/

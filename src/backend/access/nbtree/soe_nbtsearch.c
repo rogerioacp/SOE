@@ -71,11 +71,12 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
 {
     int                   tHeight = 0;
     unsigned int          token[8];
-
-    prf(rel->level, 0, rel->rCounter, (unsigned char*) &token);
    
     rel->token = token;
     rel->level = tHeight;
+
+    //selog(DEBUG1, "Getting tree root with %d %d %d", rel->level, 0, rel->rCounter);
+    prf(rel->level, 0, rel->rCounter, (unsigned int*) &token);
     //selog(DEBUG1, "---- Getting tree root with counter %d at height %d with counters  %d %d %d %d", rel->rCounter, rel->level, token[0], token[1], token[2], token[3]);
 	/* Get the root page to start with */
     *bufP = _bt_getbuf_level_s(rel, 0);
@@ -147,7 +148,7 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
    		par_blkno = BufferGetBlockNumber_s(*bufP);
 
         #ifdef TPATHORAM
-        prf(rel->level, oldBlkno, currentNodeCounter, (unsigned char*) &token);
+        prf(rel->level, oldBlkno, currentNodeCounter, (unsigned int*) &token);
         //selog(DEBUG1, "Going to evict block %d at level %d with counters %d %d %d %d", oldBlkno, rel->level, token[0], token[1], token[2], token[3]);
         //rel->token = token;
 
@@ -160,8 +161,8 @@ BlockNumber _bt_search_s(VRelation rel, int keysz, ScanKey scankey, bool nextkey
         tHeight++;
         rel->level = tHeight;
 
-        prf(rel->level, blkno, currentNodeCounter, (unsigned char*) &token);
-        //selog(DEBUG1, "block access %d at level %d with prf results are %d %d",blkno, rel->level, token[0], token[1]);
+        prf(rel->level, blkno, currentNodeCounter, (unsigned int*) &token);
+        //selog(DEBUG1, "block access %d at level %d with prf results are %d %d %d %d",blkno, rel->level, token[0], token[1], token[2], token[3]);
  
 		*bufP = _bt_getbuf_level_s(rel, blkno);
         currentNodeCounter +=1;
@@ -549,7 +550,7 @@ _bt_first_s(IndexScanDesc scan)
     //selog(DEBUG1, "heap block counter of block %d is at %d", offnum, opaque->counters[offnum]);
     rel->heapBlockCounter = opaque->counters[offnum];
     opaque->counters[offnum] +=1;
-    prf(rel->level, leafBlkno, rel->leafCurrentCounter, (unsigned char*) &token);
+    prf(rel->level, leafBlkno, rel->leafCurrentCounter, (unsigned int*) &token);
     //selog(DEBUG1, "Going to evict block %d at level %d with counters %d %d %d %d", leafBlkno, rel->level, token[0], token[1], token[2], token[3]);
     rel->token = token;
     MarkBufferDirty_s(rel, buf);

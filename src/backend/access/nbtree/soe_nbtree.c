@@ -65,11 +65,11 @@ void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned 
     oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
     memset(oopaque->counters, 0, sizeof(uint32)*300);
 
-    prf(level, offset, 0, (unsigned char*) &token);
+    prf(level, offset, 0, (unsigned int*) &token);
     
     //selog(DEBUG1, "size of btree opaque data is %d\n", sizeof(BTPageOpaqueData));
-    //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
-    //selog(DEBUG1, "btree block at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
+    //selog(DEBUG1, "btree block at level %d and offset %d has o_blkno %d", level, offset, oopaque->o_blkno);
+    //selog(DEBUG1, "write counters are %d %d %d %d", token[0], token[1], token[2], token[3]);
 
     indexRel->level = level;
     indexRel->token = token;
@@ -80,13 +80,13 @@ void btree_load_s(VRelation indexRel, char* block, unsigned int level, unsigned 
 
     memcpy(page, block, BLCKSZ);
 
-   // oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
+    oopaque = (BTPageOpaque) PageGetSpecialPointer_s((Page) block);
 
-    //selog(DEBUG1, "btree block after initialization at level %d and offset %d has o_blkno %d\n", level, offset, oopaque->o_blkno);
+    //selog(DEBUG1, "btree block after initialization at level %d and offset %d has o_blkno %d", level, offset, oopaque->o_blkno);
     
-    prf(level, offset, 1, (unsigned char*) &token);
+    prf(level, offset, 1, (unsigned int*) &token);
 
-    //selog(DEBUG1, "Counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
+    //selog(DEBUG1, "Eviction counters are %d %d %d %d\n", token[0], token[1], token[2], token[3]);
     //indexRel->token = token;
 
     MarkBufferDirty_s(indexRel, buffer);

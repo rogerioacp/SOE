@@ -21,7 +21,7 @@ unsigned int keylen = 34*sizeof(char);
 #endif
 
 
-void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigned char *token)
+void prf(unsigned int level, unsigned int offset, unsigned int counter, unsigned int *token)
 {
 
 #ifdef PRF
@@ -57,23 +57,32 @@ void prf(unsigned int level, unsigned int offset, unsigned int counter,  unsigne
     //token+sizeof(unsignedint) = res2[0];
     //token + 2*sizeof(unsigned int) = res1[1];
     //token + 3*sizeof(unsigned int) = res2[1];
-    memcpy(token, &res1[0], sizeof(unsigned int));
-    memcpy(token + sizeof(unsigned int), &res2[0], sizeof(unsigned int));
-    memcpy(token + 2*sizeof(unsigned int), &res1[1], sizeof(unsigned int));
-    memcpy(token + 3*sizeof(unsigned int), &res2[1], sizeof(unsigned int));
+    //memcpy(token, &res1[0], sizeof(unsigned int));
+    //memcpy(token + sizeof(unsigned int), &res2[0], sizeof(unsigned int));
+    //memcpy(token + 2*sizeof(unsigned int), &res1[1], sizeof(unsigned int));
+    //memcpy(token + 3*sizeof(unsigned int), &res2[1], sizeof(unsigned int));
+    token[0] = res1[0];
+    token[1] = res2[0];
+    token[2] = res1[1];
+    token[3] = res2[1];
 
-
-    //selog(DEBUG1, "res is %d with values %d %d %d %d", (unsigned int) token[0], (unsigned int) token[1], (unsigned int) token[2], (unsigned int) token[3]);
+    //selog(DEBUG1, "libsodium prf %d %d %d %d resut %d %d %d %d", level, offset, counter, counter + 1, (unsigned int) token[0], (unsigned int) token[1], (unsigned int) token[2], (unsigned int) token[3]);
     
 #else
 	/* If we are not generating tokens with a PRF just copy the counter */
 
     int next = counter + 1;
-    memcpy(token, &counter, sizeof(unsigned int));
-    memcpy(token + sizeof(unsigned int), &next, sizeof(unsigned int));
-    memcpy(token + 2*sizeof(unsigned int), &counter, sizeof(unsigned int));
-    memcpy(token + 3*sizeof(unsigned int), &next, sizeof(unsigned int));
-    
+    int* tokens = (int*) token;
+    tokens[0] = counter;
+    tokens[1] = next;
+    tokens[2] = counter;
+    tokens[3] = next;
+    //memcpy(token, &counter, sizeof(unsigned int));
+    //memcpy(token + sizeof(unsigned int), &next, sizeof(unsigned int));
+    //memcpy(token + 2*sizeof(unsigned int), &counter, sizeof(unsigned int));
+    //memcpy(token + 3*sizeof(unsigned int), &next, sizeof(unsigned int));
+    //selog(DEBUG1, "set token of block %d at level %d wth counter %d with values %d %d %d %d", offset, level, counter, (unsigned int) token[0], (unsigned int) token[1], (unsigned int) token[2], (unsigned int) token[3]);
+     
 #endif
 
 
