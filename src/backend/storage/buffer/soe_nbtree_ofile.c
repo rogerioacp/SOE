@@ -82,7 +82,7 @@ nbtree_fileInit(const char *filename, unsigned int nblocks, unsigned int blocksi
 		/* BTPageOpaque oopaque; */
 		allocBlocks = Min_s(tnblocks, BATCH_SIZE);
 
-		blocks = (char *) malloc(BLCKSZ * nblocks);
+		blocks = (char *) malloc(BLCKSZ * allocBlocks);
 		tmpPage = malloc(blocksize);
 
 		for (offset = 0; offset < allocBlocks; offset++)
